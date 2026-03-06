@@ -1,0 +1,142 @@
+[
+  {
+    "title": "Overview of Siemens Industrial Experience (iX)",
+    "keywords": ["what is ix", "siemens ix", "siemens industrial experience", "design system", "overview", "about ix", "what is siemens ix"],
+    "content": "Siemens Industrial Experience (iX) is an open-source design system for designers and developers to consistently create the perfect digital experience for partners and customers within industrial contexts. It gives access to a broad range of UI patterns, web-based code implementations, design tools, resources and content guidelines to accelerate collaboration between designers, developers and writers, helping to build efficient and consistent products."
+  },
+  {
+    "title": "Install iX with React",
+    "keywords": ["react", "install react", "react setup", "react installation", "ix react", "siemens react"],
+    "content": "To install Siemens iX in a React project, run: npm install @siemens/ix @siemens/ix-react @siemens/ix-icons. Then import the styles in your global stylesheet: @import '@siemens/ix/dist/siemens-ix/siemens-ix.css';"
+  },
+  {
+    "title": "Install iX with Angular",
+    "keywords": ["angular", "install angular", "angular setup", "angular installation", "ix angular", "siemens angular"],
+    "content": "To install Siemens iX in an Angular project, first ensure peer dependencies @angular/core and @angular/forms (>=18.2.13) are installed. Then run: npm install @siemens/ix @siemens/ix-angular @siemens/ix-icons. Import styles in your global stylesheet (e.g. src/styles.scss): @import '@siemens/ix/dist/siemens-ix/siemens-ix.css'. For standalone setup, import iX components directly from @siemens/ix-angular/standalone. For module setup, import IxModule and BrowserAnimationsModule in your AppModule."
+  },
+  {
+    "title": "Install iX with Vue",
+    "keywords": ["vue", "install vue", "vue setup", "vue installation", "ix vue", "siemens vue"],
+    "content": "To install Siemens iX in a Vue project, run: npm install @siemens/ix @siemens/ix-vue @siemens/ix-icons. Then in your main.js, import the styles and register the plugin: import '@siemens/ix/dist/siemens-ix/siemens-ix.css'; import { ixPlugin } from '@siemens/ix-vue'; app.use(ixPlugin);"
+  },
+  {
+    "title": "Install iX with Web Components",
+    "keywords": ["web components", "javascript", "vanilla js", "plain javascript", "web component setup", "ix web components"],
+    "content": "To install Siemens iX as web components (vanilla JS), run: npm install @siemens/ix @siemens/ix-icons. In your main.js, import the styles and register the loaders: import '@siemens/ix/dist/siemens-ix/siemens-ix.css'; import { defineCustomElements } from '@siemens/ix/loader'; import { defineCustomElements as defineIxIconCustomElement } from '@siemens/ix-icons/loader'; defineIxIconCustomElement(); defineCustomElements(); You can use tools like Vite to build and serve the app."
+  },
+  {
+    "title": "Figma Library",
+    "keywords": ["figma", "figma library", "design library", "figma access", "design tokens", "figma components"],
+    "content": "The Siemens iX Figma library contains all tokens, components and blueprints ready for app design. Siemens employees with a Figma license can search for 'iX Design System' in the Siemens AG Global Figma account. Guest access and the classic open-source library are available upon request — contact the iX team. The library includes Siemens brand assets and Figma variables for easy theming. See the 'Designing with themes' documentation for details."
+  },
+  {
+    "title": "Components Overview",
+    "keywords": ["components", "component list", "all components", "ui components", "available components", "component overview"],
+    "content": "Siemens iX components are organized into categories: Application Frame (Application, Application header, Application menu, Avatar, Content, Content header, About & legal, Settings, Popover news); Navigation (Breadcrumb, Group, Pagination, Tabs, Tree, Workflow); Containers & Layouts (Blind, Card, Card list, Flip, Event list, Drawer, Layout auto, Layout grid, Modal, Panes, Tile); Forms (Forms field, Forms layout, Forms validation, Forms behavior); Input fields (Category filter, Checkbox, Date dropdown, Date input, Date picker, Date-time picker, Expanding search, Number input, Radio, Select, Slider, Input, Textarea, Time picker, Toggle, Upload); Buttons & Actions (Button, Dropdown button, Icon button, Link button, Split button, Toggle button, Chip); System feedback (Empty state, Message bar, Pill, Progress indicator, Spinner, Toast, Tooltip); Data display (AG Grid, HTML table, Key value, Key value list, KPI); Charts (Line, Bar, Gauge, Pie, 3D, Special charts)."
+  },
+  {
+    "title": "IxButton – Overview & Variants",
+    "keywords": ["ix button", "ixbutton", "button variants", "primary button", "secondary button", "tertiary button", "danger button", "subtle button", "button overview", "button guide", "button states"],
+    "content": "The Siemens iX Button (ix-button) initiates actions and applies functions in an application. Variants available: primary (default, for main actions like Confirm/Send), secondary (supporting actions like Cancel/Reset), tertiary (contextual actions like Help/More options), subtle-primary, subtle-secondary, subtle-tertiary (softer visual style), danger-primary, danger-secondary, danger-tertiary (destructive/irreversible actions like Delete). States: default, hover, active, disabled, loading, focused. Options: icon (left, preferred), icon-right (right, e.g. Next arrow), loading (shows spinner), disabled. Minimum width 5rem. Use short labels; ellipsis (…) indicates further input needed."
+  },
+  {
+    "title": "IxButton – React Code",
+    "keywords": ["ix button react", "ixbutton react", "button code react", "button react example", "how to use ix button in react", "react button code", "ix button in react"],
+    "content": "IxButton code for React:\n\nInstall: npm install @siemens/ix @siemens/ix-react @siemens/ix-icons\n\nImport in your component:\nimport { IxButton } from '@siemens/ix-react';\n\nBasic usage:\n<IxButton>Click me</IxButton>\n\nAll variants:\n<IxButton variant=\"primary\">Primary</IxButton>\n<IxButton variant=\"secondary\">Secondary</IxButton>\n<IxButton variant=\"tertiary\">Tertiary</IxButton>\n<IxButton variant=\"subtle-primary\">Subtle Primary</IxButton>\n<IxButton variant=\"subtle-secondary\">Subtle Secondary</IxButton>\n<IxButton variant=\"subtle-tertiary\">Subtle Tertiary</IxButton>\n<IxButton variant=\"danger-primary\">Danger</IxButton>\n<IxButton variant=\"danger-secondary\">Danger Secondary</IxButton>\n<IxButton variant=\"danger-tertiary\">Danger Tertiary</IxButton>\n\nWith icon:\n<IxButton icon=\"star\">Favourite</IxButton>\n<IxButton icon-right=\"chevron-right\">Next</IxButton>\n\nDisabled:\n<IxButton disabled>Disabled</IxButton>\n\nLoading:\n<IxButton loading>Saving...</IxButton>\n\nSubmit form:\n<IxButton type=\"submit\">Submit</IxButton>\n\nAs anchor/link:\n<IxButton href=\"https://example.com\" target=\"_blank\">Open Link</IxButton>\n\nRemember to import the iX CSS in index.js:\nimport '@siemens/ix/dist/siemens-ix/siemens-ix.css';"
+  },
+  {
+    "title": "IxButton – Angular Code",
+    "keywords": ["ix button angular", "ixbutton angular", "button code angular", "button angular example", "how to use ix button in angular", "angular button code", "ix button in angular"],
+    "content": "IxButton code for Angular:\n\nInstall: npm install @siemens/ix @siemens/ix-angular @siemens/ix-icons\n\nImport styles in src/styles.scss:\n@import '@siemens/ix/dist/siemens-ix/siemens-ix.css';\n\nStandalone component – import IxButton directly:\nimport { IxButton } from '@siemens/ix-angular/standalone';\n@Component({ standalone: true, imports: [IxButton], template: `...` })\n\nModule setup – import IxModule in AppModule:\nimport { IxModule } from '@siemens/ix-angular';\n@NgModule({ imports: [IxModule.forRoot()] })\n\nTemplate usage:\n<ix-button>Click me</ix-button>\n<ix-button variant=\"primary\">Primary</ix-button>\n<ix-button variant=\"secondary\">Secondary</ix-button>\n<ix-button variant=\"tertiary\">Tertiary</ix-button>\n<ix-button variant=\"subtle-primary\">Subtle Primary</ix-button>\n<ix-button variant=\"subtle-secondary\">Subtle Secondary</ix-button>\n<ix-button variant=\"subtle-tertiary\">Subtle Tertiary</ix-button>\n<ix-button variant=\"danger-primary\">Danger</ix-button>\n<ix-button variant=\"danger-secondary\">Danger Secondary</ix-button>\n<ix-button variant=\"danger-tertiary\">Danger Tertiary</ix-button>\n\nWith icon:\n<ix-button icon=\"star\">Favourite</ix-button>\n<ix-button icon-right=\"chevron-right\">Next</ix-button>\n\nDisabled:\n<ix-button [disabled]=\"isDisabled\">Disabled</ix-button>\n\nLoading:\n<ix-button [loading]=\"isLoading\">Saving</ix-button>\n\nSubmit form:\n<ix-button type=\"submit\" [form]=\"myFormId\">Submit</ix-button>"
+  },
+  {
+    "title": "IxButton – Vue Code",
+    "keywords": ["ix button vue", "ixbutton vue", "button code vue", "button vue example", "how to use ix button in vue", "vue button code", "ix button in vue"],
+    "content": "IxButton code for Vue:\n\nInstall: npm install @siemens/ix @siemens/ix-vue @siemens/ix-icons\n\nSetup in main.js:\nimport '@siemens/ix/dist/siemens-ix/siemens-ix.css';\nimport { createApp } from 'vue';\nimport { ixPlugin } from '@siemens/ix-vue';\nimport App from './App.vue';\nconst app = createApp(App);\napp.use(ixPlugin);\napp.mount('#root');\n\nIn your component:\nimport { IxButton } from '@siemens/ix-vue';\n\nTemplate usage:\n<IxButton>Click me</IxButton>\n<IxButton variant=\"primary\">Primary</IxButton>\n<IxButton variant=\"secondary\">Secondary</IxButton>\n<IxButton variant=\"tertiary\">Tertiary</IxButton>\n<IxButton variant=\"subtle-primary\">Subtle Primary</IxButton>\n<IxButton variant=\"subtle-secondary\">Subtle Secondary</IxButton>\n<IxButton variant=\"subtle-tertiary\">Subtle Tertiary</IxButton>\n<IxButton variant=\"danger-primary\">Danger</IxButton>\n<IxButton variant=\"danger-secondary\">Danger Secondary</IxButton>\n<IxButton variant=\"danger-tertiary\">Danger Tertiary</IxButton>\n\nWith icon:\n<IxButton icon=\"star\">Favourite</IxButton>\n<IxButton icon-right=\"chevron-right\">Next</IxButton>\n\nDisabled:\n<IxButton :disabled=\"true\">Disabled</IxButton>\n\nLoading:\n<IxButton :loading=\"isLoading\">Saving</IxButton>"
+  },
+  {
+    "title": "IxButton – Web Components / HTML Code",
+    "keywords": ["ix button web components", "ix button html", "ix button javascript", "ixbutton vanilla", "button code web components", "how to use ix button in html", "plain javascript button", "vanilla js button"],
+    "content": "IxButton code for Web Components (Vanilla JS / HTML):\n\nInstall: npm install @siemens/ix @siemens/ix-icons\n\nIn main.js:\nimport '@siemens/ix/dist/siemens-ix/siemens-ix.css';\nimport { defineCustomElements } from '@siemens/ix/loader';\nimport { defineCustomElements as defineIxIconCustomElement } from '@siemens/ix-icons/loader';\ndefineIxIconCustomElement();\ndefineCustomElements();\n\nIn HTML:\n<ix-button>Click me</ix-button>\n<ix-button variant=\"primary\">Primary</ix-button>\n<ix-button variant=\"secondary\">Secondary</ix-button>\n<ix-button variant=\"tertiary\">Tertiary</ix-button>\n<ix-button variant=\"subtle-primary\">Subtle Primary</ix-button>\n<ix-button variant=\"subtle-secondary\">Subtle Secondary</ix-button>\n<ix-button variant=\"subtle-tertiary\">Subtle Tertiary</ix-button>\n<ix-button variant=\"danger-primary\">Danger</ix-button>\n<ix-button variant=\"danger-secondary\">Danger Secondary</ix-button>\n<ix-button variant=\"danger-tertiary\">Danger Tertiary</ix-button>\n\nWith icon:\n<ix-button icon=\"star\">Favourite</ix-button>\n<ix-button icon-right=\"chevron-right\">Next</ix-button>\n\nDisabled:\n<ix-button disabled>Disabled</ix-button>\n\nLoading:\n<ix-button loading>Saving...</ix-button>\n\nSubmit:\n<ix-button type=\"submit\">Submit</ix-button>\n\nLink:\n<ix-button href=\"https://example.com\" target=\"_blank\">Open</ix-button>"
+  },
+  {
+    "title": "IxButton – All Frameworks Code",
+    "keywords": ["ix button all frameworks", "ix button code all", "button code for all frameworks", "ix button in all languages", "show ix button code", "ix button examples", "ix button snippet", "button snippet all frameworks", "code for ixbutton", "code for ix button"],
+    "content": "Here is the IxButton code for ALL frameworks:\n\n--- REACT ---\nimport { IxButton } from '@siemens/ix-react';\n<IxButton variant=\"primary\">Primary</IxButton>\n<IxButton variant=\"secondary\">Secondary</IxButton>\n<IxButton variant=\"tertiary\">Tertiary</IxButton>\n<IxButton variant=\"danger-primary\">Danger</IxButton>\n<IxButton icon=\"star\" variant=\"primary\">With Icon</IxButton>\n<IxButton disabled>Disabled</IxButton>\n<IxButton loading>Loading</IxButton>\n\n--- ANGULAR ---\n// app.module.ts: import { IxModule } from '@siemens/ix-angular'; imports: [IxModule.forRoot()]\n// OR standalone: import { IxButton } from '@siemens/ix-angular/standalone'\n<ix-button variant=\"primary\">Primary</ix-button>\n<ix-button variant=\"secondary\">Secondary</ix-button>\n<ix-button variant=\"tertiary\">Tertiary</ix-button>\n<ix-button variant=\"danger-primary\">Danger</ix-button>\n<ix-button icon=\"star\">With Icon</ix-button>\n<ix-button [disabled]=\"isDisabled\">Disabled</ix-button>\n<ix-button [loading]=\"isLoading\">Loading</ix-button>\n\n--- VUE ---\nimport { IxButton } from '@siemens/ix-vue';\n<IxButton variant=\"primary\">Primary</IxButton>\n<IxButton variant=\"secondary\">Secondary</IxButton>\n<IxButton variant=\"tertiary\">Tertiary</IxButton>\n<IxButton variant=\"danger-primary\">Danger</IxButton>\n<IxButton icon=\"star\">With Icon</IxButton>\n<IxButton :disabled=\"true\">Disabled</IxButton>\n<IxButton :loading=\"isLoading\">Loading</IxButton>\n\n--- WEB COMPONENTS (HTML) ---\n// main.js: import { defineCustomElements } from '@siemens/ix/loader'; defineCustomElements();\n<ix-button variant=\"primary\">Primary</ix-button>\n<ix-button variant=\"secondary\">Secondary</ix-button>\n<ix-button variant=\"tertiary\">Tertiary</ix-button>\n<ix-button variant=\"danger-primary\">Danger</ix-button>\n<ix-button icon=\"star\">With Icon</ix-button>\n<ix-button disabled>Disabled</ix-button>\n<ix-button loading>Loading</ix-button>"
+  },
+  {
+    "title": "IxIconButton – All Frameworks Code",
+    "keywords": ["ix icon button", "icon button code", "ixiconbutton", "icon only button", "ix-icon-button", "icon button all frameworks", "icon button react", "icon button angular", "icon button vue", "icon button html"],
+    "content": "IxIconButton (icon-only button) code for all frameworks:\n\nAPI properties: icon (icon name), variant (primary/secondary/tertiary/subtle-primary/subtle-secondary/subtle-tertiary/danger-primary/danger-secondary/danger-tertiary), size (12/16/24, default 24), oval (boolean, round shape), disabled, loading, ghost, outline.\n\n--- REACT ---\nimport { IxIconButton } from '@siemens/ix-react';\n<IxIconButton icon=\"star\" variant=\"primary\"></IxIconButton>\n<IxIconButton icon=\"trash\" variant=\"danger-primary\"></IxIconButton>\n<IxIconButton icon=\"settings\" size=\"16\"></IxIconButton>\n<IxIconButton icon=\"search\" oval></IxIconButton>\n<IxIconButton icon=\"save\" disabled></IxIconButton>\n\n--- ANGULAR ---\n<ix-icon-button icon=\"star\" variant=\"primary\"></ix-icon-button>\n<ix-icon-button icon=\"trash\" variant=\"danger-primary\"></ix-icon-button>\n<ix-icon-button icon=\"settings\" size=\"16\"></ix-icon-button>\n<ix-icon-button icon=\"search\" oval></ix-icon-button>\n<ix-icon-button icon=\"save\" [disabled]=\"true\"></ix-icon-button>\n\n--- VUE ---\nimport { IxIconButton } from '@siemens/ix-vue';\n<IxIconButton icon=\"star\" variant=\"primary\" />\n<IxIconButton icon=\"trash\" variant=\"danger-primary\" />\n<IxIconButton icon=\"settings\" size=\"16\" />\n<IxIconButton icon=\"search\" :oval=\"true\" />\n\n--- WEB COMPONENTS (HTML) ---\n<ix-icon-button icon=\"star\" variant=\"primary\"></ix-icon-button>\n<ix-icon-button icon=\"trash\" variant=\"danger-primary\"></ix-icon-button>\n<ix-icon-button icon=\"settings\" size=\"16\"></ix-icon-button>\n<ix-icon-button icon=\"search\" oval></ix-icon-button>"
+  },
+  {
+    "title": "IxToggleButton – All Frameworks Code",
+    "keywords": ["ix toggle button", "toggle button code", "ixtogglebutton", "ix-toggle-button", "toggle button all frameworks", "toggle button react", "toggle button angular", "toggle button vue", "toggle button html", "pressed button"],
+    "content": "IxToggleButton (activate/deactivate a function) code for all frameworks:\n\nAPI properties: variant (secondary/tertiary/subtle-secondary/subtle-tertiary, default subtle-primary), pressed (boolean, shows active toggled state), icon, icon-right, disabled, loading.\nEvent: pressedChange (emits boolean).\n\n--- REACT ---\nimport { IxToggleButton } from '@siemens/ix-react';\nimport { useState } from 'react';\nconst [pressed, setPressed] = useState(false);\n<IxToggleButton variant=\"secondary\" pressed={pressed} onPressedChange={(e) => setPressed(e.detail)}>Bold</IxToggleButton>\n<IxToggleButton variant=\"tertiary\" icon=\"star\">Favourite</IxToggleButton>\n<IxToggleButton variant=\"subtle-secondary\" disabled>Disabled</IxToggleButton>\n\n--- ANGULAR ---\n<ix-toggle-button variant=\"secondary\" [pressed]=\"isBold\" (pressedChange)=\"isBold = $event\">Bold</ix-toggle-button>\n<ix-toggle-button variant=\"tertiary\" icon=\"star\">Favourite</ix-toggle-button>\n<ix-toggle-button variant=\"subtle-secondary\" [disabled]=\"true\">Disabled</ix-toggle-button>\n\n--- VUE ---\nimport { IxToggleButton } from '@siemens/ix-vue';\n<IxToggleButton variant=\"secondary\" :pressed=\"isBold\" @pressedChange=\"isBold = $event\">Bold</IxToggleButton>\n<IxToggleButton variant=\"tertiary\" icon=\"star\">Favourite</IxToggleButton>\n\n--- WEB COMPONENTS (HTML) ---\n<ix-toggle-button variant=\"secondary\" id=\"boldBtn\">Bold</ix-toggle-button>\n<script>\n  const btn = document.getElementById('boldBtn');\n  btn.addEventListener('pressedChange', (e) => console.log('pressed:', e.detail));\n</script>"
+  },
+  {
+    "title": "Forms",
+    "keywords": ["form", "forms", "form field", "form layout", "form validation", "form behavior", "input form"],
+    "content": "Siemens iX provides a complete forms system: Forms field — a form element for user input, typically used in a fieldset; Forms layout — covers hierarchy of information and structure for usability; Forms validation — gives users feedback to ensure accurate data is submitted; Forms behavior — handles how user input is processed and validated for a seamless experience."
+  },
+  {
+    "title": "Input Fields and Selections",
+    "keywords": ["input", "text input", "number input", "checkbox", "radio", "select", "dropdown", "toggle", "slider", "textarea", "date picker", "time picker", "upload"],
+    "content": "iX input components include: Input — single-line text and character input; Textarea — multi-line text input; Number input — for numerical values; Checkbox — select none, one or more options; Radio — select only one from exclusive options; Select — choose from a list; Slider — select a value in a range; Toggle — on/off switch; Date input/picker — select dates; Date-time picker — select date and time; Time picker — select specific times; Upload — drag-and-drop file upload; Expanding search — expands on click to save space; Category filter — narrow search by predefined categories."
+  },
+  {
+    "title": "Color Palette and Theming",
+    "keywords": ["color", "colors", "theme", "theming", "color palette", "background color", "text color", "status color", "border color", "chart color", "css variables"],
+    "content": "iX colors are provided as CSS custom properties, accessible via var(). Categories include: Background colors (--theme-color-0 to --theme-color-8, for non-interactive backgrounds); Component & interaction colors (--theme-color-primary, --theme-color-dynamic, --theme-color-component-1 through -11, ghost colors for hover/active states); Status colors — Alarm (--theme-color-alarm), Critical, Warning, Success, Info, Neutral (each with -40 and -10 variants); Text colors (--theme-color-std-text, --theme-color-soft-text, --theme-color-weak-text, --theme-color-alarm-text); Border colors (--theme-color-std-bdr, --theme-color-soft-bdr, etc.); Chart colors (--theme-chart-1 through --theme-chart-17, each with a -40 opacity variant)."
+  },
+  {
+    "title": "Icons",
+    "keywords": ["icon", "icons", "icon library", "icon usage", "ix icons", "siemens icons"],
+    "content": "Siemens iX comes with an extensive icon library designed for industrial contexts. Icons are available in regular and filled variants and are packaged in @siemens/ix-icons. They are intended as in-app icons for UI elements, not as application logos. Install via: npm install @siemens/ix-icons and register with defineCustomElements from @siemens/ix-icons/loader. Icons cover a wide range including actions, status indicators, devices, charts, navigation, files, and many more industrial-specific icons."
+  },
+  {
+    "title": "Guidelines Overview",
+    "keywords": ["guidelines", "design guidelines", "ux guidelines", "design principles", "best practices", "accessibility", "responsive", "ux writing"],
+    "content": "Siemens iX design guidelines cover: Design Principles — four principles: Simplify for clarity, Design for flexibility, Empower users, Build for humans; Accessibility — ensuring products are usable by everyone, complying with standards like WCAG; Responsive Design — building mobile and adaptive web/hybrid apps using the design system; UX Writing — a writing style guide for consistent and clear industrial product content; Conversational Design — guidelines for designing intuitive chatbot interactions; CLI Design — guidelines for creating consistent and clear CLI commands."
+  },
+  {
+    "title": "Accessibility",
+    "keywords": ["accessibility", "wcag", "a11y", "screen reader", "inclusive design", "accessible"],
+    "content": "Accessibility in Siemens iX ensures digital products are usable by everyone, including people with disabilities. The design system is built to meet WCAG standards, enhancing the overall user experience. The guidelines section provides detailed instructions on how to make designs and implementations accessible to all users. For details, see https://ix.siemens.io/docs/guidelines/accessibility/overview"
+  },
+  {
+    "title": "Charts",
+    "keywords": ["chart", "charts", "line chart", "bar chart", "gauge chart", "pie chart", "3d chart", "data visualization", "echarts"],
+    "content": "Siemens iX provides chart components for data visualization: Line chart — visualizes trends over time with connected data points; Bar chart — compares values across categories using rectangular bars; Gauge chart — displays a single value within a range using a dial/needle, ideal for KPIs; Pie chart — visualizes parts of a whole using circular slices; 3D chart — provides immersive 3D data visualization; Special chart — covers advanced ECharts chart types and features. Charts use the iX color palette (--theme-chart-1 through --theme-chart-17) for consistent styling."
+  },
+  {
+    "title": "Navigation Components",
+    "keywords": ["navigation", "breadcrumb", "tabs", "tree", "pagination", "workflow", "menu", "application menu"],
+    "content": "iX navigation components include: Breadcrumb — shows clear navigation path within an application; Group — expandable containers for lists of selectable options; Pagination — navigate between pages of content; Tabs — organize content into sections by grouping similar information; Tree — displays hierarchical data with expand/collapse nodes; Workflow — guides users through a series of logical steps; Application menu — main navigation for application parts, legal info, and settings."
+  },
+  {
+    "title": "Modals and Overlays",
+    "keywords": ["modal", "dialog", "drawer", "pane", "overlay", "popup", "popover"],
+    "content": "iX overlay components include: Modal — presents information prominently for gathering essential user input without navigation; Drawer — opens on button click to show additional content; Panes — interactive components for content not constantly visible on screen; Popover news — presents important updates on application start; Settings overlay — centralized location for application settings; About and legal — overlay for app info, versions, license terms, and legal content."
+  },
+  {
+    "title": "Toast, Spinner and Feedback",
+    "keywords": ["toast", "spinner", "progress", "loading", "feedback", "notification", "message bar", "empty state", "pill", "tooltip"],
+    "content": "iX feedback components include: Toast — small pop-ups for simple process feedback; Spinner — indicates a running process; Progress indicator — shows status of ongoing processes (loading, submitting); Message bar — displays important info, warnings or errors; Pill — small pieces of info like counters or statuses; Empty state — informs users there is no content to display; Tooltip — additional information shown on hover or focus."
+  },
+  {
+    "title": "Data Display and Tables",
+    "keywords": ["table", "data grid", "ag grid", "key value", "kpi", "data display", "html table"],
+    "content": "iX data display components include: Angular data grid — AG Grid integrated into the design system for powerful tabular data with full iX styling; HTML table — structured tabular data display; Key value — displays a label and value in a structured way; Key value list — organizes a series of key-value pairs; KPI — displays measured values with a status indicator to help users interpret data."
+  },
+  {
+    "title": "Contribute to Siemens iX",
+    "keywords": ["contribute", "contribution", "github", "open source", "community", "feedback", "issue", "pull request"],
+    "content": "Siemens iX is open-source and welcomes contributions from the community. Send feedback, questions and contributions via GitHub at https://github.com/siemens/ix. If unsure where to start, check the repository issues or open a discussion. The iX community is also available at https://community.siemens.com/c/ix and the Siemens Xcelerator Developer Portal at https://developer.siemens.com/."
+  },
+  {
+    "title": "Responsive and Mobile Design",
+    "keywords": ["responsive", "mobile", "mobile app", "hybrid app", "screen size", "adaptive design", "mobile web"],
+    "content": "Siemens iX supports building mobile applications jointly with web technology. Use the design system to build the UI of mobile web apps or hybrid apps. The iX guidelines cover best practices for creating designs that work seamlessly across different devices and screen sizes. For details, see https://ix.siemens.io/docs/guidelines/mobile/mobile-app-dev"
+  }
+]
