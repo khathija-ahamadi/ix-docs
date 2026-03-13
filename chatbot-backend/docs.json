@@ -1,43 +1,288 @@
 [
   {
     "title": "Overview of Siemens Industrial Experience (iX)",
-    "keywords": ["what is ix", "siemens ix", "siemens industrial experience", "design system", "overview", "about ix", "what is siemens ix"],
-    "content": "Siemens Industrial Experience (iX) is an open-source design system for designers and developers to consistently create the perfect digital experience for partners and customers within industrial contexts. It gives access to a broad range of UI patterns, web-based code implementations, design tools, resources and content guidelines to accelerate collaboration between designers, developers and writers, helping to build efficient and consistent products."
+    "keywords": ["what is ix", "siemens ix", "siemens industrial experience", "design system", "overview", "about ix", "what is siemens ix", "introduction", "getting started", "what does ix do"],
+    "content": "Siemens Industrial Experience (iX) is an open-source design system for designers and developers to consistently create the perfect digital experience for partners and customers within industrial contexts. It gives access to a broad range of UI patterns, web-based code implementations, design tools, resources and content guidelines to accelerate collaboration between designers, developers and writers, helping to build efficient and consistent products. iX supports React, Angular, Vue and vanilla Web Components. The official documentation is at https://ix.siemens.io/. The source code is on GitHub at https://github.com/siemens/ix."
   },
   {
     "title": "Install iX with React",
-    "keywords": ["react", "install react", "react setup", "react installation", "ix react", "siemens react"],
-    "content": "To install Siemens iX in a React project, run: npm install @siemens/ix @siemens/ix-react @siemens/ix-icons. Then import the styles in your global stylesheet: @import '@siemens/ix/dist/siemens-ix/siemens-ix.css';"
+    "keywords": ["react", "install react", "react setup", "react installation", "ix react", "siemens react", "react getting started", "react project setup"],
+    "content": "To install Siemens iX in a React project, run: npm install @siemens/ix @siemens/ix-react @siemens/ix-icons. Then import the styles in your global stylesheet or index.js: import '@siemens/ix/dist/siemens-ix/siemens-ix.css'; Import components like: import { IxButton } from '@siemens/ix-react'; Use them as JSX: <IxButton variant=\"primary\">Click me</IxButton>. For details, see https://ix.siemens.io/docs/installation/react"
   },
   {
     "title": "Install iX with Angular",
-    "keywords": ["angular", "install angular", "angular setup", "angular installation", "ix angular", "siemens angular"],
-    "content": "To install Siemens iX in an Angular project, first ensure peer dependencies @angular/core and @angular/forms (>=18.2.13) are installed. Then run: npm install @siemens/ix @siemens/ix-angular @siemens/ix-icons. Import styles in your global stylesheet (e.g. src/styles.scss): @import '@siemens/ix/dist/siemens-ix/siemens-ix.css'. For standalone setup, import iX components directly from @siemens/ix-angular/standalone. For module setup, import IxModule and BrowserAnimationsModule in your AppModule."
+    "keywords": ["angular", "install angular", "angular setup", "angular installation", "ix angular", "siemens angular", "angular getting started", "angular project setup"],
+    "content": "To install Siemens iX in an Angular project, first ensure peer dependencies @angular/core and @angular/forms (>=18.2.13) are installed. Then run: npm install @siemens/ix @siemens/ix-angular @siemens/ix-icons. Import styles in your global stylesheet (e.g. src/styles.scss): @import '@siemens/ix/dist/siemens-ix/siemens-ix.css'. For standalone setup, import iX components directly from @siemens/ix-angular/standalone, e.g. import { IxButton } from '@siemens/ix-angular/standalone'. For module setup, import IxModule in AppModule: import { IxModule } from '@siemens/ix-angular'; @NgModule({ imports: [IxModule.forRoot()] }). Then use in templates: <ix-button variant=\"primary\">Click me</ix-button>. For details, see https://ix.siemens.io/docs/installation/angular"
   },
   {
     "title": "Install iX with Vue",
-    "keywords": ["vue", "install vue", "vue setup", "vue installation", "ix vue", "siemens vue"],
-    "content": "To install Siemens iX in a Vue project, run: npm install @siemens/ix @siemens/ix-vue @siemens/ix-icons. Then in your main.js, import the styles and register the plugin: import '@siemens/ix/dist/siemens-ix/siemens-ix.css'; import { ixPlugin } from '@siemens/ix-vue'; app.use(ixPlugin);"
+    "keywords": ["vue", "install vue", "vue setup", "vue installation", "ix vue", "siemens vue", "vue getting started", "vue project setup"],
+    "content": "To install Siemens iX in a Vue project, run: npm install @siemens/ix @siemens/ix-vue @siemens/ix-icons. Then in your main.js, import the styles and register the plugin: import '@siemens/ix/dist/siemens-ix/siemens-ix.css'; import { createApp } from 'vue'; import { ixPlugin } from '@siemens/ix-vue'; import App from './App.vue'; const app = createApp(App); app.use(ixPlugin); app.mount('#root'); In your component: import { IxButton } from '@siemens/ix-vue'; Use as: <IxButton variant=\"primary\">Click me</IxButton>. For details, see https://ix.siemens.io/docs/installation/vue"
   },
   {
     "title": "Install iX with Web Components",
-    "keywords": ["web components", "javascript", "vanilla js", "plain javascript", "web component setup", "ix web components"],
-    "content": "To install Siemens iX as web components (vanilla JS), run: npm install @siemens/ix @siemens/ix-icons. In your main.js, import the styles and register the loaders: import '@siemens/ix/dist/siemens-ix/siemens-ix.css'; import { defineCustomElements } from '@siemens/ix/loader'; import { defineCustomElements as defineIxIconCustomElement } from '@siemens/ix-icons/loader'; defineIxIconCustomElement(); defineCustomElements(); You can use tools like Vite to build and serve the app."
+    "keywords": ["web components", "javascript", "vanilla js", "plain javascript", "web component setup", "ix web components", "html setup", "vanilla javascript"],
+    "content": "To install Siemens iX as web components (vanilla JS), run: npm install @siemens/ix @siemens/ix-icons. In your main.js, import the styles and register the loaders: import '@siemens/ix/dist/siemens-ix/siemens-ix.css'; import { defineCustomElements } from '@siemens/ix/loader'; import { defineCustomElements as defineIxIconCustomElement } from '@siemens/ix-icons/loader'; defineIxIconCustomElement(); defineCustomElements(); You can use tools like Vite to build and serve the app. Then use in HTML: <ix-button variant=\"primary\">Click me</ix-button>. For details, see https://ix.siemens.io/docs/installation/javascript"
   },
   {
     "title": "Figma Library",
-    "keywords": ["figma", "figma library", "design library", "figma access", "design tokens", "figma components"],
-    "content": "The Siemens iX Figma library contains all tokens, components and blueprints ready for app design. Siemens employees with a Figma license can search for 'iX Design System' in the Siemens AG Global Figma account. Guest access and the classic open-source library are available upon request — contact the iX team. The library includes Siemens brand assets and Figma variables for easy theming. See the 'Designing with themes' documentation for details."
+    "keywords": ["figma", "figma library", "design library", "figma access", "design tokens", "figma components", "figma variables", "design tool"],
+    "content": "The Siemens iX Figma library contains all tokens, components and blueprints ready for app design. Siemens employees with a Figma license can search for 'iX Design System' in the Siemens AG Global Figma account. Guest access and the classic open-source library are available upon request — contact the iX team. The library includes Siemens brand assets and Figma variables for easy theming. See the 'Designing with themes' documentation for details. For access, visit https://ix.siemens.io/docs/home/figma-library"
   },
   {
     "title": "Components Overview",
-    "keywords": ["components", "component list", "all components", "ui components", "available components", "component overview"],
-    "content": "Siemens iX components are organized into categories: Application Frame (Application, Application header, Application menu, Avatar, Content, Content header, About & legal, Settings, Popover news); Navigation (Breadcrumb, Group, Pagination, Tabs, Tree, Workflow); Containers & Layouts (Blind, Card, Card list, Flip, Event list, Drawer, Layout auto, Layout grid, Modal, Panes, Tile); Forms (Forms field, Forms layout, Forms validation, Forms behavior); Input fields (Category filter, Checkbox, Date dropdown, Date input, Date picker, Date-time picker, Expanding search, Number input, Radio, Select, Slider, Input, Textarea, Time picker, Toggle, Upload); Buttons & Actions (Button, Dropdown button, Icon button, Link button, Split button, Toggle button, Chip); System feedback (Empty state, Message bar, Pill, Progress indicator, Spinner, Toast, Tooltip); Data display (AG Grid, HTML table, Key value, Key value list, KPI); Charts (Line, Bar, Gauge, Pie, 3D, Special charts)."
+    "keywords": ["components", "component list", "all components", "ui components", "available components", "component overview", "component categories", "what components are available"],
+    "content": "Siemens iX components are organized into categories: Application Frame (Application, Application header, Application menu, Avatar, Content, Content header, About & legal, Settings, Popover news); Navigation and Hierarchy (Breadcrumb, Group, Pagination, Tabs, Tree, Workflow); Containers and Layouts (Blind, Card, Card list, Flip, Event list, Drawer, Layout auto, Layout grid, Modal, Panes, Tile); Forms (Forms field, Forms layout, Forms validation, Forms behavior); Input Fields and Selections (Category filter, Checkbox, Custom field, Date dropdown, Date input, Date picker, Date-time picker, Expanding search, Number input, Radio, Select, Slider, Input, Textarea, Time picker, Toggle, Upload); Buttons and Actions (Button, Dropdown button, Icon button, Link button, Split button, Toggle button, Chip); System Feedback and Status (Empty state, Message bar, Pill, Progress indicator, Spinner, Toast, Tooltip); Data Display (Angular data grid / AG Grid, HTML table, Key value, Key value list, KPI); Charts (Chart overview, Line chart, Bar chart, Gauge chart, Pie chart, 3D chart, Special chart). Full overview at https://ix.siemens.io/docs/components/overview"
+  },
+  {
+    "title": "Application Component",
+    "keywords": ["application", "ix-application", "app layout", "app component", "application frame", "app breakpoints", "application setup", "responsive layout"],
+    "content": "The Application component (ix-application) is a technical and infrastructural component that manages the layout and theming of top-level app elements, ensuring a cohesive user experience. It acts as a centralized hub for configuring aspects like screen breakpoints, theming and app switch configuration. It works with Application header, Application menu, and Content components. The application component automatically adapts to three breakpoints: 'lg' for large screens (min-width 62em), 'md' for medium screens (min-width 48em), 'sm' for small screens (min-width 36em). You can force a specific breakpoint using the forceBreakpoint option. The Application Switch feature allows users to navigate across related applications via a modal with available application list. For details, see https://ix.siemens.io/docs/components/application"
+  },
+  {
+    "title": "Application Header",
+    "keywords": ["application header", "app header", "ix-application-header", "header", "logo", "app name", "avatar", "application switch"],
+    "content": "The Application Header (ix-application-header) provides a structured area for essential elements such as company logo and application name, while allowing flexibility through optional elements. In its simplest version, headers show the company logo (colored at runtime based on theme if provided as SVG with currentcolor) and the application name. Options include: Avatar (indicates logged-in user with dropdown for actions like logout), Application switch (opens modal with available apps), Application icon (visual representation of the app), Suffix (additional context like 'powered by Siemens'), Slot for right-aligned content (mode switching, global search, context info), Secondary slot for left-aligned content (toolbars, navigation tabs), Borderless mode, Window controls for Electron-like apps. At breakpoint 'sm', the menu becomes a hamburger icon, logo adapts, and slots move into an overflow dropdown. Dos: keep the header clean and lean, test all breakpoints. Don'ts: overload slots, use avatar without user profiles. For details, see https://ix.siemens.io/docs/components/application-header"
+  },
+  {
+    "title": "Application Menu",
+    "keywords": ["application menu", "navigation menu", "ix-menu", "sidebar", "side navigation", "menu items", "menu category", "app menu"],
+    "content": "The Application Menu (ix-menu / navigation menu) provides direct access to main application parts, legal and version information, and settings. It has a main navigation section and a bottom section. Features include: expand/collapse with icon button, selected item highlighting, item notifications (number badges), second level navigation via menu categories, Settings overlay toggle, theme toggle (light/dark mode), custom bottom items, and About & legal. Menu items support icon, label, notification count, selected state, and custom tooltip text. The menu expands and collapses with transitions, items overflow with vertical scroll. On hover, tooltips show the item label. Bottom section items (settings, theme toggle) do not navigate away from current content. States: collapsed and expanded. Dos: use icons in second-level navigation when helpful, use custom tooltip for long labels. Don'ts: mix items with and without icons in same level, place navigational items in bottom section. For details, see https://ix.siemens.io/docs/components/application-menu"
+  },
+  {
+    "title": "Avatar",
+    "keywords": ["avatar", "user avatar", "profile picture", "ix-avatar", "user icon", "logged in user"],
+    "content": "Avatars (ix-avatar) visually or textually represent individual identities, typically for users logged into a system. Avatars are commonly placed in the application header. Clicking the avatar opens a dropdown with additional user information and actions such as log out or user profile. If the application does not support multiple users or user profiles, do not use the avatar. For applications that allow usage without login, you can show a login button in the header slot and hide the avatar, or display the avatar with a placeholder image and provide login-related information in the dropdown. For details, see https://ix.siemens.io/docs/components/avatar"
+  },
+  {
+    "title": "Content Component",
+    "keywords": ["content", "ix-content", "content area", "content component", "page content", "main content"],
+    "content": "The Content component (ix-content) is a simple layout component made for hosting content. It provides the main content area of the application, typically used alongside the Application, Application header, and Application menu components. For details, see https://ix.siemens.io/docs/components/content"
+  },
+  {
+    "title": "Content Header",
+    "keywords": ["content header", "page header", "ix-content-header", "page title", "content title"],
+    "content": "Content headers (ix-content-header) provide a brief overview of the content on a page. They offer a structured way to display page titles and related actions at the top of the content area. For details, see https://ix.siemens.io/docs/components/content-header"
+  },
+  {
+    "title": "About and Legal",
+    "keywords": ["about and legal", "about", "legal", "license", "version info", "copyright", "ix-about-and-legal"],
+    "content": "The About and Legal component (ix-about-and-legal) is an overlay typically used to show application information, application versions, license terms, legal regulations, copyright information and other legal content. It is usually accessed from the bottom section of the Application Menu. For details, see https://ix.siemens.io/docs/components/about-and-legal"
+  },
+  {
+    "title": "Settings",
+    "keywords": ["settings", "settings overlay", "ix-settings", "preferences", "application settings", "app settings"],
+    "content": "The Settings component (ix-settings) provides a centralized location for application settings. It opens as an overlay from the bottom section of the Application Menu. Use it for configuration options like language, notification preferences, and other user-level settings. For details, see https://ix.siemens.io/docs/components/settings"
+  },
+  {
+    "title": "Popover News",
+    "keywords": ["popover news", "news", "updates", "announcements", "ix-popover-news", "whats new"],
+    "content": "Popover News (ix-popover-news) presents important updates and information when the application starts. It is typically used to notify users of new features, changes, or announcements. It appears in the application header area. For details, see https://ix.siemens.io/docs/components/popover-news"
+  },
+  {
+    "title": "Breadcrumb",
+    "keywords": ["breadcrumb", "navigation path", "ix-breadcrumb", "breadcrumb navigation", "page path", "navigation trail"],
+    "content": "Breadcrumbs (ix-breadcrumb) provide a clear navigation path within an application. They allow users to track their location and navigate to previous or child pages. Breadcrumb items are interactive — users navigate by pressing items. Options include: subtle/solid appearance, icon support, show child items on last item (dropdown with child pages), visible item count customization. Behavior: location-based population reflecting app hierarchy, overflow into dropdown menu with ellipsis, text truncation, placed at top left below header and above page title. States: default, hover, active, focused. Dos: label each item, use single-line text. Don'ts: use for multistep processes (use Workflow instead), show multiple breadcrumbs on one screen. For details, see https://ix.siemens.io/docs/components/breadcrumb"
+  },
+  {
+    "title": "Group",
+    "keywords": ["group", "expandable group", "ix-group", "selectable options", "option group", "collapsible group"],
+    "content": "Groups (ix-group) are expandable containers for a list of selectable options. They allow users to organize and interact with grouped content. For details, see https://ix.siemens.io/docs/components/group"
+  },
+  {
+    "title": "Pagination",
+    "keywords": ["pagination", "page navigation", "ix-pagination", "page numbers", "paging", "navigate pages"],
+    "content": "Paginations (ix-pagination) allow users to navigate between pages of content when it is split for performance reasons. Use pagination for large data sets that are divided across multiple pages. For details, see https://ix.siemens.io/docs/components/pagination"
+  },
+  {
+    "title": "Tabs",
+    "keywords": ["tabs", "tab", "ix-tabs", "tab item", "ix-tab-item", "tab navigation", "tab bar", "rounded tabs"],
+    "content": "Tabs (ix-tabs / ix-tab-item) organize content into separate sections by grouping similar information. Properties for ix-tabs: layout ('auto' or 'stretched'), placement ('bottom' or 'top'), rounded (boolean), selected (default tab index), small (small size). Properties for ix-tab-item: counter (number), disabled (boolean), icon (icon-only tab), layout, placement, rounded, selected, small. Events: selectedChange (on ix-tabs emits new index), tabClick (on ix-tab-item). Example: <ix-tabs selected=\"0\"><ix-tab-item>Tab 1</ix-tab-item><ix-tab-item>Tab 2</ix-tab-item></ix-tabs>. For details, see https://ix.siemens.io/docs/components/tabs"
+  },
+  {
+    "title": "Tree",
+    "keywords": ["tree", "tree view", "ix-tree", "hierarchical", "expand collapse", "tree navigation", "tree structure"],
+    "content": "Trees (ix-tree) display hierarchical data structures and allow users to navigate by expanding and collapsing nodes. Use trees for file system structures, organizational charts, or nested data. For details, see https://ix.siemens.io/docs/components/tree"
+  },
+  {
+    "title": "Workflow",
+    "keywords": ["workflow", "stepper", "wizard", "ix-workflow", "steps", "process", "multi step"],
+    "content": "Workflows (ix-workflow) are a series of logical steps that guide users through a process. Use workflows for multi-step processes like onboarding, form wizards, or configuration flows. Don't use breadcrumbs for multistep processes — use Workflow instead. For details, see https://ix.siemens.io/docs/components/workflow"
+  },
+  {
+    "title": "Blind (Accordion)",
+    "keywords": ["blind", "accordion", "collapsible", "ix-blind", "expand collapse", "toggle visibility", "collapsible section"],
+    "content": "Blinds (ix-blind) enhance content organization by allowing users to toggle visibility through collapsing and expanding sections. They consist of a header section (with chevron and label) and a content section. Multiple blinds stacked create an accordion (recommended gap 0.5rem). Variants: filled (default), outline (lower emphasis), primary (high emphasis), and state-related (alarm, critical, warning, success, info, neutral). Options: icon, sublabel, header action area (for buttons like delete). Behavior: click header to expand/collapse, content below moves down. States: default, hover, active, focused. Dos: use 3-7 blinds per accordion. Don'ts: multi-line header text, change chevron position, use single blind alone, use for hierarchical files (use Tree instead). For details, see https://ix.siemens.io/docs/components/blind"
+  },
+  {
+    "title": "Card",
+    "keywords": ["card", "ix-card", "card component", "action card", "push card", "card variants", "dashboard card"],
+    "content": "Cards (ix-card) neatly organize and group related information about a specific subject. Three types: Cards (flexible content like images, charts, key data), Action cards (trigger key actions like buttons), Push cards (display notifications with expandable content). Variants: outline (default, balanced), filled, alarm, critical, warning, success, info, neutral, primary. Options: selected state, content area (padding 1rem recommended), icon (for action/push cards), notification value (push cards), heading, subheading, expandable content (push cards). Behavior: entire card container is interactive, default fixed width/height (manual adjustment for overflow), group in grids or card lists, position top-left. States: default, hover, active, focused. Dos: group in card lists or grids, keep equal sizes. Don'ts: nest cards, use for user input. For details, see https://ix.siemens.io/docs/components/card"
+  },
+  {
+    "title": "Card List",
+    "keywords": ["card list", "ix-card-list", "card grid", "card collection", "multiple cards"],
+    "content": "Card lists (ix-card-list) display a large number of cards or items of the same type in a lightweight, grouped manner. Use card lists alongside layout grids for responsive card arrangements. For details, see https://ix.siemens.io/docs/components/card-list"
+  },
+  {
+    "title": "Flip",
+    "keywords": ["flip", "flip card", "ix-flip", "flip container", "two sided card"],
+    "content": "Flips (ix-flip) are containers that flip when clicked to reveal additional content. They provide a two-sided interaction where the front shows summary information and the back reveals details. For details, see https://ix.siemens.io/docs/components/flip"
+  },
+  {
+    "title": "Event List",
+    "keywords": ["event list", "ix-event-list", "event log", "event display", "event items"],
+    "content": "Event lists (ix-event-list) display a list of any type of element with additional details. Use for logs, notifications, or any chronological/ordered data presentation. For details, see https://ix.siemens.io/docs/components/event-list"
+  },
+  {
+    "title": "Drawer",
+    "keywords": ["drawer", "ix-drawer", "side panel", "slide panel", "additional content"],
+    "content": "Drawers (ix-drawer) are containers that open on the click of a button to show additional content. They slide in from the side and overlay the main content. For details, see https://ix.siemens.io/docs/components/drawer"
+  },
+  {
+    "title": "Layout Auto",
+    "keywords": ["layout auto", "auto layout", "ix-layout-auto", "automatic layout", "responsive columns"],
+    "content": "Layout auto (ix-layout-auto) containers automatically adjust the size of their columns based on the content. Use for flexible, content-driven layouts that adapt to available space. For details, see https://ix.siemens.io/docs/components/layout-auto"
+  },
+  {
+    "title": "Layout Grid",
+    "keywords": ["layout grid", "grid layout", "ix-layout-grid", "responsive grid", "column layout", "grid system"],
+    "content": "Layout grids (ix-layout-grid) are used to structure the layout of a page or screen responsively. They provide a grid system for organizing content in columns that adapt to different screen sizes. For details, see https://ix.siemens.io/docs/components/layout-grid"
+  },
+  {
+    "title": "Modal",
+    "keywords": ["modal", "dialog", "ix-modal", "modal dialog", "popup", "modal window", "message modal", "loading modal"],
+    "content": "Modals (ix-modal) appear on top of main content, blocking interaction until the user completes an action. Custom modals present rich contextual content like forms and workflows. Components: Title, Close button, Modal header, Modal content, Modal footer. Options: centered/top alignment, size (fixed 360-840px, full width, full screen), backdrop, animation, close on backdrop click, before dismiss handler, header (title, icon with color, hide close button), footer (primary + secondary + optional tertiary button, right-aligned). Behavior: opened by system or user action, closed via close button/footer buttons/Escape/backdrop click, focus traps inside modal, scrollbar for overflow content, sticky footer recommended. States: closed, opened. Dos: provide visible close method, clear primary action, keyboard/screen-reader accessible. Don'ts: use for decisions (use Message Modal), nest modals, auto-close irreversible actions. Related: Message modal (ix-message-modal for decisions), Loading modal (ix-loading-modal for progress). For details, see https://ix.siemens.io/docs/components/modal"
+  },
+  {
+    "title": "Message Modal",
+    "keywords": ["message modal", "confirm dialog", "ix-message-modal", "confirmation", "decision modal", "alert dialog"],
+    "content": "Message modals (ix-message-modal) are used when a decision needs to be made, such as confirming a delete action or accepting terms. They present a clear message with action buttons for the user to choose from. Use message modals instead of custom modals when a decision is required. For details, see https://ix.siemens.io/docs/components/message-modal"
+  },
+  {
+    "title": "Loading Modal",
+    "keywords": ["loading modal", "ix-loading-modal", "progress modal", "loading dialog", "loading overlay"],
+    "content": "Loading modals (ix-loading-modal) indicate that a process is running and the user needs to wait. They block interaction until the process completes. For details, see https://ix.siemens.io/docs/components/loading-modal"
+  },
+  {
+    "title": "Panes",
+    "keywords": ["panes", "ix-pane", "side pane", "panel", "collapsible panel", "resizable panel"],
+    "content": "Panes (ix-pane) are interactive components that allow users to access content that isn't constantly visible on the screen. They can be expanded, collapsed, and sometimes resized. For details, see https://ix.siemens.io/docs/components/panes"
+  },
+  {
+    "title": "Tile",
+    "keywords": ["tile", "ix-tile", "tile container", "tile layout"],
+    "content": "Tiles (ix-tile) are containers that display content in a card-like format. They are similar to cards but may have different layout and interaction characteristics. For details, see https://ix.siemens.io/docs/components/tile"
+  },
+  {
+    "title": "Forms Field",
+    "keywords": ["forms field", "form field", "ix-field", "form element", "fieldset", "label", "helper text", "feedback text", "required indicator"],
+    "content": "Forms field (ix-field) is a form element used when user input is needed, typically with other form elements in a fieldset. It provides: Label (describes the input), Required indicator (asterisk for mandatory fields), Placeholder (hint about what to enter), Helper text (guidance for the user), Feedback text (validation messages like errors or success), Counter (character count for text inputs), Text alignment (start by default, end for number inputs). All input components (input, select, checkbox, etc.) use forms field attributes. For details, see https://ix.siemens.io/docs/components/forms-field"
+  },
+  {
+    "title": "Forms Layout",
+    "keywords": ["forms layout", "form layout", "form structure", "fieldset layout", "form design"],
+    "content": "Forms layout covers effective form layouts that play a crucial role in usability. Well-structured forms include fieldsets, considering the hierarchy of information, and understanding how to strike the right balance between aesthetics and functionality. It guides the arrangement of form elements for optimal user experience. For details, see https://ix.siemens.io/docs/components/forms-layout"
+  },
+  {
+    "title": "Forms Validation",
+    "keywords": ["forms validation", "form validation", "validation", "form errors", "input validation", "required field", "error message"],
+    "content": "Forms validation gives users feedback on their input to ensure accurate, consistent data is submitted. When requirements are not met or data is incorrect, it's rejected. Validation includes required field checks, format validation, range validation, and custom validation. Feedback text displays error messages with appropriate styling. Avoid validation before user exits focus. Describe errors clearly and provide expected data formats. For details, see https://ix.siemens.io/docs/components/forms-validation"
+  },
+  {
+    "title": "Forms Behavior",
+    "keywords": ["forms behavior", "form behavior", "form interaction", "form submission", "form handling"],
+    "content": "Forms behavior refers to the way in which user input is handled and validated within a form. It plays a crucial role in providing a seamless and user-friendly experience for form interactions, including how inputs are processed, submitted, and how the form responds to user actions. For details, see https://ix.siemens.io/docs/components/forms-behavior"
+  },
+  {
+    "title": "Input",
+    "keywords": ["input", "text input", "ix-input", "input field", "text field", "single line input", "form input"],
+    "content": "Input fields (ix-input) allow users to enter and edit single-line text, numbers, and other character-based symbols. Commonly used in forms, search bars and data entry areas. Anatomy: Label, Required indicator, Placeholder, Slot-end, Slot-start, Container, Helper/feedback text, Counter. Options: label, slot options (add icons/buttons at start/end of input, e.g. visibility toggle in password field), placeholder, text alignment (start by default), helper text, counter, feedback text. Behavior: click to enable editing, text truncation at container width, left-aligned (right only for number inputs). States: default, focused, hover, disabled, read-only. Dos: use helper text for guidance, feedback text for status, appropriate width. Don'ts: overcrowd with elements, use placeholders as label substitutes. For details, see https://ix.siemens.io/docs/components/input"
+  },
+  {
+    "title": "Number Input",
+    "keywords": ["number input", "ix-number-input", "numeric input", "number field", "quantity input"],
+    "content": "Number inputs (ix-number-input) allow users to enter and adjust numerical values. They are right-aligned by default and may include stepper buttons for incrementing/decrementing values. For details, see https://ix.siemens.io/docs/components/input-number"
+  },
+  {
+    "title": "Textarea",
+    "keywords": ["textarea", "ix-textarea", "multi line input", "text area", "long text input", "paragraph input"],
+    "content": "Textareas (ix-textarea) allow users to enter and edit multi-line text input, making it perfect for forms that require longer entries like descriptions, comments, or messages. For details, see https://ix.siemens.io/docs/components/textarea"
+  },
+  {
+    "title": "Checkbox",
+    "keywords": ["checkbox", "ix-checkbox", "check box", "multi select", "checkbox group", "indeterminate"],
+    "content": "Checkboxes (ix-checkbox) are form controls that allow users to select none, one or more options. Used in forms where multiple options can be selected. Anatomy: Checkbox, Checkbox label, Group label, Group required indicator, Group helper/feedback text. Options: checkbox label, indeterminate state (some items in group selected), checkbox group (related checkboxes), group label, group helper text, group feedback text. Behavior: click toggles checked/unchecked, grouped checkboxes validated collectively. Dos: use for multiple selectable options, group related checkboxes. Don'ts: use for binary yes/no (use toggle), use for mutually exclusive options (use radio buttons), use for immediate-consequence actions (use buttons). For details, see https://ix.siemens.io/docs/components/checkbox"
+  },
+  {
+    "title": "Radio Button",
+    "keywords": ["radio", "radio button", "ix-radio", "radio group", "single select", "mutually exclusive"],
+    "content": "Radio buttons (ix-radio) enable users to choose only one option from a predefined set of mutually exclusive options. Use when only one selection is allowed from a group. For details, see https://ix.siemens.io/docs/components/radio"
+  },
+  {
+    "title": "Select / Dropdown",
+    "keywords": ["select", "dropdown", "ix-select", "dropdown list", "combo box", "select menu", "multiselect", "editable select"],
+    "content": "Selects (ix-select) allow users to choose from a list of options. Supports single or multiple selections and an editable variant for adding new items. Anatomy: Label, Required indicator, Placeholder, Clear button, Open dropdown button, Container, Dropdown list, List header, Selected list item, Editable mode. Options: label, placeholder, helper text, feedback text, show clear button, list header, no-matches message, editable (add new items), multiselect with optional collapse counter, items with label and selected state. Behavior: click/Enter opens dropdown, typing filters list, arrow keys navigate, Escape closes, item text truncation, configurable dropdown width. States: default, hover, focused, disabled, read-only. Dos: consider performance for large lists, sort logically. Don'ts: use for binary choices (use radio), use for navigation (use category filter), combine data attributes in labels (use table instead). For details, see https://ix.siemens.io/docs/components/select"
+  },
+  {
+    "title": "Slider",
+    "keywords": ["slider", "range slider", "ix-slider", "value slider", "range input", "slider control"],
+    "content": "Sliders (ix-slider) allow users to select a value from a range of values. They are useful for settings like volume, brightness, or any continuous range selection. For details, see https://ix.siemens.io/docs/components/slider"
+  },
+  {
+    "title": "Toggle",
+    "keywords": ["toggle", "toggle switch", "ix-toggle", "on off switch", "switch control", "boolean toggle"],
+    "content": "Toggle switches (ix-toggle) enable users to toggle between an on and off state. They are ideal for binary settings like enabling/disabling features. For details, see https://ix.siemens.io/docs/components/toggle"
+  },
+  {
+    "title": "Date Input",
+    "keywords": ["date input", "ix-date-input", "date field", "date entry", "date format"],
+    "content": "Date inputs (ix-date-input) allow users to enter and select dates in a standardized format, ensuring consistency and accuracy. They provide a text field with date formatting support. For details, see https://ix.siemens.io/docs/components/input-date"
+  },
+  {
+    "title": "Date Picker",
+    "keywords": ["date picker", "ix-date-picker", "calendar", "date selector", "date calendar"],
+    "content": "Date pickers (ix-date-picker) provide a versatile calendar that can be used as a standalone element or within a dropdown for date input, offering a seamless way to select dates. For details, see https://ix.siemens.io/docs/components/date-picker"
+  },
+  {
+    "title": "Date Dropdown",
+    "keywords": ["date dropdown", "ix-date-dropdown", "date select", "predefined dates", "date quick select"],
+    "content": "Date dropdowns (ix-date-dropdown) allow users to select a specific date from a date picker or pre-defined date options. They combine a dropdown list of quick date options (like 'Last 7 days') with a full calendar picker. For details, see https://ix.siemens.io/docs/components/date-dropdown"
+  },
+  {
+    "title": "Date-Time Picker",
+    "keywords": ["date time picker", "ix-datetime-picker", "datetime", "date and time", "datetime selector"],
+    "content": "Date-time pickers (ix-datetime-picker) offer an interface for selecting both dates and times, which can be used as a standalone element or within a dropdown, providing a seamless way to input date and time values. For details, see https://ix.siemens.io/docs/components/date-time-picker"
+  },
+  {
+    "title": "Time Picker",
+    "keywords": ["time picker", "ix-time-picker", "time selector", "time input", "clock"],
+    "content": "Time pickers (ix-time-picker) allow users to select specific times, ensuring accurate time input. For details, see https://ix.siemens.io/docs/components/time-picker"
+  },
+  {
+    "title": "Category Filter",
+    "keywords": ["category filter", "ix-category-filter", "search filter", "filter categories", "predefined categories"],
+    "content": "Category filters (ix-category-filter) allow users to quickly narrow their search by selecting predefined categories. They combine search with categorical filtering for efficient data discovery. For details, see https://ix.siemens.io/docs/components/category-filter"
+  },
+  {
+    "title": "Expanding Search",
+    "keywords": ["expanding search", "ix-expanding-search", "search field", "collapsible search", "search bar"],
+    "content": "Expanding searches (ix-expanding-search) are search fields that expand on click to save space. When collapsed, they show only a search icon; when clicked, they expand into a full search input field. For details, see https://ix.siemens.io/docs/components/expanding-search"
+  },
+  {
+    "title": "Custom Field",
+    "keywords": ["custom field", "ix-custom-field", "wrapper component", "custom form component"],
+    "content": "Custom fields (ix-custom-field) are wrapper components that can host any form component. They provide the standard form field structure (label, helper text, feedback text) around custom content. For details, see https://ix.siemens.io/docs/components/custom-field"
+  },
+  {
+    "title": "Upload",
+    "keywords": ["upload", "file upload", "ix-upload", "drag and drop", "file input", "file selector"],
+    "content": "Uploads (ix-upload) allow users to select and upload files from their device via drag-and-drop. They support file type restrictions and multiple file selection. For details, see https://ix.siemens.io/docs/components/upload"
   },
   {
     "title": "IxButton – Overview & Variants",
     "keywords": ["ix button", "ixbutton", "button variants", "primary button", "secondary button", "tertiary button", "danger button", "subtle button", "button overview", "button guide", "button states"],
-    "content": "The Siemens iX Button (ix-button) initiates actions and applies functions in an application. Variants available: primary (default, for main actions like Confirm/Send), secondary (supporting actions like Cancel/Reset), tertiary (contextual actions like Help/More options), subtle-primary, subtle-secondary, subtle-tertiary (softer visual style), danger-primary, danger-secondary, danger-tertiary (destructive/irreversible actions like Delete). States: default, hover, active, disabled, loading, focused. Options: icon (left, preferred), icon-right (right, e.g. Next arrow), loading (shows spinner), disabled. Minimum width 5rem. Use short labels; ellipsis (…) indicates further input needed."
+    "content": "The Siemens iX Button (ix-button) initiates actions and applies functions in an application. Variants: primary (main actions like Confirm/Send), secondary (supporting actions like Cancel/Reset), tertiary (contextual actions like Help/More options/View details), subtle-primary, subtle-secondary, subtle-tertiary (softer visual style — when using subtle primary for main action, ensure subtle secondary and subtle tertiary for supporting/contextual actions), danger-primary, danger-secondary, danger-tertiary (destructive/irreversible actions like Delete). States: default, hover, active, disabled, loading, focused (disabled and loading states are non-interactive). Options: label (short text describing action), icon (left, preferred position, replaced by spinner when loading), icon-right (right, e.g. Next arrow), type (submit for forms, button for default), loading, disabled. Behavior: triggered by click/Space key, labels never truncated (single line only), left/right/full-width alignment, minimum width 5rem (customizable), cluster buttons with 0.5rem gap. Dos: short labels, ellipsis (…) for further input needed, one primary per visual unit. Don'ts: icons on both sides, danger buttons excessively. For details, see https://ix.siemens.io/docs/components/button"
   },
   {
     "title": "IxButton – React Code",
@@ -67,76 +312,216 @@
   {
     "title": "IxIconButton – All Frameworks Code",
     "keywords": ["ix icon button", "icon button code", "ixiconbutton", "icon only button", "ix-icon-button", "icon button all frameworks", "icon button react", "icon button angular", "icon button vue", "icon button html"],
-    "content": "IxIconButton (icon-only button) code for all frameworks:\n\nAPI properties: icon (icon name), variant (primary/secondary/tertiary/subtle-primary/subtle-secondary/subtle-tertiary/danger-primary/danger-secondary/danger-tertiary), size (12/16/24, default 24), oval (boolean, round shape), disabled, loading, ghost, outline.\n\n--- REACT ---\nimport { IxIconButton } from '@siemens/ix-react';\n<IxIconButton icon=\"star\" variant=\"primary\"></IxIconButton>\n<IxIconButton icon=\"trash\" variant=\"danger-primary\"></IxIconButton>\n<IxIconButton icon=\"settings\" size=\"16\"></IxIconButton>\n<IxIconButton icon=\"search\" oval></IxIconButton>\n<IxIconButton icon=\"save\" disabled></IxIconButton>\n\n--- ANGULAR ---\n<ix-icon-button icon=\"star\" variant=\"primary\"></ix-icon-button>\n<ix-icon-button icon=\"trash\" variant=\"danger-primary\"></ix-icon-button>\n<ix-icon-button icon=\"settings\" size=\"16\"></ix-icon-button>\n<ix-icon-button icon=\"search\" oval></ix-icon-button>\n<ix-icon-button icon=\"save\" [disabled]=\"true\"></ix-icon-button>\n\n--- VUE ---\nimport { IxIconButton } from '@siemens/ix-vue';\n<IxIconButton icon=\"star\" variant=\"primary\" />\n<IxIconButton icon=\"trash\" variant=\"danger-primary\" />\n<IxIconButton icon=\"settings\" size=\"16\" />\n<IxIconButton icon=\"search\" :oval=\"true\" />\n\n--- WEB COMPONENTS (HTML) ---\n<ix-icon-button icon=\"star\" variant=\"primary\"></ix-icon-button>\n<ix-icon-button icon=\"trash\" variant=\"danger-primary\"></ix-icon-button>\n<ix-icon-button icon=\"settings\" size=\"16\"></ix-icon-button>\n<ix-icon-button icon=\"search\" oval></ix-icon-button>"
+    "content": "IxIconButton (icon-only button) code for all frameworks. Icon buttons are button elements containing only an icon and no text. Due to their small size, they're used in complex layouts. Only use when a well-known icon is available or meaning is clear from context.\n\nAPI properties: icon (icon name), variant (primary/secondary/tertiary/subtle-primary/subtle-secondary/subtle-tertiary/danger-primary/danger-secondary/danger-tertiary), size (12 extra-small/16 small/24 default), oval (boolean, square to oval shape — use square in rectangular components, oval in oval components), color (adjustable icon color for non-standard backgrounds), disabled, loading, ghost, outline.\n\n--- REACT ---\nimport { IxIconButton } from '@siemens/ix-react';\n<IxIconButton icon=\"star\" variant=\"primary\"></IxIconButton>\n<IxIconButton icon=\"trash\" variant=\"danger-primary\"></IxIconButton>\n<IxIconButton icon=\"settings\" size=\"16\"></IxIconButton>\n<IxIconButton icon=\"search\" oval></IxIconButton>\n<IxIconButton icon=\"save\" disabled></IxIconButton>\n\n--- ANGULAR ---\n<ix-icon-button icon=\"star\" variant=\"primary\"></ix-icon-button>\n<ix-icon-button icon=\"trash\" variant=\"danger-primary\"></ix-icon-button>\n<ix-icon-button icon=\"settings\" size=\"16\"></ix-icon-button>\n<ix-icon-button icon=\"search\" oval></ix-icon-button>\n<ix-icon-button icon=\"save\" [disabled]=\"true\"></ix-icon-button>\n\n--- VUE ---\nimport { IxIconButton } from '@siemens/ix-vue';\n<IxIconButton icon=\"star\" variant=\"primary\" />\n<IxIconButton icon=\"trash\" variant=\"danger-primary\" />\n<IxIconButton icon=\"settings\" size=\"16\" />\n<IxIconButton icon=\"search\" :oval=\"true\" />\n\n--- WEB COMPONENTS (HTML) ---\n<ix-icon-button icon=\"star\" variant=\"primary\"></ix-icon-button>\n<ix-icon-button icon=\"trash\" variant=\"danger-primary\"></ix-icon-button>\n<ix-icon-button icon=\"settings\" size=\"16\"></ix-icon-button>\n<ix-icon-button icon=\"search\" oval></ix-icon-button>\n\nDos: use icons with clear meaning. Don'ts: use in large numbers (use toolbar), stretch to span container width."
   },
   {
     "title": "IxToggleButton – All Frameworks Code",
     "keywords": ["ix toggle button", "toggle button code", "ixtogglebutton", "ix-toggle-button", "toggle button all frameworks", "toggle button react", "toggle button angular", "toggle button vue", "toggle button html", "pressed button"],
-    "content": "IxToggleButton (activate/deactivate a function) code for all frameworks:\n\nAPI properties: variant (secondary/tertiary/subtle-secondary/subtle-tertiary, default subtle-primary), pressed (boolean, shows active toggled state), icon, icon-right, disabled, loading.\nEvent: pressedChange (emits boolean).\n\n--- REACT ---\nimport { IxToggleButton } from '@siemens/ix-react';\nimport { useState } from 'react';\nconst [pressed, setPressed] = useState(false);\n<IxToggleButton variant=\"secondary\" pressed={pressed} onPressedChange={(e) => setPressed(e.detail)}>Bold</IxToggleButton>\n<IxToggleButton variant=\"tertiary\" icon=\"star\">Favourite</IxToggleButton>\n<IxToggleButton variant=\"subtle-secondary\" disabled>Disabled</IxToggleButton>\n\n--- ANGULAR ---\n<ix-toggle-button variant=\"secondary\" [pressed]=\"isBold\" (pressedChange)=\"isBold = $event\">Bold</ix-toggle-button>\n<ix-toggle-button variant=\"tertiary\" icon=\"star\">Favourite</ix-toggle-button>\n<ix-toggle-button variant=\"subtle-secondary\" [disabled]=\"true\">Disabled</ix-toggle-button>\n\n--- VUE ---\nimport { IxToggleButton } from '@siemens/ix-vue';\n<IxToggleButton variant=\"secondary\" :pressed=\"isBold\" @pressedChange=\"isBold = $event\">Bold</IxToggleButton>\n<IxToggleButton variant=\"tertiary\" icon=\"star\">Favourite</IxToggleButton>\n\n--- WEB COMPONENTS (HTML) ---\n<ix-toggle-button variant=\"secondary\" id=\"boldBtn\">Bold</ix-toggle-button>\n<script>\n  const btn = document.getElementById('boldBtn');\n  btn.addEventListener('pressedChange', (e) => console.log('pressed:', e.detail));\n</script>"
+    "content": "IxToggleButton (activate/deactivate a function) code for all frameworks. Toggle buttons switch between states or modes, ideal for settings that can be turned on or off independently of others.\n\nAPI properties: variant (secondary/tertiary/subtle-secondary/subtle-tertiary, default subtle-primary — for default variant, secondary or tertiary must be set), pressed (boolean, active toggled state, read by screen readers), icon, icon-right, disabled, loading, oval (for icon-only toggle buttons).\nEvent: pressedChange (emits boolean).\nStates: default, hover, active, disabled, loading, focused (all also available for pressed state).\n\n--- REACT ---\nimport { IxToggleButton } from '@siemens/ix-react';\nimport { useState } from 'react';\nconst [pressed, setPressed] = useState(false);\n<IxToggleButton variant=\"secondary\" pressed={pressed} onPressedChange={(e) => setPressed(e.detail)}>Bold</IxToggleButton>\n<IxToggleButton variant=\"tertiary\" icon=\"star\">Favourite</IxToggleButton>\n<IxToggleButton variant=\"subtle-secondary\" disabled>Disabled</IxToggleButton>\n\n--- ANGULAR ---\n<ix-toggle-button variant=\"secondary\" [pressed]=\"isBold\" (pressedChange)=\"isBold = $event\">Bold</ix-toggle-button>\n<ix-toggle-button variant=\"tertiary\" icon=\"star\">Favourite</ix-toggle-button>\n<ix-toggle-button variant=\"subtle-secondary\" [disabled]=\"true\">Disabled</ix-toggle-button>\n\n--- VUE ---\nimport { IxToggleButton } from '@siemens/ix-vue';\n<IxToggleButton variant=\"secondary\" :pressed=\"isBold\" @pressedChange=\"isBold = $event\">Bold</IxToggleButton>\n<IxToggleButton variant=\"tertiary\" icon=\"star\">Favourite</IxToggleButton>\n\n--- WEB COMPONENTS (HTML) ---\n<ix-toggle-button variant=\"secondary\" id=\"boldBtn\">Bold</ix-toggle-button>\n<script>\n  const btn = document.getElementById('boldBtn');\n  btn.addEventListener('pressedChange', (e) => console.log('pressed:', e.detail));\n</script>\n\nDos: use when users can switch settings on/off independently, when options don't follow on/off metaphor. Don'ts: use in button groups where only one option can be selected (use normal buttons instead)."
   },
   {
-    "title": "Forms",
-    "keywords": ["form", "forms", "form field", "form layout", "form validation", "form behavior", "input form"],
-    "content": "Siemens iX provides a complete forms system: Forms field — a form element for user input, typically used in a fieldset; Forms layout — covers hierarchy of information and structure for usability; Forms validation — gives users feedback to ensure accurate data is submitted; Forms behavior — handles how user input is processed and validated for a seamless experience."
+    "title": "Dropdown Button",
+    "keywords": ["dropdown button", "ix-dropdown-button", "action dropdown", "button with dropdown", "action list button"],
+    "content": "Dropdown buttons (ix-dropdown-button) reveal a list of actions when selected. They allow users to select an action from a list by clicking a button and revealing a dropdown. All button variants apply. Options: label (short, with verbs), placement (top/bottom/left/right + start/end alignment, auto-corrected). States: default, hover, active (shows dropdown), disabled, focused. Dos: use when selecting an option triggers an action. Don'ts: use when there's a frequent/most-important action (use standard or split button instead). For details, see https://ix.siemens.io/docs/components/dropdown-button"
   },
   {
-    "title": "Input Fields and Selections",
-    "keywords": ["input", "text input", "number input", "checkbox", "radio", "select", "dropdown", "toggle", "slider", "textarea", "date picker", "time picker", "upload"],
-    "content": "iX input components include: Input — single-line text and character input; Textarea — multi-line text input; Number input — for numerical values; Checkbox — select none, one or more options; Radio — select only one from exclusive options; Select — choose from a list; Slider — select a value in a range; Toggle — on/off switch; Date input/picker — select dates; Date-time picker — select date and time; Time picker — select specific times; Upload — drag-and-drop file upload; Expanding search — expands on click to save space; Category filter — narrow search by predefined categories."
+    "title": "Link Button",
+    "keywords": ["link button", "ix-link-button", "navigation button", "link with chevron", "external link button"],
+    "content": "Link buttons (ix-link-button) take users to another location either within or outside the application and contain a chevron and a text label. For details, see https://ix.siemens.io/docs/components/link-button"
+  },
+  {
+    "title": "Split Button",
+    "keywords": ["split button", "ix-split-button", "button with actions", "combined button", "default action button"],
+    "content": "Split buttons (ix-split-button) are button elements that allow users to either trigger an action with one click or select an action from a list of options. They consist of a labeled button on the left and a dropdown button on the right. All button and dropdown button variants apply. Options: label (short, with verbs), placement (direction and alignment for dropdown), split icon (chevron default, or 'more-menu'). Behavior: pressing a dropdown option triggers the action, left side label typically stays static. States: default, hover, active, disabled, focused (applied independently to left/right). Dos: use when there's a frequent/most-important action. Don'ts: use for unrelated actions, duplicate default option in dropdown. For details, see https://ix.siemens.io/docs/components/split-button"
+  },
+  {
+    "title": "Chip",
+    "keywords": ["chip", "ix-chip", "tag", "label chip", "filter chip", "status chip", "closable chip"],
+    "content": "Chips (ix-chip) are interactive elements that display small pieces of information in a compact and visually appealing way. They contain a concise label, optional icon, and are clickable and closable. Variants: primary (high emphasis), state-related (alarm, critical, warning, success, info, neutral), custom (customized background and label color). Options: active (interactivity toggle), background (custom variant only), outline (lower emphasis), closable (close button removes chip), icon (before label), color (custom font/icon color), width (minimum 2rem), tooltip text. Behavior: reactive to user actions, supports multi-selection and filtering, placed inline or grouped, dismissible when closable, text truncation with set width. States: default, hover, focused, active. Dos: use for tagging/categorizing, ensure color contrast, consider spacing for mobile. Don'ts: overuse, mix styles for same use, use without interaction (use pills instead). For details, see https://ix.siemens.io/docs/components/chip"
+  },
+  {
+    "title": "Dropdown",
+    "keywords": ["dropdown", "ix-dropdown", "flyout", "dropdown menu", "dropdown list", "popup menu"],
+    "content": "Dropdowns (ix-dropdown) provide a floating list of options or content. They can be used standalone or as part of dropdown buttons, split buttons, and select components. For details, see https://ix.siemens.io/docs/components/dropdown"
+  },
+  {
+    "title": "Toast",
+    "keywords": ["toast", "ix-toast", "notification", "snackbar", "popup notification", "toast message", "feedback popup"],
+    "content": "Toasts (ix-toast) are small pop-ups that provide simple feedback on a process. They appear after user actions and provide information about success or failure. Anatomy: Icon, Button, Progress bar, Header, Message, Close action. Types: info (additional info), success (action succeeded), warning (potential problems), error (action failed), custom (adjustable icon and color). Options: header (1-3 keywords), message (detailed context), button (further action like undo), position (bottom-right default or top-right, configured globally). Behavior: auto-closure after 3-8 seconds with progress bar, manual closure always available, suppress auto-close for workflow continuation, stacked (newest at bottom), appears below modals when simultaneous. Dos: use for contextual tips/shortcuts, instant feedback, undo shortcuts, consistent position. Don'ts: use for critical alerts (use message modal), edit predefined toast type icons. For details, see https://ix.siemens.io/docs/components/toast"
+  },
+  {
+    "title": "Spinner",
+    "keywords": ["spinner", "ix-spinner", "loading spinner", "loading indicator", "circular progress"],
+    "content": "Spinners (ix-spinner) indicate that a process is running to provide feedback to the user. Use spinners for indeterminate loading states where the completion time is unknown. For details, see https://ix.siemens.io/docs/components/spinner"
+  },
+  {
+    "title": "Progress Indicator",
+    "keywords": ["progress indicator", "progress bar", "ix-progress-indicator", "loading progress", "progress status"],
+    "content": "Progress indicators (ix-progress-indicator) inform users about the status of ongoing processes, e.g. loading data, submitting forms or processing non-blocking operations. For details, see https://ix.siemens.io/docs/components/progress-indicator"
+  },
+  {
+    "title": "Message Bar",
+    "keywords": ["message bar", "ix-message-bar", "alert bar", "info bar", "warning bar", "error bar", "notification bar"],
+    "content": "Message bars (ix-message-bar) display important information to users, e.g. feedback, warnings or errors. They use both color and an icon to indicate severity level, with text matching the severity for WCAG compliance. For details, see https://ix.siemens.io/docs/components/messagebar"
+  },
+  {
+    "title": "Pill",
+    "keywords": ["pill", "ix-pill", "badge", "status pill", "counter pill", "info pill"],
+    "content": "Pills (ix-pill) display small pieces of information, e.g. counters or statuses. Unlike chips, pills are non-interactive and used only for displaying status. They can have a smaller height than chips since they don't need to meet touch target requirements. For details, see https://ix.siemens.io/docs/components/pill"
+  },
+  {
+    "title": "Empty State",
+    "keywords": ["empty state", "ix-empty-state", "no content", "no data", "no results", "placeholder state"],
+    "content": "Empty states (ix-empty-state) inform users that there is no content to display. Use them when a list, table, or page has no data, no search results, or the user hasn't created any items yet. They typically include an icon, a heading, and a description with optional call-to-action. For details, see https://ix.siemens.io/docs/components/empty-state"
+  },
+  {
+    "title": "Tooltip",
+    "keywords": ["tooltip", "ix-tooltip", "hover text", "info popup", "hint", "help text"],
+    "content": "Tooltips (ix-tooltip) provide additional information when users hover over or focus on an element. They are non-interactive overlays that appear near the target element. For details, see https://ix.siemens.io/docs/components/tooltip"
+  },
+  {
+    "title": "Angular Data Grid (AG Grid)",
+    "keywords": ["data grid", "ag grid", "ix-ag-grid", "table grid", "data table", "angular grid", "grid component"],
+    "content": "The Angular Data Grid is the popular AG Grid library seamlessly integrated into the iX design system, allowing you to harness its powerful features while maintaining consistency with the styleguide. It provides full iX styling for powerful tabular data including sorting, filtering, pagination, row selection, and cell editing. For details, see https://ix.siemens.io/docs/components/grid"
+  },
+  {
+    "title": "HTML Table",
+    "keywords": ["html table", "ix-html-table", "table", "data table", "tabular data"],
+    "content": "HTML tables (ix-html-table) are used to display tabular data in a structured way. They provide standard HTML table semantics with iX styling for consistency. For details, see https://ix.siemens.io/docs/components/html-grid"
+  },
+  {
+    "title": "Key Value",
+    "keywords": ["key value", "ix-key-value", "label value", "key value pair", "data pair"],
+    "content": "Key value pairs (ix-key-value) display a label (key) and a value in a structured, easy way. For details, see https://ix.siemens.io/docs/components/key-value"
+  },
+  {
+    "title": "Key Value List",
+    "keywords": ["key value list", "ix-key-value-list", "data list", "property list", "attribute list"],
+    "content": "Key value lists (ix-key-value-list) organize and list a series of key value pairs. They provide a structured way to display multiple properties or attributes. For details, see https://ix.siemens.io/docs/components/key-value-list"
+  },
+  {
+    "title": "KPI",
+    "keywords": ["kpi", "ix-kpi", "key performance indicator", "metric", "measured value", "status indicator"],
+    "content": "KPIs (ix-kpi) display measured values together with a status indicator to help users interpret data. They are commonly used in dashboards for at-a-glance performance monitoring. For details, see https://ix.siemens.io/docs/components/kpi"
+  },
+  {
+    "title": "Charts Overview",
+    "keywords": ["chart", "charts", "data visualization", "chart overview", "echarts", "charting", "graph"],
+    "content": "Charts in Siemens iX are essential tools for visualizing data, making complex information more accessible and easier to understand. iX provides chart components built on ECharts for data visualization. Available chart types: Line chart, Bar chart, Gauge chart, Pie chart, 3D chart, Special chart. Charts use the iX color palette (--theme-chart-1 through --theme-chart-17 with -40 opacity variants) for consistent styling across themes. For recommended color sequence for data series, use: chart-3, chart-2, chart-8, chart-1, chart-6, chart-4, chart-10, chart-9, chart-11, chart-14, chart-13, chart-12, chart-7, chart-15, chart-16, chart-17, chart-5. For details, see https://ix.siemens.io/docs/components/charts-overview"
+  },
+  {
+    "title": "Line Chart",
+    "keywords": ["line chart", "ix-line-chart", "trend chart", "time series", "data points", "line graph"],
+    "content": "Line charts display data as a series of data points connected by straight line segments. They are commonly used to visualize trends over time or compare two variables. Typically used for continuous data visualization. For details, see https://ix.siemens.io/docs/components/line-chart"
+  },
+  {
+    "title": "Bar Chart",
+    "keywords": ["bar chart", "ix-bar-chart", "column chart", "category chart", "bar graph"],
+    "content": "Bar charts display data using rectangular bars. The length of each bar is proportional to the value it represents. Commonly used to compare values of different categories, typically for categorical or ordinal data. For details, see https://ix.siemens.io/docs/components/bar-chart"
+  },
+  {
+    "title": "Gauge Chart",
+    "keywords": ["gauge chart", "ix-gauge-chart", "speedometer", "dial chart", "meter chart", "gauge"],
+    "content": "Gauge charts display data using a dial or needle to indicate a value within a specific range. Commonly used for performance metrics like speedometers, progress meters, and KPIs. Typically represent a single value within a range. For details, see https://ix.siemens.io/docs/components/gauge-chart"
+  },
+  {
+    "title": "Pie Chart",
+    "keywords": ["pie chart", "ix-pie-chart", "donut chart", "circular chart", "part of whole"],
+    "content": "Pie charts display data using a circular graph. The length of each slice is proportional to the value it represents. Commonly used to visualize parts of a whole and compare relative sizes of categories. For details, see https://ix.siemens.io/docs/components/pie-chart"
+  },
+  {
+    "title": "3D Chart",
+    "keywords": ["3d chart", "three dimensional chart", "ix-3d-chart", "3d visualization", "immersive chart"],
+    "content": "3D charts are a powerful way to visualize data in three dimensions. They provide a more immersive and interactive experience compared to traditional 2D charts. Typically used for complex data sets or engaging data presentations. For details, see https://ix.siemens.io/docs/components/3d"
+  },
+  {
+    "title": "Special Chart",
+    "keywords": ["special chart", "echarts advanced", "custom chart", "radar chart", "heatmap", "scatter plot"],
+    "content": "Special charts cover advanced ECharts chart types and features beyond the standard line, bar, gauge, and pie charts. This includes radar charts, heatmaps, scatter plots, and other specialized visualization types. For details, see https://ix.siemens.io/docs/components/special-chart"
   },
   {
     "title": "Color Palette and Theming",
-    "keywords": ["color", "colors", "theme", "theming", "color palette", "background color", "text color", "status color", "border color", "chart color", "css variables"],
-    "content": "iX colors are provided as CSS custom properties, accessible via var(). Categories include: Background colors (--theme-color-0 to --theme-color-8, for non-interactive backgrounds); Component & interaction colors (--theme-color-primary, --theme-color-dynamic, --theme-color-component-1 through -11, ghost colors for hover/active states); Status colors — Alarm (--theme-color-alarm), Critical, Warning, Success, Info, Neutral (each with -40 and -10 variants); Text colors (--theme-color-std-text, --theme-color-soft-text, --theme-color-weak-text, --theme-color-alarm-text); Border colors (--theme-color-std-bdr, --theme-color-soft-bdr, etc.); Chart colors (--theme-chart-1 through --theme-chart-17, each with a -40 opacity variant)."
+    "keywords": ["color", "colors", "theme", "theming", "color palette", "background color", "text color", "status color", "border color", "chart color", "css variables", "dark mode", "light mode", "brand theme"],
+    "content": "iX colors are provided as CSS custom properties, accessible via var(). Use: .some-example { background-color: var(--theme-color-primary); }\n\nCategories:\n\n1. Background colors (non-interactive backgrounds, solid without opacity): --theme-color-0 (transparent) through --theme-color-8. Use color-1 for main canvas, color-2 for first-level containers.\n\n2. Component & interaction colors: --theme-color-primary (brand color, primary buttons, selected elements), --theme-color-dynamic, --theme-color-dynamic-alt. Component colors (semi-transparent): --theme-color-component-1 through -11. Ghost colors (invisible background, visible hover/active): --theme-color-ghost, --theme-color-ghost-alt (alternating table patterns), --theme-color-ghost-primary. Solid colors: --theme-color-1--hover, --theme-color-1--active, --theme-color-secondary, --theme-color-component-8, --theme-color-component-error, --theme-color-component-info.\n\n3. Status colors (with hover/active states and contrast colors): --theme-color-alarm (error, invalid, danger), --theme-color-critical, --theme-color-warning, --theme-color-success, --theme-color-info, --theme-color-neutral. Each has -40 (40% opacity) and some have -10 variants. Don't use status colors for text (use alarm-text instead).\n\n4. Text colors: --theme-color-contrast-text (darkest/lightest), --theme-color-std-text (default), --theme-color-soft-text (secondary/labels/hints), --theme-color-weak-text (disabled), --theme-color-alarm-text, inverted variants (--theme-color-inv-contrast-text, etc.).\n\n5. Border colors: --theme-color-contrast-bdr, --theme-color-hard-bdr (solid), --theme-color-std-bdr (strong, inputs), --theme-color-soft-bdr (subtle, cards), --theme-color-weak-bdr (subtle separations), --theme-color-x-weak-bdr (very subtle), --theme-color-focus-bdr.\n\n6. Effect colors: --theme-color-shadow-1, -2, --theme-color-lightbox, --theme-color-backdrop, --theme-color-backdrop-3, --theme-color-gradient-effect-1, -2.\n\n7. Chart infrastructure: --theme-chart-axes, --theme-chart-ticks, --theme-chart-grid-lines, --theme-chart-grid-fill, --theme-chart-tooltip-fill, --theme-chart-tooltip-bdr.\n\n8. Chart data colors: --theme-chart-1 through --theme-chart-17, each with a -40 opacity variant.\n\nFor details, see https://ix.siemens.io/docs/styles/colors"
+  },
+  {
+    "title": "Typography",
+    "keywords": ["typography", "fonts", "font size", "headings", "body text", "label text", "display text", "code text", "font style", "text style"],
+    "content": "Typography in iX ensures readability and visual harmony across all applications. Font formats are based on a modular scale for consistency and balance.\n\nCategories:\n- Headings: H1 through H6 for headlines to organize content and indicate hierarchy.\n- Body text: Body, Body-xs, Body-sm, Body-lg for content with multiple lines, paragraphs, and messages.\n- Label: Label, Label-xs, Label-sm, Label-lg for text labels or single line texts in components.\n- Display: Display, Display-xs, Display-sm, Display-lg, Display-xl, Display-xxl for large number/text displays, single-line, like KPI values on cards.\n- Code: Code, Code-sm, Code-lg for code snippets, code keywords, code editor.\n\nFor details, see https://ix.siemens.io/docs/styles/typography"
+  },
+  {
+    "title": "Borders",
+    "keywords": ["borders", "border style", "border tokens", "border css", "border variables"],
+    "content": "Borders in iX define boundaries, create structure, and enhance UI clarity. All borders are CSS custom properties accessible via var().\n\nUsage: .some-example { border: var(--theme-primary-bdr-1); }\n\nAvailable border tokens: --theme-std-bdr-1 (strong, inputs), --theme-soft-bdr-1 (subtle, cards/separators), --theme-weak-bdr-1 (subtle separations), --theme-x-weak-bdr-1 (very subtle), --theme-contrast-bdr-1 (darkest/lightest), --theme-primary-bdr-1, --theme-dynamic-bdr-1, --theme-alarm-bdr-1, --theme-critical-bdr-1, --theme-warning-bdr-1, --theme-success-bdr-1, --theme-info-bdr-1, --theme-neutral-bdr-1.\n\nFor details, see https://ix.siemens.io/docs/styles/borders"
+  },
+  {
+    "title": "Shadows",
+    "keywords": ["shadows", "box shadow", "shadow tokens", "drop shadow", "elevation shadow"],
+    "content": "Shadows in iX add depth, create dimension, and enhance hierarchy perception. All shadows are CSS custom properties.\n\nUsage: .some-example { box-shadow: var(--theme-shadow-1); }\n\nAvailable tokens: --theme-shadow-1, --theme-shadow-2, --theme-shadow-3, --theme-shadow-4, --theme-inset-shadow-1.\n\nFor details, see https://ix.siemens.io/docs/styles/shadows"
+  },
+  {
+    "title": "Elevation",
+    "keywords": ["elevation", "z-index", "layering", "depth", "visual hierarchy", "stacking order"],
+    "content": "Elevation in iX defines the perceived distance of a surface from the background along the z-axis, establishing content hierarchy and guiding user focus. Achieved through background color layers, borders, and selective shadows.\n\nThe layering model:\n1. Base layer: Main page background (use color-1).\n2. First-level containers: Stand out from background (use color-2 or component-1).\n3. Second-level containers: Nested within containers (maintain color-2, separate with borders like color-soft-bdr/color-weak-bdr, or use color-component-2).\n4. Floating elements: Demand immediate attention (use shadow-4 for dropdowns, tooltips, modals, toasts). Don't use shadows on navigation elements or cards.\n\nStick to color-1 and color-2 for primary layering. color-3 to color-8 are for specific component use cases. For interactive elements, --hover and --active color tokens are available.\n\nNote: Elevation approach changed in v4.0 (partially applicable for v3.x).\n\nFor details, see https://ix.siemens.io/docs/styles/elevation"
   },
   {
     "title": "Icons",
-    "keywords": ["icon", "icons", "icon library", "icon usage", "ix icons", "siemens icons"],
-    "content": "Siemens iX comes with an extensive icon library designed for industrial contexts. Icons are available in regular and filled variants and are packaged in @siemens/ix-icons. They are intended as in-app icons for UI elements, not as application logos. Install via: npm install @siemens/ix-icons and register with defineCustomElements from @siemens/ix-icons/loader. Icons cover a wide range including actions, status indicators, devices, charts, navigation, files, and many more industrial-specific icons."
+    "keywords": ["icon", "icons", "icon library", "icon usage", "ix icons", "siemens icons", "icon search", "icon list"],
+    "content": "Siemens iX comes with an extensive icon library designed for industrial contexts. Icons are available in regular and filled variants and are packaged in @siemens/ix-icons. They are intended as in-app icons for UI elements, not as application logos.\n\nInstall: npm install @siemens/ix-icons\nRegister: import { defineCustomElements } from '@siemens/ix-icons/loader'; defineCustomElements();\n\nIcons cover a wide range including actions (add, edit, delete, save, search, copy, paste), status indicators (alarm, warning, success, info), devices, charts, navigation (home, menu, back, forward, chevron), files, and many more industrial-specific icons.\n\nFor details, see https://ix.siemens.io/docs/icons/icons"
   },
   {
     "title": "Guidelines Overview",
-    "keywords": ["guidelines", "design guidelines", "ux guidelines", "design principles", "best practices", "accessibility", "responsive", "ux writing"],
-    "content": "Siemens iX design guidelines cover: Design Principles — four principles: Simplify for clarity, Design for flexibility, Empower users, Build for humans; Accessibility — ensuring products are usable by everyone, complying with standards like WCAG; Responsive Design — building mobile and adaptive web/hybrid apps using the design system; UX Writing — a writing style guide for consistent and clear industrial product content; Conversational Design — guidelines for designing intuitive chatbot interactions; CLI Design — guidelines for creating consistent and clear CLI commands."
+    "keywords": ["guidelines", "design guidelines", "ux guidelines", "design principles", "best practices"],
+    "content": "Siemens iX design guidelines cover: Design Principles — four principles: Simplify for clarity, Design for flexibility, Empower users, Build for humans; Accessibility — ensuring products are usable by everyone, complying with WCAG standards; Responsive/Mobile Design — building mobile and adaptive web/hybrid apps using the design system; UX Writing — a writing style guide for consistent and clear industrial product content; Conversational Design — guidelines for designing intuitive chatbot interactions; CLI Design — guidelines for creating consistent and clear CLI commands. For details, see https://ix.siemens.io/docs/guidelines/"
   },
   {
     "title": "Accessibility",
-    "keywords": ["accessibility", "wcag", "a11y", "screen reader", "inclusive design", "accessible"],
-    "content": "Accessibility in Siemens iX ensures digital products are usable by everyone, including people with disabilities. The design system is built to meet WCAG standards, enhancing the overall user experience. The guidelines section provides detailed instructions on how to make designs and implementations accessible to all users. For details, see https://ix.siemens.io/docs/guidelines/accessibility/overview"
-  },
-  {
-    "title": "Charts",
-    "keywords": ["chart", "charts", "line chart", "bar chart", "gauge chart", "pie chart", "3d chart", "data visualization", "echarts"],
-    "content": "Siemens iX provides chart components for data visualization: Line chart — visualizes trends over time with connected data points; Bar chart — compares values across categories using rectangular bars; Gauge chart — displays a single value within a range using a dial/needle, ideal for KPIs; Pie chart — visualizes parts of a whole using circular slices; 3D chart — provides immersive 3D data visualization; Special chart — covers advanced ECharts chart types and features. Charts use the iX color palette (--theme-chart-1 through --theme-chart-17) for consistent styling."
-  },
-  {
-    "title": "Navigation Components",
-    "keywords": ["navigation", "breadcrumb", "tabs", "tree", "pagination", "workflow", "menu", "application menu"],
-    "content": "iX navigation components include: Breadcrumb — shows clear navigation path within an application; Group — expandable containers for lists of selectable options; Pagination — navigate between pages of content; Tabs — organize content into sections by grouping similar information; Tree — displays hierarchical data with expand/collapse nodes; Workflow — guides users through a series of logical steps; Application menu — main navigation for application parts, legal info, and settings."
-  },
-  {
-    "title": "Modals and Overlays",
-    "keywords": ["modal", "dialog", "drawer", "pane", "overlay", "popup", "popover"],
-    "content": "iX overlay components include: Modal — presents information prominently for gathering essential user input without navigation; Drawer — opens on button click to show additional content; Panes — interactive components for content not constantly visible on screen; Popover news — presents important updates on application start; Settings overlay — centralized location for application settings; About and legal — overlay for app info, versions, license terms, and legal content."
-  },
-  {
-    "title": "Toast, Spinner and Feedback",
-    "keywords": ["toast", "spinner", "progress", "loading", "feedback", "notification", "message bar", "empty state", "pill", "tooltip"],
-    "content": "iX feedback components include: Toast — small pop-ups for simple process feedback; Spinner — indicates a running process; Progress indicator — shows status of ongoing processes (loading, submitting); Message bar — displays important info, warnings or errors; Pill — small pieces of info like counters or statuses; Empty state — informs users there is no content to display; Tooltip — additional information shown on hover or focus."
-  },
-  {
-    "title": "Data Display and Tables",
-    "keywords": ["table", "data grid", "ag grid", "key value", "kpi", "data display", "html table"],
-    "content": "iX data display components include: Angular data grid — AG Grid integrated into the design system for powerful tabular data with full iX styling; HTML table — structured tabular data display; Key value — displays a label and value in a structured way; Key value list — organizes a series of key-value pairs; KPI — displays measured values with a status indicator to help users interpret data."
-  },
-  {
-    "title": "Contribute to Siemens iX",
-    "keywords": ["contribute", "contribution", "github", "open source", "community", "feedback", "issue", "pull request"],
-    "content": "Siemens iX is open-source and welcomes contributions from the community. Send feedback, questions and contributions via GitHub at https://github.com/siemens/ix. If unsure where to start, check the repository issues or open a discussion. The iX community is also available at https://community.siemens.com/c/ix and the Siemens Xcelerator Developer Portal at https://developer.siemens.com/."
+    "keywords": ["accessibility", "wcag", "a11y", "screen reader", "inclusive design", "accessible", "keyboard navigation", "aria", "contrast ratio"],
+    "content": "Accessibility in Siemens iX ensures digital products are usable by everyone, including people with disabilities. The design system strives to meet WCAG AA standards.\n\nFour WCAG principles:\n\n1. Perceivable: Provide text alternatives for non-text content (use aria-label, aria-labelledby, aria-describedby). Create adaptable content (landscape/portrait orientations, tooltips for table cells, region designation, form grouping). Combine color and contrast — body text minimum 4.5:1, large text 3:1, icons 3:1, component contrast 3:1 with adjoining colors. Use more than color to convey information.\n\n2. Operable: Keyboard usage for all features (annotate tab order, follow ARIA keyboard guidance, disabled elements are non-interactive). Give enough time (avoid autoplay, avoid time limits, toast auto-closure can be paused). Implement navigable aids (proper heading hierarchy h1-h6, descriptive page titles, clear link text, skip links, search function). Customize input modalities (simple pointer actions, minimum 24x24px target size, alternatives to device motion).\n\n3. Understandable: Readability (specify language in HTML, use simple clear language, define complex terms). Be predictable (consistent icons, predictable patterns, consistent button styles). Give input assistance (labels for inputs, required field indicators, expected data formats, describe errors, provide undo).\n\n4. Robust: Clean, standards-compliant code. Use proper ARIA labels and roles, programmatic status messages. Test with multiple browsers, assistive technologies, and zoom levels (at least 200%).\n\nFor details, see https://ix.siemens.io/docs/guidelines/accessibility/overview"
   },
   {
     "title": "Responsive and Mobile Design",
-    "keywords": ["responsive", "mobile", "mobile app", "hybrid app", "screen size", "adaptive design", "mobile web"],
-    "content": "Siemens iX supports building mobile applications jointly with web technology. Use the design system to build the UI of mobile web apps or hybrid apps. The iX guidelines cover best practices for creating designs that work seamlessly across different devices and screen sizes. For details, see https://ix.siemens.io/docs/guidelines/mobile/mobile-app-dev"
+    "keywords": ["responsive", "mobile", "mobile app", "hybrid app", "screen size", "adaptive design", "mobile web", "ionic", "capacitor", "touch", "notch", "safe area"],
+    "content": "Siemens iX supports building mobile applications jointly with web technology. Three approaches: web apps (browser-based, platform-independent), native apps (platform-specific), hybrid apps (web technologies in native container, recommended).\n\nHybrid apps combine web and native advantages: medium/high performance, individual look & feel, medium development effort, extensive hardware features, app store distribution, offline capability, and full iX component support.\n\nUsing Ionic + React for hybrid apps:\n1. Theme mapping: Map iX CSS custom properties to Ionic CSS variables.\n2. Define safe areas: Set --ix-safe-area-inset-top/right/bottom/left using CSS env() for notches and rounded corners. Adjust for landscape orientation with data-screen-orientation attribute.\n3. Application frame layout: Use IxApplication breakpoints prop. For phones + tablets, typically 'sm' and 'md'. Use Ionic platform utilities (isPlatform) to detect device.\n\nKey considerations: responsive/adaptive design for different viewport sizes, touch interaction without mouse/keyboard, device-specific features like notches.\n\nFor details, see https://ix.siemens.io/docs/guidelines/mobile/mobile-app-dev"
+  },
+  {
+    "title": "UX Writing and Language Guidelines",
+    "keywords": ["ux writing", "writing style", "language", "content guidelines", "button labels", "dialog text", "wording", "copy text"],
+    "content": "Siemens iX provides UX writing guidelines for consistent and clear industrial product content. The guidelines cover writing for dialogs and buttons, labels, error messages, status messages, tooltips, empty states, and general UI text. Key principles: use simple clear language, reduce text styles and decorations, keep labels short and descriptive, use verbs in button labels, write clear error descriptions. The writing guidelines help make applications readable and understandable (WCAG Principle 3). For details, see https://ix.siemens.io/docs/guidelines/language/basics"
+  },
+  {
+    "title": "Conversational Design",
+    "keywords": ["conversational design", "chatbot", "chatbot design", "conversational ui", "chat interface", "ai assistant"],
+    "content": "Siemens iX provides guidelines for designing intuitive chatbot interactions. Conversational design covers best practices for creating natural, helpful, and consistent conversational interfaces in industrial contexts. For details, see https://ix.siemens.io/docs/guidelines/conversational-design"
+  },
+  {
+    "title": "CLI Design",
+    "keywords": ["cli", "command line", "terminal", "cli design", "command line interface", "cli guidelines"],
+    "content": "Siemens iX provides guidelines for creating consistent and clear CLI (Command Line Interface) commands. The CLI design guidelines help ensure that terminal-based tools follow best practices for naming, argument structure, output formatting, and error handling. For details, see https://ix.siemens.io/docs/guidelines/cli-design"
+  },
+  {
+    "title": "Contribute to Siemens iX",
+    "keywords": ["contribute", "contribution", "github", "open source", "community", "feedback", "issue", "pull request", "source code"],
+    "content": "Siemens iX is open-source and welcomes contributions from the community. Send feedback, questions and contributions via GitHub at https://github.com/siemens/ix. If unsure where to start, check the repository issues or open a discussion. The iX community is also available at https://community.siemens.com/c/ix and the Siemens Xcelerator Developer Portal at https://developer.siemens.com/. The project is licensed under MIT."
+  },
+  {
+    "title": "Support and Contact",
+    "keywords": ["support", "contact", "help", "question", "report bug", "get help", "reach out"],
+    "content": "For support with Siemens iX, you can: visit the documentation at https://ix.siemens.io/, join the iX community at https://community.siemens.com/c/ix, report issues on GitHub at https://github.com/siemens/ix/issues, reach the Siemens Xcelerator Developer Portal at https://developer.siemens.com/, or contact the team at https://ix.siemens.io/docs/home/support/contact-us."
+  },
+  {
+    "title": "MCP Server",
+    "keywords": ["mcp server", "model context protocol", "ai integration", "mcp", "developer tool"],
+    "content": "Siemens iX provides an MCP (Model Context Protocol) server for AI-powered integration and tooling. It allows AI assistants to access iX documentation and component information programmatically. For details, see https://ix.siemens.io/docs/home/mcp-server"
+  },
+  {
+    "title": "Migration Guide",
+    "keywords": ["migration", "upgrade", "version upgrade", "breaking changes", "update", "v4", "v3 to v4"],
+    "content": "Siemens iX provides migration guides for upgrading between major versions. The migration guide covers breaking changes, new features, deprecated APIs, and step-by-step upgrade instructions. Notable: the elevation approach changed starting with v4.0 (partially applicable for v3.x). For details, see https://ix.siemens.io/docs/home/migration/4_0_0"
+  },
+  {
+    "title": "Animations",
+    "keywords": ["animation", "animations", "motion", "transition", "animate", "css animation"],
+    "content": "Siemens iX provides animation guidelines and tokens for consistent motion design across applications. Animations enhance user experience by providing visual feedback during state changes and transitions. For details, see https://ix.siemens.io/docs/styles/animation"
   }
 ]

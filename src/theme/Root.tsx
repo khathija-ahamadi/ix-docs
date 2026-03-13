@@ -9,7 +9,7 @@
 
 import { useLocation } from '@docusaurus/router';
 import { useEffect, useLayoutEffect } from 'react';
-import Chatbot from '@site/src/components/Chatbot';
+import AiAssistant from '@site/src/components/AiAssistant';
 
 declare global {
   interface Window {
@@ -68,7 +68,7 @@ export default function Root({ children }) {
   return (
     <>
       {children}
-      <Chatbot />
+      <AiAssistant />
     </>
   );
 }
