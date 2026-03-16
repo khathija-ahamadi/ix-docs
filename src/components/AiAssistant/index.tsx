@@ -95,9 +95,34 @@ const EXAMPLE_PROMPTS = [
   'Build a data table page with pagination, a search bar, and action buttons for add/edit/delete',
 ];
 
+const MAX_WIDTH_RATIO = 0.95;
+const DEFAULT_WIDTH = 560;
+const DEFAULT_HEIGHT_VH = 70; // percent of viewport height
+const PANEL_BOTTOM_PX = 92; // must match CSS .panel { bottom }
+const PANEL_RIGHT_PX = 24; // must match CSS .panel { right }
+const VIEWPORT_PADDING = 8; // breathing room from edges
+
 export default function AiAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<Mode>('chat');
+
+  // ── Resize state ──
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_WIDTH);
+  const defaultHeight = Math.round(window.innerHeight * (DEFAULT_HEIGHT_VH / 100));
+  const [panelHeight, setPanelHeight] = useState(defaultHeight);
+
+  // Initial dimensions are the minimum – users can only resize larger
+  const MIN_WIDTH = DEFAULT_WIDTH;
+  const MIN_HEIGHT = defaultHeight;
+  const resizing = useRef<{
+    active: boolean;
+    edge: 'corner' | 'top' | 'left';
+    startX: number;
+    startY: number;
+    startW: number;
+    startH: number;
+  } | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // ── API Key state ──
   const [apiKey, setApiKey] = useState<string>('');
@@ -148,6 +173,66 @@ export default function AiAssistant() {
   const [codeMessage, setCodeMessage] = useState('');
   const [copied, setCopied] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // ── Resize event handlers ──
+  useEffect(() => {
+    const onPointerMove = (e: PointerEvent) => {
+      const r = resizing.current;
+      if (!r?.active) return;
+      e.preventDefault();
+
+      // Use clientWidth/clientHeight (excludes scrollbars) for accurate bounds
+      const vpW = document.documentElement.clientWidth;
+      const vpH = document.documentElement.clientHeight;
+      const maxW = vpW - PANEL_RIGHT_PX - VIEWPORT_PADDING;
+      const maxH = vpH - PANEL_BOTTOM_PX - VIEWPORT_PADDING;
+
+      if (r.edge === 'corner' || r.edge === 'left') {
+        // Panel is right-anchored, so dragging left increases width
+        // Also clamp so left edge doesn't go past VIEWPORT_PADDING
+        const newW = Math.min(maxW, Math.max(MIN_WIDTH, r.startW + (r.startX - e.clientX)));
+        setPanelWidth(newW);
+      }
+      if (r.edge === 'corner' || r.edge === 'top') {
+        // Panel is bottom-anchored, so dragging up increases height
+        const newH = Math.min(maxH, Math.max(MIN_HEIGHT, r.startH + (r.startY - e.clientY)));
+        setPanelHeight(newH);
+      }
+    };
+
+    const onPointerUp = () => {
+      if (resizing.current) {
+        resizing.current = null;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+  }, []);
+
+  const startResize = (
+    e: React.PointerEvent,
+    edge: 'corner' | 'top' | 'left'
+  ) => {
+    e.preventDefault();
+    resizing.current = {
+      active: true,
+      edge,
+      startX: e.clientX,
+      startY: e.clientY,
+      startW: panelWidth,
+      startH: panelHeight,
+    };
+    document.body.style.cursor =
+      edge === 'corner' ? 'nwse-resize' : edge === 'top' ? 'ns-resize' : 'ew-resize';
+    document.body.style.userSelect = 'none';
+  };
 
   // ── Auto-scroll chat ──
   useEffect(() => {
@@ -344,7 +429,25 @@ export default function AiAssistant() {
 
       {/* ── Unified panel ── */}
       {isOpen && (
-        <div className={styles.panel}>
+        <div
+          ref={panelRef}
+          className={styles.panel}
+          style={{ width: panelWidth, height: panelHeight, maxHeight: panelHeight }}
+        >
+          {/* ── Resize handles ── */}
+          <div
+            className={styles.resizeTop}
+            onPointerDown={(e) => startResize(e, 'top')}
+          />
+          <div
+            className={styles.resizeLeft}
+            onPointerDown={(e) => startResize(e, 'left')}
+          />
+          <div
+            className={styles.resizeCorner}
+            onPointerDown={(e) => startResize(e, 'corner')}
+          />
+
           {/* Header with mode tabs */}
           <div className={styles.header}>
             <div className={styles.tabs}>

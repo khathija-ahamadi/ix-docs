@@ -34,9 +34,7 @@
   bottom: 92px;
   right: 24px;
   z-index: 9998;
-  width: 560px;
-  height: 70vh;
-  max-height: 70vh;
+  /* width / height / max-height are set via inline style for resizing */
   display: flex;
   flex-direction: column;
   background: var(--theme-color-1, #0f1619);
@@ -45,6 +43,37 @@
   box-shadow: 0 8px 30px var(--theme-color-shadow-1, rgba(0, 0, 0, 0.6));
   overflow: hidden;
   animation: slideUp 0.25s ease;
+}
+
+/* ── Resize handles ──────────────────────────────────────── */
+.resizeTop {
+  position: absolute;
+  top: -4px;
+  left: 12px;
+  right: 12px;
+  height: 8px;
+  cursor: ns-resize;
+  z-index: 10;
+}
+
+.resizeLeft {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: -4px;
+  width: 8px;
+  cursor: ew-resize;
+  z-index: 10;
+}
+
+.resizeCorner {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  z-index: 11;
 }
 
 /* ── Header with Tabs ────────────────────────────────────── */
@@ -551,9 +580,9 @@
   .panel {
     right: 8px;
     left: 8px;
-    width: auto;
+    width: auto !important;
     bottom: 84px;
-    max-height: 80vh;
+    max-height: 80vh !important;
   }
 
   .fab {
@@ -568,6 +597,12 @@
   .frameworkBtn {
     flex: none;
     width: calc(50% - 3px);
+  }
+
+  .resizeTop,
+  .resizeLeft,
+  .resizeCorner {
+    display: none;
   }
 }
 
