@@ -62,15 +62,22 @@ async function decryptApiKey(stored: string): Promise<string> {
 type Mode = 'chat' | 'codegen' | 'settings';
 type Framework = 'react' | 'angular' | 'vue' | 'webcomponents';
 
+interface Source {
+  title: string;
+  url: string;
+}
+
 interface ChatMessage {
   role: 'user' | 'bot';
   text: string;
   tier?: 'free' | 'premium';
+  sources?: Source[];
 }
 
 interface MatchedComponent {
   title: string;
   score: number;
+  url?: string;
   matchedKeywords: string[];
 }
 
@@ -197,17 +204,26 @@ export default function AiAssistant() {
 
     setChatLoading(true);
     try {
+      // Send conversation history for multi-turn context
+      const recentHistory = chatMessages.slice(-6).map((m) => ({
+        role: m.role,
+        text: m.text,
+      }));
+
       const res = await fetch(CHAT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: userMsg, apiKey }),
+        body: JSON.stringify({ question: userMsg, apiKey, history: recentHistory }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `Server error (${res.status})`);
       }
       const data = await res.json();
-      setChatMessages((prev) => [...prev, { role: 'bot', text: data.answer, tier: 'premium' }]);
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'bot', text: data.answer, tier: 'premium', sources: data.sources || [] },
+      ]);
     } catch (err: any) {
       setChatError(err.message || 'Something went wrong');
     } finally {
@@ -399,6 +415,23 @@ export default function AiAssistant() {
                         : 'iX Bot'}
                     </span>
                     <p className={styles.bubbleText}>{msg.text}</p>
+                    {msg.sources && msg.sources.length > 0 && (
+                      <div className={styles.sourcesRow}>
+                        <span className={styles.sourcesLabel}>📖 Sources:</span>
+                        {msg.sources.map((src, si) => (
+                          <a
+                            key={si}
+                            href={src.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.sourceLink}
+                            title={src.title}
+                          >
+                            {src.title.length > 30 ? src.title.slice(0, 30) + '…' : src.title}
+                          </a>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
 

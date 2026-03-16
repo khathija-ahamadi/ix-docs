@@ -184,6 +184,43 @@
   font-style: italic;
 }
 
+/* ── Source citation links ───────────────────────────────── */
+.sourcesRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(224, 245, 255, 0.1);
+}
+
+.sourcesLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
+  margin-right: 2px;
+}
+
+.sourceLink {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: rgba(0, 189, 227, 0.1);
+  color: var(--theme-color-primary, #00bde3);
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background 0.15s;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sourceLink:hover {
+  background: rgba(0, 189, 227, 0.25);
+  text-decoration: underline;
+}
+
 /* ── Input row ───────────────────────────────────────────── */
 .inputRow {
   display: flex;

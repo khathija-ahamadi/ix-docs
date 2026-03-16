@@ -12,6 +12,78 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ─── Query expansion (synonyms / aliases) ───────────────────────────
+// Maps common natural-language terms to iX component or concept names.
+// When the user says "popup", we also search for "modal", etc.
+const QUERY_ALIASES = {
+  popup: ["modal", "dialog"],
+  dialog: ["modal"],
+  sidebar: ["menu", "application-menu", "ix-menu"],
+  navbar: ["application-header", "ix-application-header", "header"],
+  header: ["application-header"],
+  nav: ["menu", "breadcrumb", "tabs"],
+  table: ["html-grid", "grid", "ag-grid", "data-grid"],
+  datagrid: ["grid", "ag-grid", "html-grid"],
+  form: ["forms-field", "forms-layout", "forms-validation", "input", "checkbox", "select", "radio"],
+  login: ["input", "button", "checkbox", "forms-field"],
+  notification: ["toast", "messagebar", "message-bar"],
+  alert: ["messagebar", "message-bar", "toast"],
+  accordion: ["blind", "ix-blind"],
+  collapse: ["blind", "ix-blind"],
+  collapsible: ["blind", "ix-blind"],
+  tag: ["chip", "pill"],
+  badge: ["pill", "chip"],
+  switch: ["toggle", "ix-toggle"],
+  toggle: ["ix-toggle"],
+  progress: ["progress-indicator", "spinner"],
+  loading: ["spinner", "progress-indicator"],
+  calendar: ["date-picker", "date-input", "date-dropdown"],
+  datepicker: ["date-picker", "date-input", "date-dropdown"],
+  timepicker: ["time-picker", "time-input"],
+  color: ["colors", "theming", "theme"],
+  theme: ["theming", "colors"],
+  dark: ["theming", "theme"],
+  light: ["theming", "theme"],
+  install: ["installation", "setup", "getting-started"],
+  setup: ["installation", "getting-started"],
+  start: ["getting-started", "installation", "starter-app"],
+  migrate: ["migration"],
+  upgrade: ["migration"],
+  version: ["migration", "release", "changelog"],
+  chart: ["line-chart", "bar-chart", "pie-chart", "gauge-chart"],
+  graph: ["line-chart", "bar-chart", "chart"],
+  search: ["expanding-search", "category-filter"],
+  overlay: ["modal", "drawer", "pane"],
+  drawer: ["pane", "panes"],
+  panel: ["pane", "panes", "blind"],
+  cards: ["card", "card-list"],
+  list: ["event-list", "card-list", "key-value-list"],
+  dropdown: ["select", "dropdown-button", "ix-dropdown"],
+  icon: ["icons", "icon-button", "ix-icons"],
+  typography: ["fonts", "text", "styles"],
+  spacing: ["layout-grid", "layout-auto"],
+  layout: ["layout-grid", "layout-auto", "panes", "application"],
+  responsive: ["breakpoints", "application", "layout-grid"],
+  accessibility: ["a11y", "accessible"],
+  a11y: ["accessibility"],
+};
+
+/**
+ * Expand a user query with synonyms / aliases.
+ * Returns the original query + appended synonym terms.
+ */
+function expandQuery(query) {
+  const lower = query.toLowerCase();
+  const extras = new Set();
+  for (const [trigger, synonyms] of Object.entries(QUERY_ALIASES)) {
+    if (lower.includes(trigger)) {
+      for (const syn of synonyms) extras.add(syn);
+    }
+  }
+  if (extras.size === 0) return query;
+  return `${query} ${[...extras].join(" ")}`;
+}
+
 // ─── BM25 Search Engine ────────────────────────────────────────────
 
 const STOPWORDS = new Set([
@@ -78,11 +150,12 @@ function buildSearchIndex(corpus) {
 }
 
 /**
- * Search the corpus using BM25 scoring.
+ * Search the corpus using BM25 scoring with query expansion.
  * Returns top-K docs sorted by relevance score.
  */
 function searchDocs(query, topK = 10) {
-  const queryTokens = tokenize(query);
+  const expanded = expandQuery(query);
+  const queryTokens = tokenize(expanded);
   if (queryTokens.length === 0) return [];
 
   const { docTermFreqs, docLengths, idf, avgDl } = searchIndex;
@@ -109,12 +182,20 @@ function searchDocs(query, topK = 10) {
     if (lowerTitle.includes(lowerQuery)) score *= 2.0;
     else {
       // Partial title match boost (any query token appears in title)
-      const titleHits = queryTokens.filter((t) => lowerTitle.includes(t)).length;
-      if (titleHits > 0) score *= 1 + 0.3 * (titleHits / queryTokens.length);
+      const originalTokens = tokenize(query);
+      const titleHits = originalTokens.filter((t) => lowerTitle.includes(t)).length;
+      if (titleHits > 0) score *= 1 + 0.3 * (titleHits / Math.max(originalTokens.length, 1));
     }
 
     const matchedKeywords = queryTokens.filter((t) => (tf[t] || 0) > 0);
-    return { title: doc.title, content: doc.content, score, source: doc.source, matchedKeywords };
+    return {
+      title: doc.title,
+      content: doc.content,
+      score,
+      source: doc.source,
+      url: doc.url || null,
+      matchedKeywords,
+    };
   });
 
   return scores
@@ -229,9 +310,14 @@ Generate the complete ${framework} code for this UI.`;
 
 // ─── Routes ─────────────────────────────────────────────────────────
 
-/** Chat endpoint — BM25 RAG over the full iX documentation */
+/**
+ * Chat endpoint — BM25 RAG over the full iX documentation.
+ * Supports multi-turn conversation via optional `history` array.
+ *
+ * Body: { question: string, apiKey?: string, history?: Array<{role,text}> }
+ */
 app.post("/chat", async (req, res) => {
-  const { question, apiKey: userApiKey } = req.body;
+  const { question, apiKey: userApiKey, history } = req.body;
 
   if (!question || !question.trim()) {
     return res.status(400).json({ error: "question is required" });
@@ -242,7 +328,7 @@ app.post("/chat", async (req, res) => {
     return res.status(400).json({ error: "No API key available. Please add your AI API key in the ⚙️ Settings tab." });
   }
 
-  // RAG: BM25 retrieval over the full documentation corpus
+  // RAG: BM25 retrieval over the full documentation corpus (with query expansion)
   const matchedDocs = searchDocs(question, 10);
 
   if (matchedDocs.length === 0) {
@@ -250,36 +336,63 @@ app.post("/chat", async (req, res) => {
       answer:
         "I couldn't find relevant information in the iX documentation for that question. " +
         "Try rephrasing or ask about a specific component, installation, theming, or guidelines.",
+      sources: [],
     });
   }
 
-  // Cap context to top 8 chunks to stay within token limits
-  const docsContext = matchedDocs
-    .slice(0, 8)
-    .map((d) => `### ${d.title}\n${d.content}`)
+  // Build context with source references
+  const topDocs = matchedDocs.slice(0, 8);
+  const docsContext = topDocs
+    .map((d, i) => `### [${i + 1}] ${d.title}\n${d.content}`)
     .join("\n\n---\n\n");
+
+  // Collect unique source URLs for citation
+  const sources = [...new Map(
+    topDocs
+      .filter((d) => d.url)
+      .map((d) => [d.url, { title: d.title, url: d.url }])
+  ).values()].slice(0, 5);
+
+  // Build conversation messages (multi-turn)
+  const messages = [
+    {
+      role: "system",
+      content:
+        "You are a helpful, knowledgeable assistant for the Siemens Industrial Experience (iX) design system. " +
+        "Answer the user's question strictly using the provided iX documentation excerpts below. " +
+        "Be concise but thorough. If the docs contain code examples, include them formatted in markdown code blocks. " +
+        "When referencing information, cite the source number in brackets like [1], [2] etc. " +
+        "If the answer is not covered by the provided docs, say so honestly and suggest checking https://ix.siemens.io/. " +
+        "Format your response using markdown for readability (headings, lists, code blocks).",
+    },
+  ];
+
+  // Include recent conversation history (up to last 6 turns) for multi-turn context
+  if (Array.isArray(history) && history.length > 0) {
+    const recentHistory = history.slice(-6);
+    for (const msg of recentHistory) {
+      if (msg.role === "user") {
+        messages.push({ role: "user", content: msg.text });
+      } else if (msg.role === "bot") {
+        messages.push({ role: "assistant", content: msg.text });
+      }
+    }
+  }
+
+  // Current question with documentation context
+  messages.push({
+    role: "user",
+    content: `## iX Documentation excerpts\n\n${docsContext}\n\n---\n\n## Question\n\n${question}`,
+  });
 
   try {
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
         model: "llama-3.3-70b-versatile",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a helpful, knowledgeable assistant for the Siemens Industrial Experience (iX) design system. " +
-              "Answer the user's question strictly using the provided iX documentation excerpts. " +
-              "Be concise but thorough. If the docs contain code examples, include them. " +
-              "If the answer is not covered by the provided docs, say so honestly and suggest checking https://ix.siemens.io/.",
-          },
-          {
-            role: "user",
-            content: `## iX Documentation excerpts\n\n${docsContext}\n\n---\n\n## Question\n\n${question}`,
-          },
-        ],
+        messages,
         temperature: 0.3,
-        max_tokens: 1024,
+        max_tokens: 2048,
       },
       {
         headers: {
@@ -291,7 +404,7 @@ app.post("/chat", async (req, res) => {
     );
 
     const answer = response.data.choices[0].message.content;
-    res.json({ answer, tier: "premium" });
+    res.json({ answer, tier: "premium", sources });
   } catch (err) {
     const status = err.response?.status || 500;
     const message = err.response?.data?.error?.message || err.message;
@@ -349,6 +462,7 @@ app.post("/generate", async (req, res) => {
         title: d.title,
         score: d.score,
         source: d.source,
+        url: d.url || null,
         matchedKeywords: d.matchedKeywords || [],
       })),
       framework,
@@ -363,7 +477,11 @@ app.post("/generate", async (req, res) => {
 
 /** Health check */
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", docs: docs.length });
+  res.json({
+    status: "ok",
+    docs: docs.length,
+    features: ["bm25-search", "query-expansion", "conversation-history", "source-citations"],
+  });
 });
 
 const PORT = process.env.PORT || 5000;
