@@ -533,3 +533,242 @@
     width: calc(50% - 3px);
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   TIER BANNER
+   ══════════════════════════════════════════════════════════ */
+
+.tierBannerFree {
+  padding: 5px 12px;
+  font-size: 11px;
+  background: rgba(255, 187, 0, 0.08);
+  color: var(--theme-color-warning, #ffbb00);
+  border-bottom: 1px solid rgba(255, 187, 0, 0.2);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.tierBannerPremium {
+  padding: 5px 12px;
+  font-size: 11px;
+  background: rgba(0, 189, 227, 0.08);
+  color: var(--theme-color-primary, #00bde3);
+  border-bottom: 1px solid rgba(0, 189, 227, 0.2);
+  flex-shrink: 0;
+}
+
+.tierLink {
+  background: none;
+  border: none;
+  color: var(--theme-color-warning, #ffbb00);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+}
+
+.tierLink:hover {
+  color: #fff;
+}
+
+/* ══════════════════════════════════════════════════════════
+   SETTINGS VIEW
+   ══════════════════════════════════════════════════════════ */
+
+.settingsBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settingsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settingsTitle {
+  margin: 0 0 4px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--theme-color-contrast-text, #fff);
+}
+
+.settingsDescription {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
+}
+
+.settingsDescription strong {
+  color: var(--theme-color-std-text, rgba(245, 252, 255, 0.9));
+}
+
+.settingsLink {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--theme-color-primary, #00bde3);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.settingsLink:hover {
+  text-decoration: underline;
+  color: var(--theme-color-dynamic, #00eaff);
+}
+
+/* ── Key input area ──────────────────────────────────────── */
+.keyInput {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.25));
+  border-radius: 6px;
+  background: var(--theme-color-1, #0f1619);
+  color: var(--theme-color-std-text, rgba(245, 252, 255, 0.9));
+  font-size: 13px;
+  font-family: 'Consolas', monospace;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.keyInput:focus {
+  border-color: var(--theme-color-primary, #00bde3);
+}
+
+.keyInput::placeholder {
+  color: var(--theme-color-weak-text, rgba(219, 244, 255, 0.4));
+  font-family: inherit;
+}
+
+.saveKeyBtn {
+  padding: 9px 18px;
+  background: var(--theme-color-primary, #00bde3);
+  color: var(--theme-color-inv-std-text, rgba(0, 10, 20, 0.9));
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  align-self: flex-start;
+}
+
+.saveKeyBtn:hover:not(:disabled) {
+  background: var(--theme-color-dynamic, #00eaff);
+}
+
+.saveKeyBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Key status (when saved) ────────────────────────────── */
+.keyStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 12px;
+  background: rgba(0, 189, 227, 0.06);
+  border: 1px solid rgba(0, 189, 227, 0.3);
+  border-radius: 6px;
+}
+
+.keyMasked {
+  font-family: 'Consolas', monospace;
+  font-size: 12px;
+  color: var(--theme-color-std-text, rgba(245, 252, 255, 0.9));
+  letter-spacing: 1px;
+}
+
+.clearKeyBtn {
+  background: none;
+  border: 1px solid rgba(235, 122, 10, 0.5);
+  border-radius: 4px;
+  color: var(--theme-color-warning, #ffbb00);
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.clearKeyBtn:hover {
+  background: rgba(235, 122, 10, 0.15);
+}
+
+.savedBadge {
+  font-size: 12px;
+  color: #4caf6f;
+  font-weight: 600;
+  animation: fadeIn 0.3s ease;
+}
+
+/* ── Tier comparison table ───────────────────────────────── */
+.tierTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.tierTable th {
+  text-align: left;
+  padding: 6px 10px;
+  background: var(--theme-color-2, #283236);
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tierTable th:not(:first-child),
+.tierTable td:not(:first-child) {
+  text-align: center;
+}
+
+.tierTable td {
+  padding: 6px 10px;
+  border-top: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.12));
+  color: var(--theme-color-std-text, rgba(245, 252, 255, 0.9));
+}
+
+.tierTable tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.settingsNote {
+  margin: 0;
+  font-size: 11px;
+  color: var(--theme-color-weak-text, rgba(219, 244, 255, 0.4));
+  line-height: 1.5;
+}
+
+.settingsNote strong {
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
+}
+
+/* ── Settings link button (inside info box) ──────────────── */
+.settingsLinkBtn {
+  background: none;
+  border: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.25));
+  border-radius: 4px;
+  color: var(--theme-color-primary, #00bde3);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.settingsLinkBtn:hover {
+  background: rgba(0, 189, 227, 0.1);
+}

@@ -67,7 +67,9 @@ function findMultipleRelevantDocs(description, minScore = 3) {
 
 // ─── LLM helpers ────────────────────────────────────────────────────
 
-async function askAI(context, question) {
+async function askAI(context, question, userApiKey) {
+  const key = userApiKey || process.env.GROQ_API_KEY;
+  if (!key) throw new Error('No API key available. Please add your AI API key in the ⚙️ Settings tab.');
   const response = await axios.post(
     "https://api.groq.com/openai/v1/chat/completions",
     {
@@ -86,7 +88,7 @@ async function askAI(context, question) {
     },
     {
       headers: {
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
       httpsAgent,
@@ -100,7 +102,9 @@ async function askAI(context, question) {
  * Code-generation-specific LLM call.
  * Receives multiple component docs + the user description + target framework.
  */
-async function generateCode(componentDocs, description, framework) {
+async function generateCode(componentDocs, description, framework, userApiKey) {
+  const key = userApiKey || process.env.GROQ_API_KEY;
+  if (!key) throw new Error('No API key available. Please add your AI API key in the ⚙️ Settings tab.');
   const frameworkGuide = {
     react: `Use React with @siemens/ix-react. Import components like: import { IxButton, IxInput } from '@siemens/ix-react'; Use JSX with PascalCase tags (e.g. <IxButton>, <IxInput>). For boolean props use prop={true}. For events use onEventName.`,
     angular: `Use Angular with @siemens/ix-angular. For standalone components: import { IxButton } from '@siemens/ix-angular/standalone'; For module setup: import { IxModule } from '@siemens/ix-angular'. Use kebab-case tags in templates (e.g. <ix-button>, <ix-input>). Bind props with [prop]="value". Bind events with (eventName)="handler($event)".`,
@@ -151,7 +155,7 @@ Generate the complete ${framework} code for this UI.`;
     },
     {
       headers: {
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
       httpsAgent,
@@ -165,7 +169,7 @@ Generate the complete ${framework} code for this UI.`;
 
 /** Existing chatbot endpoint */
 app.post("/chat", async (req, res) => {
-  const { question } = req.body;
+  const { question, apiKey: userApiKey } = req.body;
 
   const context = findRelevantDoc(question);
 
@@ -174,7 +178,7 @@ app.post("/chat", async (req, res) => {
   }
 
   try {
-    const answer = await askAI(context, question);
+    const answer = await askAI(context, question, userApiKey);
     res.json({ answer });
   } catch (err) {
     const status = err.response?.status || 500;
@@ -195,7 +199,7 @@ app.post("/chat", async (req, res) => {
  *   4. Response includes generated code + matched components list
  */
 app.post("/generate", async (req, res) => {
-  const { description, framework = "react" } = req.body;
+  const { description, framework = "react", apiKey: userApiKey } = req.body;
 
   if (!description || !description.trim()) {
     return res.status(400).json({ error: "description is required" });
@@ -225,7 +229,7 @@ app.post("/generate", async (req, res) => {
 
   try {
     // Step 2 — LLM: generate code using retrieved docs
-    const code = await generateCode(topDocs, description, framework);
+    const code = await generateCode(topDocs, description, framework, userApiKey);
 
     res.json({
       code,

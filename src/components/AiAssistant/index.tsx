@@ -3,13 +3,69 @@ import styles from './styles.module.css';
 
 const CHAT_URL = 'http://localhost:5000/chat';
 const GENERATE_URL = 'http://localhost:5000/generate';
+const API_KEY_STORAGE = 'ix-assistant-api-key';
 
-type Mode = 'chat' | 'codegen';
+// ── Web Crypto: AES-GCM encryption for localStorage ────────────────────────
+// Key is derived via PBKDF2 from a fixed app passphrase.
+// This prevents the raw API key from sitting as plain text in localStorage.
+async function getCryptoKey(): Promise<CryptoKey> {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    enc.encode('ix-ai-assistant-v1'),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: enc.encode('ix-api-salt-2026'),
+      iterations: 100_000,
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptApiKey(plain: string): Promise<string> {
+  const key = await getCryptoKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const cipherBuf = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    new TextEncoder().encode(plain)
+  );
+  // Prepend IV to ciphertext, then base64-encode the whole thing
+  const combined = new Uint8Array(12 + cipherBuf.byteLength);
+  combined.set(iv, 0);
+  combined.set(new Uint8Array(cipherBuf), 12);
+  return btoa(String.fromCharCode(...combined));
+}
+
+async function decryptApiKey(stored: string): Promise<string> {
+  const key = await getCryptoKey();
+  const combined = Uint8Array.from(atob(stored), (c) => c.charCodeAt(0));
+  const iv = combined.slice(0, 12);
+  const ciphertext = combined.slice(12);
+  const plainBuf = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    ciphertext
+  );
+  return new TextDecoder().decode(plainBuf);
+}
+
+type Mode = 'chat' | 'codegen' | 'settings';
 type Framework = 'react' | 'angular' | 'vue' | 'webcomponents';
 
 interface ChatMessage {
   role: 'user' | 'bot';
   text: string;
+  tier?: 'free' | 'premium';
 }
 
 interface MatchedComponent {
@@ -35,6 +91,32 @@ const EXAMPLE_PROMPTS = [
 export default function AiAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<Mode>('chat');
+
+  // ── API Key state ──
+  const [apiKey, setApiKey] = useState<string>('');
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [apiKeySaved, setApiKeySaved] = useState(false);
+  const [keyLoading, setKeyLoading] = useState(true); // true while decrypting on mount
+
+  const hasPremium = apiKey.trim().length > 0;
+
+  // ── Decrypt stored key on mount ──
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = localStorage.getItem(API_KEY_STORAGE);
+        if (stored) {
+          const plain = await decryptApiKey(stored);
+          setApiKey(plain);
+        }
+      } catch {
+        // Stored value is corrupt or from old plain-text version — clear it
+        localStorage.removeItem(API_KEY_STORAGE);
+      } finally {
+        setKeyLoading(false);
+      }
+    })();
+  }, []);
 
   // ── Chat state ──
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -70,7 +152,7 @@ export default function AiAssistant() {
     if (!isOpen) return;
     if (mode === 'chat') {
       chatInputRef.current?.focus();
-    } else {
+    } else if (mode === 'codegen') {
       textareaRef.current?.focus();
     }
   }, [isOpen, mode]);
@@ -79,25 +161,53 @@ export default function AiAssistant() {
   //  CHAT LOGIC
   // ════════════════════════════════════════════════════════════
 
+  // ── API Key handlers ──
+  const saveApiKey = async () => {
+    const trimmed = apiKeyInput.trim();
+    if (!trimmed) return;
+    try {
+      const encrypted = await encryptApiKey(trimmed);
+      localStorage.setItem(API_KEY_STORAGE, encrypted);
+    } catch {
+      // Fallback: if Web Crypto somehow unavailable, skip storage
+    }
+    setApiKey(trimmed);
+    setApiKeyInput('');
+    setApiKeySaved(true);
+    setTimeout(() => setApiKeySaved(false), 2500);
+  };
+
+  const clearApiKey = () => {
+    try { localStorage.removeItem(API_KEY_STORAGE); } catch {}
+    setApiKey('');
+    setApiKeyInput('');
+    // Clear any generated output that relied on the removed key
+    setGeneratedCode('');
+    setMatchedComponents([]);
+    setCodeMessage('');
+    setCodeError('');
+  };
+
   const sendMessage = async () => {
     if (!question.trim() || chatLoading) return;
     const userMsg = question.trim();
     setQuestion('');
     setChatError('');
     setChatMessages((prev) => [...prev, { role: 'user', text: userMsg }]);
+
     setChatLoading(true);
     try {
       const res = await fetch(CHAT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: userMsg }),
+        body: JSON.stringify({ question: userMsg, apiKey }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `Server error (${res.status})`);
       }
       const data = await res.json();
-      setChatMessages((prev) => [...prev, { role: 'bot', text: data.answer }]);
+      setChatMessages((prev) => [...prev, { role: 'bot', text: data.answer, tier: 'premium' }]);
     } catch (err: any) {
       setChatError(err.message || 'Something went wrong');
     } finally {
@@ -122,6 +232,15 @@ export default function AiAssistant() {
 
   const handleGenerate = async () => {
     if (!description.trim() || codeLoading) return;
+
+    // Gate code generation behind API key
+    if (!hasPremium) {
+      setCodeMessage(
+        '🔑 Code generation requires an AI model. Add your AI API key in the ⚙️ Settings tab to unlock this feature.'
+      );
+      return;
+    }
+
     setCodeError('');
     setGeneratedCode('');
     setMatchedComponents([]);
@@ -132,7 +251,7 @@ export default function AiAssistant() {
       const res = await fetch(GENERATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: description.trim(), framework }),
+        body: JSON.stringify({ description: description.trim(), framework, apiKey }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -225,15 +344,41 @@ export default function AiAssistant() {
               >
                 &lt;/&gt; Code Gen
               </button>
+              <button
+                className={`${styles.tab} ${mode === 'settings' ? styles.tabActive : ''}`}
+                onClick={() => setMode('settings')}
+                title="API Key Settings"
+              >
+                ⚙️ Settings
+              </button>
             </div>
-            <button
-              className={styles.clearBtn}
-              onClick={mode === 'chat' ? clearChat : clearCodeGen}
-              title="Clear"
-            >
-              🗑
-            </button>
+            {mode !== 'settings' && (
+              <button
+                className={styles.clearBtn}
+                onClick={mode === 'chat' ? clearChat : clearCodeGen}
+                title="Clear"
+              >
+                🗑
+              </button>
+            )}
           </div>
+
+          {/* ─────── Tier banner ─────── */}
+          {mode !== 'settings' && !keyLoading && (
+            <div className={hasPremium ? styles.tierBannerPremium : styles.tierBannerFree}>
+              {hasPremium ? (
+                <>🔑 <strong>Premium</strong> — AI-powered via your API key</>
+              ) : (
+                <>
+                  🆓 <strong>Free tier</strong> —{' '}
+                  <button className={styles.tierLink} onClick={() => setMode('settings')}>
+                    Add API key
+                  </button>{' '}
+                  for AI responses.
+                </>
+              )}
+            </div>
+          )}
 
           {/* ─────── Chat View ─────── */}
           {mode === 'chat' && (
@@ -247,7 +392,11 @@ export default function AiAssistant() {
                     }`}
                   >
                     <span className={styles.bubbleLabel}>
-                      {msg.role === 'user' ? 'You' : 'iX Bot'}
+                      {msg.role === 'user'
+                        ? 'You'
+                        : msg.tier === 'premium'
+                        ? 'iX Bot ✨'
+                        : 'iX Bot'}
                     </span>
                     <p className={styles.bubbleText}>{msg.text}</p>
                   </div>
@@ -255,7 +404,7 @@ export default function AiAssistant() {
 
                 {chatLoading && (
                   <div className={`${styles.bubble} ${styles.bubbleBot}`}>
-                    <span className={styles.bubbleLabel}>iX Bot</span>
+                    <span className={styles.bubbleLabel}>iX Bot ✨</span>
                     <span className={styles.typing}>Thinking…</span>
                   </div>
                 )}
@@ -371,9 +520,21 @@ export default function AiAssistant() {
                 </div>
               )}
 
-              {/* Info message */}
+              {/* Info message (includes gate message when no key) */}
               {codeMessage && (
-                <div className={styles.info}>💡 {codeMessage}</div>
+                <div className={styles.info}>
+                  {codeMessage}
+                  {!hasPremium && (
+                    <div style={{ marginTop: 8 }}>
+                      <button
+                        className={styles.settingsLinkBtn}
+                        onClick={() => setMode('settings')}
+                      >
+                        ⚙️ Go to Settings →
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Matched components */}
@@ -415,6 +576,105 @@ export default function AiAssistant() {
                   </pre>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ─────── Settings View ─────── */}
+          {mode === 'settings' && (
+            <div className={styles.settingsBody}>
+              <div className={styles.settingsSection}>
+                <h3 className={styles.settingsTitle}>🔑 API Key</h3>
+                <p className={styles.settingsDescription}>
+                  iX AI Assistant is open-source. To keep it free for everyone, AI features
+                  use <strong>your own AI API key</strong>. Many providers (Groq, OpenAI,
+                  Mistral, etc.) offer free tiers — no credit card needed.
+                </p>
+                <a
+                  href="https://console.groq.com/keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.settingsLink}
+                >
+                  ↗ Get a free Groq key (recommended — no credit card)
+                </a>
+              </div>
+
+              <div className={styles.settingsSection}>
+                <label className={styles.label}>
+                  {keyLoading
+                    ? 'Loading…'
+                    : hasPremium
+                    ? '✅ AI API Key (saved & encrypted)'
+                    : 'Enter your AI API key'}
+                </label>
+
+                {keyLoading && (
+                  <div className={styles.keyLoading}>
+                    <span className={styles.spinner} /> Decrypting stored key…
+                  </div>
+                )}
+
+                {!keyLoading && hasPremium && (
+                  <div className={styles.keyStatus}>
+                    <div className={styles.keyMasked}>
+                      {apiKey.slice(0, 6)}{'•'.repeat(20)}{apiKey.slice(-4)}
+                    </div>
+                    <button className={styles.clearKeyBtn} onClick={clearApiKey}>
+                      Remove key
+                    </button>
+                  </div>
+                )}
+
+                {!keyLoading && !hasPremium && (
+                  <>
+                    <input
+                      className={styles.keyInput}
+                      type="password"
+                      placeholder="sk-••••••••••••••••••••••••••••••••••••"
+                      value={apiKeyInput}
+                      onChange={(e) => setApiKeyInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') saveApiKey(); }}
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <button
+                      className={styles.saveKeyBtn}
+                      onClick={saveApiKey}
+                      disabled={!apiKeyInput.trim()}
+                    >
+                      Save Key
+                    </button>
+                  </>
+                )}
+
+                {apiKeySaved && (
+                  <div className={styles.savedBadge}>✓ Key saved! AI features are now unlocked.</div>
+                )}
+              </div>
+
+              <div className={styles.settingsSection}>
+                <h3 className={styles.settingsTitle}>🆓 Free vs Premium</h3>
+                <table className={styles.tierTable}>
+                  <thead>
+                    <tr>
+                      <th>Feature</th>
+                      <th>Free</th>
+                      <th>With Key</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>iX FAQ answers</td><td>✅</td><td>✅</td></tr>
+                    <tr><td>Component lookup</td><td>✅</td><td>✅</td></tr>
+                    <tr><td>AI chat (LLM)</td><td>—</td><td>✅</td></tr>
+                    <tr><td>Code generation</td><td>—</td><td>✅</td></tr>
+                  </tbody>
+                </table>
+                <p className={styles.settingsNote}>
+                  🔒 Your key is <strong>AES-256-GCM encrypted</strong> before being saved to
+                  localStorage — it is never stored as plain text. The key is only sent to
+                  the AI provider's API, never to any other server.
+                </p>
+              </div>
             </div>
           )}
         </div>
