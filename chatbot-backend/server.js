@@ -12,58 +12,120 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ─── Retrieval helpers ──────────────────────────────────────────────
+// ─── BM25 Search Engine ────────────────────────────────────────────
+
+const STOPWORDS = new Set([
+  "the","a","an","is","are","was","were","be","been","being","have","has",
+  "had","do","does","did","will","would","could","should","may","might",
+  "shall","can","need","to","of","in","for","on","with","at","by","from",
+  "as","into","through","during","before","after","above","below","between",
+  "out","off","over","under","again","further","then","once","here","there",
+  "when","where","why","how","all","each","every","both","few","more","most",
+  "other","some","such","no","nor","not","only","own","same","so","than",
+  "too","very","and","but","or","if","while","because","until","that",
+  "which","who","whom","this","these","those","it","its","they","them",
+  "their","what","we","you","your","i","me","my","he","she","his","her",
+  "up","about","just","also","now","like",
+]);
+
+/** Tokenise text into lowercase terms, filtering stopwords. */
+function tokenize(text) {
+  return (text.toLowerCase().match(/[a-z][a-z0-9-]{1,}/g) || [])
+    .filter((w) => !STOPWORDS.has(w) && w.length > 1);
+}
 
 /**
- * Original single-best-match retrieval (used by /chat).
+ * Build a BM25 inverted index over the docs corpus.
+ * Called once at server startup.
  */
-function findRelevantDoc(question) {
-  question = question.toLowerCase().replace(/[^a-z0-9 ]/g, " ");
+function buildSearchIndex(corpus) {
+  const N = corpus.length;
+  const docTermFreqs = [];
+  const docLengths = [];
+  const df = {};
 
-  let bestMatch = null;
-  let bestScore = 0;
+  for (const doc of corpus) {
+    // Index title (triple-weighted), keywords (double-weighted), and content
+    const titleTokens = tokenize(doc.title);
+    const keywordTokens = (doc.keywords || []).flatMap((k) => tokenize(k));
+    const contentTokens = tokenize(doc.content);
+    const tokens = [
+      ...titleTokens, ...titleTokens, ...titleTokens,
+      ...keywordTokens, ...keywordTokens,
+      ...contentTokens,
+    ];
 
-  for (let doc of docs) {
-    let score = 0;
-    for (let keyword of doc.keywords) {
-      if (question.includes(keyword.toLowerCase())) {
-        score += keyword.length;
-      }
+    const tf = {};
+    for (const t of tokens) {
+      tf[t] = (tf[t] || 0) + 1;
     }
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = doc.content;
+    docTermFreqs.push(tf);
+    docLengths.push(tokens.length);
+
+    for (const t of Object.keys(tf)) {
+      df[t] = (df[t] || 0) + 1;
     }
   }
 
-  return bestMatch;
+  // IDF with BM25 formula
+  const idf = {};
+  for (const [term, freq] of Object.entries(df)) {
+    idf[term] = Math.log((N - freq + 0.5) / (freq + 0.5) + 1);
+  }
+
+  const avgDl = docLengths.reduce((s, l) => s + l, 0) / N;
+  return { docTermFreqs, docLengths, idf, avgDl };
 }
 
 /**
- * Multi-document retrieval for code generation.
- * Returns ALL docs whose keyword score exceeds the threshold,
- * sorted by relevance (highest first).
+ * Search the corpus using BM25 scoring.
+ * Returns top-K docs sorted by relevance score.
  */
-function findMultipleRelevantDocs(description, minScore = 3) {
-  const normalised = description.toLowerCase().replace(/[^a-z0-9 ]/g, " ");
+function searchDocs(query, topK = 10) {
+  const queryTokens = tokenize(query);
+  if (queryTokens.length === 0) return [];
 
-  const scored = docs
-    .map((doc) => {
-      let score = 0;
-      const matchedKeywords = [];
-      for (const keyword of doc.keywords) {
-        if (normalised.includes(keyword.toLowerCase())) {
-          score += keyword.length;
-          matchedKeywords.push(keyword);
-        }
-      }
-      return { title: doc.title, content: doc.content, score, matchedKeywords };
-    })
-    .filter((d) => d.score >= minScore)
-    .sort((a, b) => b.score - a.score);
+  const { docTermFreqs, docLengths, idf, avgDl } = searchIndex;
+  const k1 = 1.5;
+  const b = 0.75;
+  const lowerQuery = query.toLowerCase();
 
-  return scored;
+  const scores = docs.map((doc, i) => {
+    let score = 0;
+    const tf = docTermFreqs[i];
+    const dl = docLengths[i];
+
+    for (const qt of queryTokens) {
+      const termFreq = tf[qt] || 0;
+      if (termFreq === 0) continue;
+      const idfVal = idf[qt] || 0;
+      const tfNorm =
+        (termFreq * (k1 + 1)) / (termFreq + k1 * (1 - b + (b * dl) / avgDl));
+      score += idfVal * tfNorm;
+    }
+
+    // Boost documents whose title closely matches the query
+    const lowerTitle = doc.title.toLowerCase();
+    if (lowerTitle.includes(lowerQuery)) score *= 2.0;
+    else {
+      // Partial title match boost (any query token appears in title)
+      const titleHits = queryTokens.filter((t) => lowerTitle.includes(t)).length;
+      if (titleHits > 0) score *= 1 + 0.3 * (titleHits / queryTokens.length);
+    }
+
+    const matchedKeywords = queryTokens.filter((t) => (tf[t] || 0) > 0);
+    return { title: doc.title, content: doc.content, score, source: doc.source, matchedKeywords };
+  });
+
+  return scores
+    .filter((d) => d.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK);
 }
+
+// Build search index at startup
+const searchIndex = buildSearchIndex(docs);
+console.log(`BM25 search index built over ${docs.length} document chunks`);
 
 // ─── LLM helpers ────────────────────────────────────────────────────
 
@@ -167,19 +229,69 @@ Generate the complete ${framework} code for this UI.`;
 
 // ─── Routes ─────────────────────────────────────────────────────────
 
-/** Existing chatbot endpoint */
+/** Chat endpoint — BM25 RAG over the full iX documentation */
 app.post("/chat", async (req, res) => {
   const { question, apiKey: userApiKey } = req.body;
 
-  const context = findRelevantDoc(question);
-
-  if (!context) {
-    return res.json({ answer: "Sorry, no relevant information found." });
+  if (!question || !question.trim()) {
+    return res.status(400).json({ error: "question is required" });
   }
 
+  const key = userApiKey || process.env.GROQ_API_KEY;
+  if (!key) {
+    return res.status(400).json({ error: "No API key available. Please add your AI API key in the ⚙️ Settings tab." });
+  }
+
+  // RAG: BM25 retrieval over the full documentation corpus
+  const matchedDocs = searchDocs(question, 10);
+
+  if (matchedDocs.length === 0) {
+    return res.json({
+      answer:
+        "I couldn't find relevant information in the iX documentation for that question. " +
+        "Try rephrasing or ask about a specific component, installation, theming, or guidelines.",
+    });
+  }
+
+  // Cap context to top 8 chunks to stay within token limits
+  const docsContext = matchedDocs
+    .slice(0, 8)
+    .map((d) => `### ${d.title}\n${d.content}`)
+    .join("\n\n---\n\n");
+
   try {
-    const answer = await askAI(context, question, userApiKey);
-    res.json({ answer });
+    const response = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a helpful, knowledgeable assistant for the Siemens Industrial Experience (iX) design system. " +
+              "Answer the user's question strictly using the provided iX documentation excerpts. " +
+              "Be concise but thorough. If the docs contain code examples, include them. " +
+              "If the answer is not covered by the provided docs, say so honestly and suggest checking https://ix.siemens.io/.",
+          },
+          {
+            role: "user",
+            content: `## iX Documentation excerpts\n\n${docsContext}\n\n---\n\n## Question\n\n${question}`,
+          },
+        ],
+        temperature: 0.3,
+        max_tokens: 1024,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        httpsAgent,
+      }
+    );
+
+    const answer = response.data.choices[0].message.content;
+    res.json({ answer, tier: "premium" });
   } catch (err) {
     const status = err.response?.status || 500;
     const message = err.response?.data?.error?.message || err.message;
@@ -212,8 +324,8 @@ app.post("/generate", async (req, res) => {
     });
   }
 
-  // Step 1 — RAG: retrieve relevant component documentation
-  const matchedDocs = findMultipleRelevantDocs(description);
+  // Step 1 — RAG: BM25 retrieval of relevant component documentation
+  const matchedDocs = searchDocs(description, 15);
 
   if (matchedDocs.length === 0) {
     return res.json({
@@ -236,7 +348,8 @@ app.post("/generate", async (req, res) => {
       matchedComponents: topDocs.map((d) => ({
         title: d.title,
         score: d.score,
-        matchedKeywords: d.matchedKeywords,
+        source: d.source,
+        matchedKeywords: d.matchedKeywords || [],
       })),
       framework,
     });

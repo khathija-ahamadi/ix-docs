@@ -548,7 +548,7 @@ export default function AiAssistant() {
                       <span
                         key={i}
                         className={styles.chip}
-                        title={`Keywords: ${comp.matchedKeywords.join(', ')}`}
+                        title={`Keywords: ${(comp.matchedKeywords || []).join(', ')}`}
                       >
                         {comp.title}
                       </span>
