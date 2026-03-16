@@ -3,6 +3,7 @@
   "extends": "@docusaurus/tsconfig",
   "compilerOptions": {
     "baseUrl": ".",
+    "jsx": "react-jsx",
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },

@@ -144,6 +144,7 @@
   flex: 1;
   overflow: hidden;
   min-height: 0;
+  position: relative;
 }
 
 /* ── Messages area ───────────────────────────────────────── */
@@ -313,6 +314,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  position: relative;
 }
 
 /* ── Sections ────────────────────────────────────────────── */
@@ -843,4 +845,158 @@
 
 .settingsLinkBtn:hover {
   background: rgba(0, 189, 227, 0.1);
+}
+
+/* ══════════════════════════════════════════════════════════
+   HISTORY DRAWER
+   ══════════════════════════════════════════════════════════ */
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.historyBtn {
+  background: none;
+  border: none;
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+  padding: 8px;
+}
+
+.historyBtn:hover {
+  opacity: 1;
+  color: var(--theme-color-contrast-text, #fff);
+}
+
+.historyDrawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: var(--theme-color-2, #283236);
+  border-bottom: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.25));
+  max-height: 260px;
+  overflow-y: auto;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  animation: slideDown 0.2s ease;
+  border-radius: 0 0 8px 8px;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; max-height: 0; }
+  to   { opacity: 1; max-height: 240px; }
+}
+
+.historyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.12));
+  position: sticky;
+  top: 0;
+  background: var(--theme-color-2, #283236);
+  z-index: 1;
+}
+
+.historyTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--theme-color-contrast-text, #fff);
+  letter-spacing: 0.3px;
+}
+
+.historyClose {
+  background: none;
+  border: none;
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.historyClose:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--theme-color-contrast-text, #fff);
+}
+
+.historyEmpty {
+  padding: 16px 12px;
+  font-size: 12px;
+  color: var(--theme-color-weak-text, rgba(219, 244, 255, 0.4));
+  text-align: center;
+  line-height: 1.5;
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+}
+
+.historyItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.08));
+  transition: background 0.15s;
+}
+
+.historyItem:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.historyItemBtn {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.historyItemTitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--theme-color-std-text, rgba(245, 252, 255, 0.9));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.historyItemMeta {
+  font-size: 10px;
+  color: var(--theme-color-weak-text, rgba(219, 244, 255, 0.4));
+}
+
+.historyItem:hover .historyItemTitle {
+  color: var(--theme-color-primary, #00bde3);
+}
+
+.historyDeleteBtn {
+  background: none;
+  border: none;
+  color: var(--theme-color-weak-text, rgba(219, 244, 255, 0.4));
+  font-size: 12px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 4px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.historyDeleteBtn:hover {
+  color: var(--theme-color-warning, #ffbb00);
+  background: rgba(235, 122, 10, 0.12);
 }

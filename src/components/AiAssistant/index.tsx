@@ -4,6 +4,9 @@ import styles from './styles.module.css';
 const CHAT_URL = 'http://localhost:5000/chat';
 const GENERATE_URL = 'http://localhost:5000/generate';
 const API_KEY_STORAGE = 'ix-assistant-api-key';
+const CHAT_HISTORY_STORAGE = 'ix-assistant-chat-history';
+const CODEGEN_HISTORY_STORAGE = 'ix-assistant-codegen-history';
+const MAX_HISTORY = 5;
 
 // ── Web Crypto: AES-GCM encryption for localStorage ────────────────────────
 // Key is derived via PBKDF2 from a fixed app passphrase.
@@ -81,6 +84,23 @@ interface MatchedComponent {
   matchedKeywords: string[];
 }
 
+interface ChatSession {
+  id: string;
+  title: string;
+  timestamp: number;
+  messages: ChatMessage[];
+}
+
+interface CodeGenSession {
+  id: string;
+  title: string;
+  timestamp: number;
+  description: string;
+  framework: Framework;
+  code: string;
+  matchedComponents: MatchedComponent[];
+}
+
 const FRAMEWORK_LABELS: Record<Framework, string> = {
   react: 'React',
   angular: 'Angular',
@@ -101,6 +121,57 @@ const DEFAULT_HEIGHT_VH = 70; // percent of viewport height
 const PANEL_BOTTOM_PX = 92; // must match CSS .panel { bottom }
 const PANEL_RIGHT_PX = 24; // must match CSS .panel { right }
 const VIEWPORT_PADDING = 8; // breathing room from edges
+
+// ── History helpers ─────────────────────────────────────────────────
+function loadChatHistory(): ChatSession[] {
+  try {
+    const raw = localStorage.getItem(CHAT_HISTORY_STORAGE);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveChatHistory(sessions: ChatSession[]) {
+  try {
+    localStorage.setItem(CHAT_HISTORY_STORAGE, JSON.stringify(sessions.slice(0, MAX_HISTORY)));
+  } catch { /* quota exceeded — silently ignore */ }
+}
+
+function loadCodeGenHistory(): CodeGenSession[] {
+  try {
+    const raw = localStorage.getItem(CODEGEN_HISTORY_STORAGE);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCodeGenHistory(sessions: CodeGenSession[]) {
+  try {
+    localStorage.setItem(CODEGEN_HISTORY_STORAGE, JSON.stringify(sessions.slice(0, MAX_HISTORY)));
+  } catch { /* quota exceeded — silently ignore */ }
+}
+
+function formatTimestamp(ts: number): string {
+  const d = new Date(ts);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'Just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return d.toLocaleDateString();
+}
+
+function deriveSessionTitle(messages: ChatMessage[]): string {
+  const firstUser = messages.find((m) => m.role === 'user');
+  if (!firstUser) return 'Empty session';
+  return firstUser.text.length > 50 ? firstUser.text.slice(0, 50) + '…' : firstUser.text;
+}
 
 export default function AiAssistant() {
   const [isOpen, setIsOpen] = useState(false);
@@ -131,6 +202,18 @@ export default function AiAssistant() {
   const [keyLoading, setKeyLoading] = useState(true); // true while decrypting on mount
 
   const hasPremium = apiKey.trim().length > 0;
+
+  // ── History state ──
+  const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
+  const [codeGenHistory, setCodeGenHistory] = useState<CodeGenSession[]>([]);
+  const [showChatHistory, setShowChatHistory] = useState(false);
+  const [showCodeGenHistory, setShowCodeGenHistory] = useState(false);
+
+  // ── Load history on mount ──
+  useEffect(() => {
+    setChatHistory(loadChatHistory());
+    setCodeGenHistory(loadCodeGenHistory());
+  }, []);
 
   // ── Decrypt stored key on mount ──
   useEffect(() => {
@@ -320,11 +403,42 @@ export default function AiAssistant() {
     if (e.key === 'Enter') sendMessage();
   };
 
+  // ── Save current chat session to history ──
+  const saveChatSession = () => {
+    // Only save if there are user messages beyond the welcome message
+    const hasUserMessages = chatMessages.some((m) => m.role === 'user');
+    if (!hasUserMessages) return;
+
+    const session: ChatSession = {
+      id: Date.now().toString(),
+      title: deriveSessionTitle(chatMessages),
+      timestamp: Date.now(),
+      messages: chatMessages,
+    };
+    const updated = [session, ...chatHistory].slice(0, MAX_HISTORY);
+    setChatHistory(updated);
+    saveChatHistory(updated);
+  };
+
   const clearChat = () => {
+    saveChatSession();
     setChatMessages([
       { role: 'bot', text: 'Chat cleared. Ask me anything about Siemens iX!' },
     ]);
     setChatError('');
+  };
+
+  const restoreChatSession = (session: ChatSession) => {
+    // Save current before restoring
+    saveChatSession();
+    setChatMessages(session.messages);
+    setShowChatHistory(false);
+  };
+
+  const deleteChatSession = (id: string) => {
+    const updated = chatHistory.filter((s) => s.id !== id);
+    setChatHistory(updated);
+    saveChatHistory(updated);
   };
 
   // ════════════════════════════════════════════════════════════
@@ -347,6 +461,9 @@ export default function AiAssistant() {
     setMatchedComponents([]);
     setCodeMessage('');
     setCodeLoading(true);
+
+    // Auto-save previous generation before starting a new one
+    saveCodeGenSession();
 
     try {
       const res = await fetch(GENERATE_URL, {
@@ -402,13 +519,49 @@ export default function AiAssistant() {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleGenerate();
   };
 
+  // ── Save current code gen session to history ──
+  const saveCodeGenSession = () => {
+    if (!generatedCode) return;
+    const session: CodeGenSession = {
+      id: Date.now().toString(),
+      title: description.length > 50 ? description.slice(0, 50) + '…' : description,
+      timestamp: Date.now(),
+      description,
+      framework,
+      code: generatedCode,
+      matchedComponents,
+    };
+    const updated = [session, ...codeGenHistory].slice(0, MAX_HISTORY);
+    setCodeGenHistory(updated);
+    saveCodeGenHistory(updated);
+  };
+
   const clearCodeGen = () => {
+    saveCodeGenSession();
     setDescription('');
     setGeneratedCode('');
     setMatchedComponents([]);
     setCodeError('');
     setCodeMessage('');
     textareaRef.current?.focus();
+  };
+
+  const restoreCodeGenSession = (session: CodeGenSession) => {
+    // Save current before restoring
+    saveCodeGenSession();
+    setDescription(session.description);
+    setFramework(session.framework);
+    setGeneratedCode(session.code);
+    setMatchedComponents(session.matchedComponents);
+    setCodeError('');
+    setCodeMessage('');
+    setShowCodeGenHistory(false);
+  };
+
+  const deleteCodeGenSession = (id: string) => {
+    const updated = codeGenHistory.filter((s) => s.id !== id);
+    setCodeGenHistory(updated);
+    saveCodeGenHistory(updated);
   };
 
   // ════════════════════════════════════════════════════════════
@@ -453,32 +606,44 @@ export default function AiAssistant() {
             <div className={styles.tabs}>
               <button
                 className={`${styles.tab} ${mode === 'chat' ? styles.tabActive : ''}`}
-                onClick={() => setMode('chat')}
+                onClick={() => { setMode('chat'); setShowChatHistory(false); setShowCodeGenHistory(false); }}
               >
                 💬 Chat
               </button>
               <button
                 className={`${styles.tab} ${mode === 'codegen' ? styles.tabActive : ''}`}
-                onClick={() => setMode('codegen')}
+                onClick={() => { setMode('codegen'); setShowChatHistory(false); setShowCodeGenHistory(false); }}
               >
                 &lt;/&gt; Code Gen
               </button>
               <button
                 className={`${styles.tab} ${mode === 'settings' ? styles.tabActive : ''}`}
-                onClick={() => setMode('settings')}
+                onClick={() => { setMode('settings'); setShowChatHistory(false); setShowCodeGenHistory(false); }}
                 title="API Key Settings"
               >
                 ⚙️ Settings
               </button>
             </div>
             {mode !== 'settings' && (
-              <button
-                className={styles.clearBtn}
-                onClick={mode === 'chat' ? clearChat : clearCodeGen}
-                title="Clear"
-              >
-                🗑
-              </button>
+              <div className={styles.headerActions}>
+                <button
+                  className={styles.historyBtn}
+                  onClick={() => {
+                    if (mode === 'chat') setShowChatHistory((v) => !v);
+                    else setShowCodeGenHistory((v) => !v);
+                  }}
+                  title="History"
+                >
+                  🕘
+                </button>
+                <button
+                  className={styles.clearBtn}
+                  onClick={mode === 'chat' ? clearChat : clearCodeGen}
+                  title="Clear"
+                >
+                  🗑
+                </button>
+              </div>
             )}
           </div>
 
@@ -502,6 +667,50 @@ export default function AiAssistant() {
           {/* ─────── Chat View ─────── */}
           {mode === 'chat' && (
             <div className={styles.chatBody}>
+              {/* Chat History Drawer (overlay) */}
+              {showChatHistory && (
+                <div className={styles.historyDrawer}>
+                  <div className={styles.historyHeader}>
+                    <span className={styles.historyTitle}>💬 Chat History</span>
+                    <button
+                      className={styles.historyClose}
+                      onClick={() => setShowChatHistory(false)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {chatHistory.length === 0 ? (
+                    <div className={styles.historyEmpty}>
+                      No saved sessions yet. Chat sessions are saved when you clear or start a new conversation.
+                    </div>
+                  ) : (
+                    <div className={styles.historyList}>
+                      {chatHistory.map((session) => (
+                        <div key={session.id} className={styles.historyItem}>
+                          <button
+                            className={styles.historyItemBtn}
+                            onClick={() => restoreChatSession(session)}
+                            title={`Restore: ${session.title}`}
+                          >
+                            <span className={styles.historyItemTitle}>{session.title}</span>
+                            <span className={styles.historyItemMeta}>
+                              {session.messages.filter((m) => m.role === 'user').length} messages · {formatTimestamp(session.timestamp)}
+                            </span>
+                          </button>
+                          <button
+                            className={styles.historyDeleteBtn}
+                            onClick={() => deleteChatSession(session.id)}
+                            title="Delete"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className={styles.messages}>
                 {chatMessages.map((msg, i) => (
                   <div
@@ -581,6 +790,50 @@ export default function AiAssistant() {
           {/* ─────── Code Generator View ─────── */}
           {mode === 'codegen' && (
             <div className={styles.codeBody}>
+              {/* Code Gen History Drawer (overlay) */}
+              {showCodeGenHistory && (
+                <div className={styles.historyDrawer}>
+                  <div className={styles.historyHeader}>
+                    <span className={styles.historyTitle}>&lt;/&gt; Code Gen History</span>
+                    <button
+                      className={styles.historyClose}
+                      onClick={() => setShowCodeGenHistory(false)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {codeGenHistory.length === 0 ? (
+                    <div className={styles.historyEmpty}>
+                      No saved generations yet. Code sessions are saved when you clear or start a new generation.
+                    </div>
+                  ) : (
+                    <div className={styles.historyList}>
+                      {codeGenHistory.map((session) => (
+                        <div key={session.id} className={styles.historyItem}>
+                          <button
+                            className={styles.historyItemBtn}
+                            onClick={() => restoreCodeGenSession(session)}
+                            title={`Restore: ${session.title}`}
+                          >
+                            <span className={styles.historyItemTitle}>{session.title}</span>
+                            <span className={styles.historyItemMeta}>
+                              {FRAMEWORK_LABELS[session.framework]} · {formatTimestamp(session.timestamp)}
+                            </span>
+                          </button>
+                          <button
+                            className={styles.historyDeleteBtn}
+                            onClick={() => deleteCodeGenSession(session.id)}
+                            title="Delete"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Description input */}
               <div className={styles.section}>
                 <label className={styles.label}>Describe your UI</label>
