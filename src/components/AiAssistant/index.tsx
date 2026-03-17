@@ -6,7 +6,7 @@ const GENERATE_URL = 'http://localhost:5000/generate';
 const API_KEY_STORAGE = 'ix-assistant-api-key';
 const CHAT_HISTORY_STORAGE = 'ix-assistant-chat-history';
 const CODEGEN_HISTORY_STORAGE = 'ix-assistant-codegen-history';
-const MAX_HISTORY = 5;
+const MAX_HISTORY = 10;
 
 // ── Web Crypto: AES-GCM encryption for localStorage ────────────────────────
 // Key is derived via PBKDF2 from a fixed app passphrase.
@@ -63,11 +63,12 @@ async function decryptApiKey(stored: string): Promise<string> {
 }
 
 type Mode = 'chat' | 'codegen' | 'settings';
-type Framework = 'react' | 'angular' | 'vue' | 'webcomponents';
+type Framework = 'react' | 'angular' | 'angular-standalone' | 'vue' | 'webcomponents';
 
 interface Source {
   title: string;
   url: string;
+  deprecated?: boolean;
 }
 
 interface ChatMessage {
@@ -75,12 +76,14 @@ interface ChatMessage {
   text: string;
   tier?: 'free' | 'premium';
   sources?: Source[];
+  hasDeprecationWarnings?: boolean;
 }
 
 interface MatchedComponent {
   title: string;
   score: number;
   url?: string;
+  deprecated?: boolean;
   matchedKeywords: string[];
 }
 
@@ -104,6 +107,7 @@ interface CodeGenSession {
 const FRAMEWORK_LABELS: Record<Framework, string> = {
   react: 'React',
   angular: 'Angular',
+  'angular-standalone': 'Angular SA',
   vue: 'Vue',
   webcomponents: 'Web Components',
 };
@@ -113,6 +117,8 @@ const EXAMPLE_PROMPTS = [
   'Build a dashboard with a content header, two KPI cards, and a line chart',
   'Create a settings page with a form containing toggle switches, a select dropdown, and save/cancel buttons',
   'Build a data table page with pagination, a search bar, and action buttons for add/edit/delete',
+  'Show me how to migrate from a deprecated component to its replacement',
+  'Build a notification center using messagebar with dismiss and action buttons',
 ];
 
 const MAX_WIDTH_RATIO = 0.95;
@@ -179,12 +185,19 @@ export default function AiAssistant() {
 
   // ── Resize state ──
   const [panelWidth, setPanelWidth] = useState(DEFAULT_WIDTH);
-  const defaultHeight = Math.round(window.innerHeight * (DEFAULT_HEIGHT_VH / 100));
-  const [panelHeight, setPanelHeight] = useState(defaultHeight);
+  // Lazy init: compute once at mount so window is defined (avoids SSR crash)
+  const initialHeightRef = useRef<number | null>(null);
+  if (initialHeightRef.current === null) {
+    initialHeightRef.current =
+      typeof window !== 'undefined'
+        ? Math.round(window.innerHeight * (DEFAULT_HEIGHT_VH / 100))
+        : 600;
+  }
+  const [panelHeight, setPanelHeight] = useState(initialHeightRef.current);
 
   // Initial dimensions are the minimum – users can only resize larger
   const MIN_WIDTH = DEFAULT_WIDTH;
-  const MIN_HEIGHT = defaultHeight;
+  const MIN_HEIGHT = initialHeightRef.current;
   const resizing = useRef<{
     active: boolean;
     edge: 'corner' | 'top' | 'left';
@@ -237,7 +250,7 @@ export default function AiAssistant() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       role: 'bot',
-      text: '👋 Hello! Ask me anything about the Siemens iX design system — components, installation, theming, guidelines and more.',
+      text: '👋 Hello! Ask me anything about the Siemens iX design system — components, installation, theming, guidelines, migration and more.\n\n⚠️ I can also warn you about deprecated APIs and suggest the correct replacements.',
     },
   ]);
   const [question, setQuestion] = useState('');
@@ -317,6 +330,15 @@ export default function AiAssistant() {
     document.body.style.userSelect = 'none';
   };
 
+  // ── Escape key closes panel ──
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) setIsOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen]);
+
   // ── Auto-scroll chat ──
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -390,7 +412,13 @@ export default function AiAssistant() {
       const data = await res.json();
       setChatMessages((prev) => [
         ...prev,
-        { role: 'bot', text: data.answer, tier: 'premium', sources: data.sources || [] },
+        {
+          role: 'bot',
+          text: data.answer,
+          tier: 'premium',
+          sources: data.sources || [],
+          hasDeprecationWarnings: data.hasDeprecationWarnings || false,
+        },
       ]);
     } catch (err: any) {
       setChatError(err.message || 'Something went wrong');
@@ -479,6 +507,11 @@ export default function AiAssistant() {
       if (data.code) {
         setGeneratedCode(data.code);
         setMatchedComponents(data.matchedComponents || []);
+        if (data.hasDeprecationWarnings) {
+          setCodeMessage(
+            '⚠️ Some matched components contain deprecation notices. Review the generated code comments carefully and check the migration guide.'
+          );
+        }
       } else {
         setCodeMessage(data.message || 'No code generated.');
       }
@@ -727,6 +760,12 @@ export default function AiAssistant() {
                         : 'iX Bot'}
                     </span>
                     <p className={styles.bubbleText}>{msg.text}</p>
+                    {/* Deprecation warning banner */}
+                    {msg.role === 'bot' && msg.hasDeprecationWarnings && (
+                      <div className={styles.deprecationBanner}>
+                        ⚠️ This response mentions deprecated APIs or breaking changes. Check migration docs.
+                      </div>
+                    )}
                     {msg.sources && msg.sources.length > 0 && (
                       <div className={styles.sourcesRow}>
                         <span className={styles.sourcesLabel}>📖 Sources:</span>
@@ -736,10 +775,10 @@ export default function AiAssistant() {
                             href={src.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={styles.sourceLink}
-                            title={src.title}
+                            className={`${styles.sourceLink} ${src.deprecated ? styles.sourceLinkDeprecated : ''}`}
+                            title={src.deprecated ? `⚠️ Deprecated — ${src.title}` : src.title}
                           >
-                            {src.title.length > 30 ? src.title.slice(0, 30) + '…' : src.title}
+                            {src.deprecated ? '⚠️ ' : ''}{src.title.length > 30 ? src.title.slice(0, 30) + '…' : src.title}
                           </a>
                         ))}
                       </div>
@@ -936,10 +975,12 @@ export default function AiAssistant() {
                     {matchedComponents.map((comp, i) => (
                       <span
                         key={i}
-                        className={styles.chip}
-                        title={`Keywords: ${(comp.matchedKeywords || []).join(', ')}`}
+                        className={`${styles.chip} ${comp.deprecated ? styles.chipDeprecated : ''}`}
+                        title={comp.deprecated
+                          ? `⚠️ Deprecated — Keywords: ${(comp.matchedKeywords || []).join(', ')}`
+                          : `Keywords: ${(comp.matchedKeywords || []).join(', ')}`}
                       >
-                        {comp.title}
+                        {comp.deprecated ? '⚠️ ' : ''}{comp.title}
                       </span>
                     ))}
                   </div>
@@ -951,9 +992,19 @@ export default function AiAssistant() {
                 <div className={styles.section}>
                   <div className={styles.codeHeader}>
                     <label className={styles.label}>Generated Code</label>
-                    <button className={styles.copyBtn} onClick={handleCopy}>
-                      {copied ? '✓ Copied!' : '📋 Copy'}
-                    </button>
+                    <div className={styles.codeActions}>
+                      <button
+                        className={styles.regenerateBtn}
+                        onClick={handleGenerate}
+                        disabled={codeLoading}
+                        title="Regenerate code"
+                      >
+                        ↺ Regenerate
+                      </button>
+                      <button className={styles.copyBtn} onClick={handleCopy}>
+                        {copied ? '✓ Copied!' : '📋 Copy'}
+                      </button>
+                    </div>
                   </div>
                   <pre className={styles.codeBlock}>
                     <code>

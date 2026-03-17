@@ -5,12 +5,63 @@ const axios = require("axios");
 const https = require("https");
 const docs = require("./docs.json");
 
-// Bypass SSL certificate verification (needed behind corporate proxies)
-const httpsAgent = new https.Agent({ rejectUnauthorized: false });
+// ─── SSL ────────────────────────────────────────────────────────────
+// Behind corporate proxies set ALLOW_INSECURE_SSL=true in .env — never in prod.
+const allowInsecureSSL = process.env.ALLOW_INSECURE_SSL === "true";
+if (allowInsecureSSL) console.warn("⚠️  SSL verification disabled (ALLOW_INSECURE_SSL=true)");
+const httpsAgent = new https.Agent({ rejectUnauthorized: !allowInsecureSSL });
 
+// ─── Express setup ──────────────────────────────────────────────────
 const app = express();
-app.use(cors());
-app.use(express.json());
+
+const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:3000")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, cb) {
+      // Allow non-browser requests (curl, health checks) and listed origins
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error(`CORS: origin '${origin}' not allowed`));
+    },
+    methods: ["GET", "POST"],
+  })
+);
+app.use(express.json({ limit: "200kb" }));
+
+// ─── Rate limiter (in-memory, per IP) ──────────────────────────────
+const RATE_WINDOW_MS = 60_000;   // 1 minute window
+const RATE_LIMIT_MAX = 30;       // 30 requests per window
+const _rateMap = new Map();
+
+function rateLimiter(req, res, next) {
+  const ip =
+    req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
+    req.socket?.remoteAddress ||
+    "unknown";
+  const now = Date.now();
+  let entry = _rateMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    entry = { count: 0, resetAt: now + RATE_WINDOW_MS };
+  }
+  entry.count += 1;
+  _rateMap.set(ip, entry);
+  if (entry.count > RATE_LIMIT_MAX) {
+    return res
+      .status(429)
+      .json({ error: "Rate limit exceeded. Please wait a moment before trying again." });
+  }
+  next();
+}
+// Prune stale entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, e] of _rateMap.entries()) {
+    if (now > e.resetAt + RATE_WINDOW_MS) _rateMap.delete(ip);
+  }
+}, 5 * 60_000);
 
 // ─── Query expansion (synonyms / aliases) ───────────────────────────
 // Maps common natural-language terms to iX component or concept names.
@@ -198,10 +249,66 @@ function searchDocs(query, topK = 10) {
     };
   });
 
-  return scores
+  const ranked = scores
     .filter((d) => d.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, topK);
+    .sort((a, b) => b.score - a.score);
+
+  // Apply section-type boost and annotate deprecation signals
+  for (const r of ranked) {
+    const doc = docs.find((d) => d.source === r.source);
+    if (doc) {
+      r.score *= sectionTypeBoost(doc, queryTokens);
+      r.deprecated = hasDeprecationSignal(r.content);
+    }
+  }
+
+  // Re-sort after boosting and deduplicate by URL
+  ranked.sort((a, b) => b.score - a.score);
+  return uniqueByUrl(ranked, topK);
+}
+
+// ─── Deprecation-signal detection ─────────────────────────────────────────
+const DEPRECATION_SIGNALS = [
+  "deprecated", "deprecation", "removed in", "use instead", "migrate to",
+  "no longer supported", "will be removed", "breaking change", "replacement",
+  "was removed", "has been removed",
+];
+
+function hasDeprecationSignal(text = "") {
+  const lower = text.toLowerCase();
+  return DEPRECATION_SIGNALS.some((s) => lower.includes(s));
+}
+
+// ─── Section-type boost for migration / deprecation queries ──────────────
+const MIGRATION_TERMS = new Set([
+  "migration", "migrate", "upgrade", "breaking", "deprecated",
+  "changelog", "release", "deprecation", "removed", "replacement",
+]);
+
+function sectionTypeBoost(doc, queryTokens) {
+  const lowerTitle = (doc.title || "").toLowerCase();
+  const lowerSource = (doc.source || "").toLowerCase();
+  const isMigrationDoc =
+    MIGRATION_TERMS.has(lowerSource.split("/")[0]) ||
+    [...MIGRATION_TERMS].some((t) => lowerTitle.includes(t)) ||
+    lowerSource.includes("blog/") ||
+    hasDeprecationSignal(doc.content);
+  const queryIsMigration = queryTokens.some((qt) => MIGRATION_TERMS.has(qt));
+  return isMigrationDoc && queryIsMigration ? 1.6 : 1.0;
+}
+
+// ─── URL-level deduplication ───────────────────────────────────────────
+function uniqueByUrl(results, max = 10) {
+  const out = [];
+  const seen = new Set();
+  for (const r of results) {
+    const url = r?.url || "";
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    out.push(r);
+    if (out.length >= max) break;
+  }
+  return out;
 }
 
 // Build search index at startup
@@ -221,7 +328,11 @@ async function askAI(context, question, userApiKey) {
         {
           role: "system",
           content:
-            "You are a helpful assistant for the Siemens Industrial Experience (iX) design system. Answer only from the provided documentation.",
+            "You are a helpful assistant for the Siemens Industrial Experience (iX) design system. " +
+            "Answer only from the provided documentation. " +
+            "If any component, property, or API in the question has been deprecated or removed, " +
+            "always highlight this clearly with a ⚠️ warning, state which version introduced the change, " +
+            "and provide the recommended replacement or migration path.",
         },
         {
           role: "user",
@@ -251,6 +362,7 @@ async function generateCode(componentDocs, description, framework, userApiKey) {
   const frameworkGuide = {
     react: `Use React with @siemens/ix-react. Import components like: import { IxButton, IxInput } from '@siemens/ix-react'; Use JSX with PascalCase tags (e.g. <IxButton>, <IxInput>). For boolean props use prop={true}. For events use onEventName.`,
     angular: `Use Angular with @siemens/ix-angular. For standalone components: import { IxButton } from '@siemens/ix-angular/standalone'; For module setup: import { IxModule } from '@siemens/ix-angular'. Use kebab-case tags in templates (e.g. <ix-button>, <ix-input>). Bind props with [prop]="value". Bind events with (eventName)="handler($event)".`,
+    "angular-standalone": `Use Angular standalone components with @siemens/ix-angular. Import each component individually: import { IxButton, IxInput } from '@siemens/ix-angular/standalone'; Add them to the component's imports array: @Component({ standalone: true, imports: [IxButton, IxInput, CommonModule] }). Use kebab-case tags in templates. Bind props with [prop]="value". Bind events with (eventName)="handler($event)".`,
     vue: `Use Vue 3 with @siemens/ix-vue. Import components like: import { IxButton, IxInput } from '@siemens/ix-vue'; Use PascalCase tags in templates. Bind props with :prop="value". Bind events with @eventName="handler".`,
     webcomponents: `Use Web Components (vanilla JS/HTML) with @siemens/ix and @siemens/ix-icons. Use kebab-case tags (e.g. <ix-button>, <ix-input>). Set properties as attributes. Use addEventListener for events. Import loaders: import { defineCustomElements } from '@siemens/ix/loader';`,
   };
@@ -271,7 +383,8 @@ RULES:
 6. Apply iX design tokens (CSS custom properties) for any custom styling.
 7. Return ONLY the code inside a single fenced code block — no prose before or after.
 8. Add brief inline comments explaining key sections.
-9. Make the code copy-paste ready — a developer should be able to use it immediately.`;
+9. Make the code copy-paste ready — a developer should be able to use it immediately.
+10. If any component in the documentation is marked deprecated, do NOT use it — use the recommended replacement instead and add a MIGRATION comment explaining the change.`;
 
   const userPrompt = `## Component Documentation (retrieved from iX docs)
 
@@ -316,7 +429,7 @@ Generate the complete ${framework} code for this UI.`;
  *
  * Body: { question: string, apiKey?: string, history?: Array<{role,text}> }
  */
-app.post("/chat", async (req, res) => {
+app.post("/chat", rateLimiter, async (req, res) => {
   const { question, apiKey: userApiKey, history } = req.body;
 
   if (!question || !question.trim()) {
@@ -350,7 +463,7 @@ app.post("/chat", async (req, res) => {
   const sources = [...new Map(
     topDocs
       .filter((d) => d.url)
-      .map((d) => [d.url, { title: d.title, url: d.url }])
+      .map((d) => [d.url, { title: d.title, url: d.url, deprecated: d.deprecated || false }])
   ).values()].slice(0, 5);
 
   // Build conversation messages (multi-turn)
@@ -404,7 +517,12 @@ app.post("/chat", async (req, res) => {
     );
 
     const answer = response.data.choices[0].message.content;
-    res.json({ answer, tier: "premium", sources });
+    res.json({
+      answer,
+      tier: "premium",
+      sources,
+      hasDeprecationWarnings: topDocs.some((d) => d.deprecated),
+    });
   } catch (err) {
     const status = err.response?.status || 500;
     const message = err.response?.data?.error?.message || err.message;
@@ -423,14 +541,14 @@ app.post("/chat", async (req, res) => {
  *   3. LLM generates framework-specific code
  *   4. Response includes generated code + matched components list
  */
-app.post("/generate", async (req, res) => {
+app.post("/generate", rateLimiter, async (req, res) => {
   const { description, framework = "react", apiKey: userApiKey } = req.body;
 
   if (!description || !description.trim()) {
     return res.status(400).json({ error: "description is required" });
   }
 
-  const validFrameworks = ["react", "angular", "vue", "webcomponents"];
+  const validFrameworks = ["react", "angular", "angular-standalone", "vue", "webcomponents"];
   if (!validFrameworks.includes(framework)) {
     return res.status(400).json({
       error: `Invalid framework. Choose one of: ${validFrameworks.join(", ")}`,
@@ -463,9 +581,12 @@ app.post("/generate", async (req, res) => {
         score: d.score,
         source: d.source,
         url: d.url || null,
+        deprecated: d.deprecated || false,
         matchedKeywords: d.matchedKeywords || [],
       })),
       framework,
+      // Warn caller if any matched component doc contains deprecation signals
+      hasDeprecationWarnings: topDocs.some((d) => d.deprecated),
     });
   } catch (err) {
     const status = err.response?.status || 500;
@@ -475,19 +596,49 @@ app.post("/generate", async (req, res) => {
   }
 });
 
+/**
+ * GET /suggest?q=<partial-query>
+ * Lightweight type-ahead — returns top-5 matching doc titles + URLs.
+ * No LLM call, no API key required. Used for search autocomplete in the UI.
+ */
+app.get("/suggest", (req, res) => {
+  const q = (req.query.q || "").toString().trim();
+  if (!q || q.length < 2) return res.json({ suggestions: [] });
+  const results = searchDocs(q, 5);
+  res.json({
+    suggestions: results.map((r) => ({
+      title: r.title,
+      url: r.url || null,
+      deprecated: r.deprecated || false,
+    })),
+  });
+});
+
 /** Health check */
 app.get("/health", (req, res) => {
+  const deprecatedDocs = docs.filter((d) => hasDeprecationSignal(d.content)).length;
   res.json({
     status: "ok",
     docs: docs.length,
-    features: ["bm25-search", "query-expansion", "conversation-history", "source-citations"],
+    deprecatedChunks: deprecatedDocs,
+    features: [
+      "bm25-search",
+      "query-expansion",
+      "conversation-history",
+      "source-citations",
+      "deprecation-detection",
+      "rate-limiting",
+      "section-type-boost",
+      "url-dedup",
+    ],
   });
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`iX Chatbot backend running on http://localhost:${PORT}`);
-  console.log(`  POST /chat      — chatbot Q&A`);
-  console.log(`  POST /generate  — AI code generator`);
+  console.log(`  POST /chat      — chatbot Q&A (rate-limited)`);
+  console.log(`  POST /generate  — AI code generator (rate-limited)`);
+  console.log(`  GET  /suggest   — type-ahead suggestions`);
   console.log(`  GET  /health    — health check`);
 });

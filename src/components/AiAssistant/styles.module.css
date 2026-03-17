@@ -1000,3 +1000,81 @@
   color: var(--theme-color-warning, #ffbb00);
   background: rgba(235, 122, 10, 0.12);
 }
+
+/* ══════════════════════════════════════════════════════════
+   DEPRECATION WARNING
+   ══════════════════════════════════════════════════════════ */
+
+.deprecationBanner {
+  margin-top: 6px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  border-left: 3px solid var(--theme-color-warning, #ffbb00);
+  background: rgba(255, 187, 0, 0.1);
+  color: var(--theme-color-warning, #ffbb00);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Deprecated source citation link */
+.sourceLinkDeprecated {
+  border-left: 2px solid var(--theme-color-warning, #ffbb00);
+  background: rgba(255, 187, 0, 0.1);
+  color: var(--theme-color-warning, #ffbb00);
+}
+
+.sourceLinkDeprecated:hover {
+  background: rgba(255, 187, 0, 0.22);
+}
+
+/* Deprecated component chip */
+.chipDeprecated {
+  border: 1px solid rgba(255, 187, 0, 0.5);
+  background: rgba(255, 187, 0, 0.08);
+  color: var(--theme-color-warning, #ffbb00);
+}
+
+/* ══════════════════════════════════════════════════════════
+   CODE ACTIONS (Regenerate + Copy row)
+   ══════════════════════════════════════════════════════════ */
+
+.codeActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.regenerateBtn {
+  background: none;
+  border: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.25));
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.regenerateBtn:hover:not(:disabled) {
+  border-color: var(--theme-color-primary, #00bde3);
+  color: var(--theme-color-primary, #00bde3);
+  background: rgba(0, 189, 227, 0.08);
+}
+
+.regenerateBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Key loading state ─────────────────────────────────── */
+.keyLoading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
+  padding: 6px 0;
+}
