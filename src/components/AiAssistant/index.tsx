@@ -7,6 +7,36 @@ const API_KEY_STORAGE = 'ix-assistant-api-key';
 const CHAT_HISTORY_STORAGE = 'ix-assistant-chat-history';
 const CODEGEN_HISTORY_STORAGE = 'ix-assistant-codegen-history';
 const MAX_HISTORY = 10;
+const REFINE_URL = 'http://localhost:5000/refine';
+const MIGRATE_URL = 'http://localhost:5000/migrate';
+
+// ── IX Component registry (for Visual Component Picker) ───────────────────
+const IX_COMPONENTS = [
+  'ix-application', 'ix-application-header', 'ix-menu', 'ix-menu-item',
+  'ix-menu-category', 'ix-menu-settings', 'ix-menu-about', 'ix-menu-about-item',
+  'ix-menu-about-news', 'ix-menu-avatar', 'ix-menu-avatar-item', 'ix-menu-settings-item',
+  'ix-avatar', 'ix-icon', 'ix-icon-button', 'ix-icon-toggle-button',
+  'ix-content', 'ix-content-header', 'ix-button', 'ix-link-button',
+  'ix-toggle-button', 'ix-split-button', 'ix-dropdown-button', 'ix-dropdown',
+  'ix-dropdown-item', 'ix-dropdown-header', 'ix-dropdown-quick-actions',
+  'ix-input', 'ix-number-input', 'ix-date-input', 'ix-time-input',
+  'ix-textarea', 'ix-select', 'ix-select-item', 'ix-checkbox', 'ix-checkbox-group',
+  'ix-radio', 'ix-radio-group', 'ix-toggle', 'ix-slider',
+  'ix-date-picker', 'ix-time-picker', 'ix-datetime-picker', 'ix-date-dropdown',
+  'ix-card', 'ix-card-content', 'ix-card-list', 'ix-push-card', 'ix-action-card',
+  'ix-blind', 'ix-chip', 'ix-pill', 'ix-spinner', 'ix-divider', 'ix-typography',
+  'ix-breadcrumb', 'ix-breadcrumb-item', 'ix-pagination',
+  'ix-tabs', 'ix-tab-item', 'ix-category-filter', 'ix-expanding-search',
+  'ix-event-list', 'ix-event-list-item', 'ix-key-value', 'ix-key-value-list',
+  'ix-kpi', 'ix-tile', 'ix-flip-tile', 'ix-flip-tile-content',
+  'ix-group', 'ix-group-item', 'ix-tree', 'ix-empty-state',
+  'ix-modal-header', 'ix-modal-content', 'ix-modal-footer',
+  'ix-pane', 'ix-pane-layout', 'ix-drawer',
+  'ix-message-bar', 'ix-toast-container', 'ix-tooltip',
+  'ix-progress-indicator', 'ix-layout-auto', 'ix-layout-grid', 'ix-row', 'ix-col',
+  'ix-field-label', 'ix-custom-field', 'ix-upload',
+  'ix-workflow-steps', 'ix-workflow-step',
+];
 
 // ── Web Crypto: AES-GCM encryption for localStorage ────────────────────────
 // Key is derived via PBKDF2 from a fixed app passphrase.
@@ -62,7 +92,7 @@ async function decryptApiKey(stored: string): Promise<string> {
   return new TextDecoder().decode(plainBuf);
 }
 
-type Mode = 'chat' | 'codegen' | 'settings';
+type Mode = 'chat' | 'codegen' | 'settings' | 'migrate';
 type Framework = 'react' | 'angular' | 'angular-standalone' | 'vue' | 'webcomponents';
 
 interface Source {
@@ -273,6 +303,26 @@ export default function AiAssistant() {
   const [codeMessage, setCodeMessage] = useState('');
   const [copied, setCopied] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // ── Conversational Refine state ──
+  const [refineInput, setRefineInput] = useState('');
+  const [refineLoading, setRefineLoading] = useState(false);
+
+  // ── Image-to-Code state ──
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [imageFileName, setImageFileName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Visual Component Picker state ──
+  const [showCompPicker, setShowCompPicker] = useState(false);
+  const [compSearch, setCompSearch] = useState('');
+
+  // ── Migration Wizard state ──
+  const [migrateInput, setMigrateInput] = useState('');
+  const [migrateOutput, setMigrateOutput] = useState('');
+  const [migrateLoading, setMigrateLoading] = useState(false);
+  const [migrateError, setMigrateError] = useState('');
+  const [migrateSummary, setMigrateSummary] = useState('');
 
   // ── Resize event handlers ──
   useEffect(() => {
@@ -512,7 +562,12 @@ export default function AiAssistant() {
       const res = await fetch(GENERATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: description.trim(), framework, apiKey }),
+        body: JSON.stringify({
+          description: description.trim(),
+          framework,
+          apiKey,
+          ...(uploadedImage ? { screenshot: uploadedImage } : {}),
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -619,6 +674,169 @@ export default function AiAssistant() {
   };
 
   // ════════════════════════════════════════════════════════════
+  //  FEATURE 2 — OPEN IN STACKBLITZ
+  // ════════════════════════════════════════════════════════════
+  const openInStackBlitz = () => {
+    const clean = generatedCode
+      .replace(/^```[\w-]*\n?/gm, '')
+      .replace(/```$/gm, '')
+      .trim();
+    const fileNames: Record<Framework, string> = {
+      react: 'src/App.tsx',
+      angular: 'src/app/app.component.ts',
+      'angular-standalone': 'src/app/app.component.ts',
+      vue: 'src/App.vue',
+      webcomponents: 'index.html',
+    };
+    const templates: Record<Framework, string> = {
+      react: 'node',
+      angular: 'node',
+      'angular-standalone': 'node',
+      vue: 'node',
+      webcomponents: 'javascript',
+    };
+    const mainFile = fileNames[framework];
+    const form = document.createElement('form');
+    form.setAttribute('method', 'POST');
+    form.setAttribute('action', `https://stackblitz.com/run?file=${encodeURIComponent(mainFile)}`);
+    form.setAttribute('target', '_blank');
+    const add = (name: string, value: string) => {
+      const inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = name; inp.value = value;
+      form.appendChild(inp);
+    };
+    add('project[title]', 'iX AI Generated App');
+    add('project[description]', 'Generated by Siemens iX AI Assistant');
+    add('project[template]', templates[framework]);
+    add(`project[files][${mainFile}]`, clean);
+    if (framework !== 'webcomponents') {
+      add('project[files][package.json]', JSON.stringify({
+        name: 'ix-ai-generated',
+        version: '1.0.0',
+        scripts: { dev: 'vite', build: 'vite build' },
+        dependencies: { '@siemens/ix': 'latest', '@siemens/ix-icons': 'latest' },
+      }, null, 2));
+    }
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+  };
+
+  // ════════════════════════════════════════════════════════════
+  //  FEATURE 1 — CONVERSATIONAL CODE REFINEMENT
+  // ════════════════════════════════════════════════════════════
+  const handleRefine = async () => {
+    if (!refineInput.trim() || refineLoading || !generatedCode) return;
+    if (!hasPremium) {
+      setCodeMessage('🔑 Code refinement requires an API key — add one in ⚙️ Settings.');
+      return;
+    }
+    setRefineLoading(true);
+    setCodeError('');
+    const instruction = refineInput.trim();
+    setRefineInput('');
+    try {
+      const res = await fetch(REFINE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: generatedCode, instruction, framework, apiKey }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Server error (${res.status})`);
+      }
+      const data = await res.json();
+      if (data.code) setGeneratedCode(data.code);
+    } catch (err: any) {
+      setCodeError(err.message || 'Refinement failed');
+    } finally {
+      setRefineLoading(false);
+    }
+  };
+
+  const handleRefineKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) handleRefine();
+  };
+
+  // ════════════════════════════════════════════════════════════
+  //  FEATURE 4 — IMAGE-TO-CODE (Screenshot → Code)
+  // ════════════════════════════════════════════════════════════
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => setUploadedImage(reader.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const clearUploadedImage = () => {
+    setUploadedImage(null);
+    setImageFileName('');
+  };
+
+  // ════════════════════════════════════════════════════════════
+  //  FEATURE 5 — DEPRECATION MIGRATION WIZARD
+  // ════════════════════════════════════════════════════════════
+  const handleMigrate = async () => {
+    if (!migrateInput.trim() || migrateLoading) return;
+    if (!hasPremium) {
+      setMigrateError('🔑 Migration analysis requires an API key — add one in ⚙️ Settings.');
+      return;
+    }
+    setMigrateLoading(true);
+    setMigrateError('');
+    setMigrateOutput('');
+    setMigrateSummary('');
+    try {
+      const res = await fetch(MIGRATE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: migrateInput, apiKey }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Server error (${res.status})`);
+      }
+      const data = await res.json();
+      setMigrateOutput(data.migratedCode || '');
+      setMigrateSummary(data.summary || '');
+    } catch (err: any) {
+      setMigrateError(err.message || 'Migration analysis failed');
+    } finally {
+      setMigrateLoading(false);
+    }
+  };
+
+  const handleMigrateCopy = async (text: string) => {
+    try { await navigator.clipboard.writeText(text); } catch {}
+  };
+
+  /** Simple line-level diff renderer between old and migrated code */
+  const computeDiff = (oldCode: string, newCode: string) => {
+    const oldLines = oldCode.split('\n');
+    const newLines = newCode.replace(/^```[\w-]*\n?/gm, '').replace(/```$/gm, '').trim().split('\n');
+    const result: { text: string; type: 'removed' | 'added' | 'unchanged' }[] = [];
+    const maxLen = Math.max(oldLines.length, newLines.length);
+    for (let i = 0; i < maxLen; i++) {
+      const o = oldLines[i];
+      const n = newLines[i];
+      if (o === undefined) {
+        result.push({ text: n, type: 'added' });
+      } else if (n === undefined) {
+        result.push({ text: o, type: 'removed' });
+      } else if (o === n) {
+        result.push({ text: o, type: 'unchanged' });
+      } else {
+        result.push({ text: o, type: 'removed' });
+        result.push({ text: n, type: 'added' });
+      }
+    }
+    return result;
+  };
+
+  // ════════════════════════════════════════════════════════════
   //  RENDER
   // ════════════════════════════════════════════════════════════
 
@@ -677,8 +895,15 @@ export default function AiAssistant() {
               >
                 ⚙️ Settings
               </button>
+              <button
+                className={`${styles.tab} ${mode === 'migrate' ? styles.tabActive : ''}`}
+                onClick={() => { setMode('migrate'); setShowChatHistory(false); setShowCodeGenHistory(false); }}
+                title="Deprecation Migration Wizard"
+              >
+                🔀 Migrate
+              </button>
             </div>
-            {mode !== 'settings' && (
+            {mode !== 'settings' && mode !== 'migrate' && (
               <div className={styles.headerActions}>
                 <button
                   className={styles.historyBtn}
@@ -702,7 +927,7 @@ export default function AiAssistant() {
           </div>
 
           {/* ─────── Tier banner ─────── */}
-          {mode !== 'settings' && !keyLoading && (
+          {mode !== 'settings' && mode !== 'migrate' && !keyLoading && (
             <div className={hasPremium ? styles.tierBannerPremium : styles.tierBannerFree}>
               {hasPremium ? (
                 <>🔑 <strong>Premium</strong> — AI-powered via your API key</>
@@ -894,6 +1119,35 @@ export default function AiAssistant() {
                 </div>
               )}
 
+              {/* ── Feature 4: Image-to-Code upload ────────────────────────── */}
+              <div className={styles.imageUploadRow}>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleImageUpload}
+                />
+                {!uploadedImage ? (
+                  <button
+                    className={styles.imageUploadBtn}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={codeLoading}
+                    title="Upload a UI screenshot to generate code from it (requires API key)"
+                  >
+                    📷 Screenshot → Code
+                  </button>
+                ) : (
+                  <div className={styles.imagePreviewRow}>
+                    <img src={uploadedImage} alt={imageFileName} className={styles.imagePreview} />
+                    <div className={styles.imagePreviewInfo}>
+                      <span className={styles.imagePreviewName}>{imageFileName}</span>
+                      <button className={styles.imageClearBtn} onClick={clearUploadedImage} title="Remove screenshot">✕ Remove</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Description input */}
               <div className={styles.section}>
                 <label className={styles.label}>Describe your UI</label>
@@ -927,6 +1181,51 @@ export default function AiAssistant() {
                   </div>
                 </div>
               )}
+
+              {/* ── Feature 3: Visual Component Picker ──────────────────────── */}
+              <div className={styles.section}>
+                <div className={styles.compPickerHeader}>
+                  <label className={styles.label}>📦 Component Picker</label>
+                  <button
+                    className={styles.compPickerToggle}
+                    onClick={() => { setShowCompPicker(v => !v); setCompSearch(''); }}
+                  >
+                    {showCompPicker ? 'Hide' : 'Browse & add ▾'}
+                  </button>
+                </div>
+                {showCompPicker && (
+                  <div className={styles.compPickerBox}>
+                    <input
+                      className={styles.compPickerSearch}
+                      type="text"
+                      placeholder="Search components… (e.g. button, modal, input)"
+                      value={compSearch}
+                      onChange={(e) => setCompSearch(e.target.value)}
+                      autoFocus
+                    />
+                    <div className={styles.compPickerGrid}>
+                      {IX_COMPONENTS
+                        .filter(c => !compSearch || c.includes(compSearch.toLowerCase().trim()))
+                        .map(comp => (
+                          <button
+                            key={comp}
+                            className={styles.compPickerChip}
+                            onClick={() => {
+                              setDescription(prev =>
+                                prev ? `${prev.trimEnd()}, use ${comp}` : `Use ${comp}`
+                              );
+                              textareaRef.current?.focus();
+                            }}
+                            title={`Add ${comp} to prompt`}
+                          >
+                            {comp.replace('ix-', '')}
+                          </button>
+                        ))
+                      }
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Framework selector */}
               <div className={styles.section}>
@@ -1015,6 +1314,17 @@ export default function AiAssistant() {
                     <label className={styles.label}>Generated Code</label>
                     <div className={styles.codeActions}>
                       <button
+                        className={styles.stackblitzBtn}
+                        onClick={openInStackBlitz}
+                        disabled={codeLoading}
+                        title="Open in StackBlitz live sandbox"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 28 28" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                          <path d="M12 2L2 14h9l-3 12 17-14h-9l3-10z" fill="currentColor"/>
+                        </svg>
+                        StackBlitz
+                      </button>
+                      <button
                         className={styles.regenerateBtn}
                         onClick={handleGenerate}
                         disabled={codeLoading}
@@ -1053,6 +1363,29 @@ export default function AiAssistant() {
                         .trim()}
                     </code>
                   </pre>
+                </div>
+              )}
+
+              {/* ── Feature 1: Conversational Code Refinement ───────────────── */}
+              {generatedCode && (
+                <div className={styles.refineRow}>
+                  <input
+                    className={styles.refineInput}
+                    type="text"
+                    placeholder='Refine: e.g. “make the button secondary” or “add a loading state”…'
+                    value={refineInput}
+                    onChange={(e) => setRefineInput(e.target.value)}
+                    onKeyDown={handleRefineKeyDown}
+                    disabled={refineLoading}
+                  />
+                  <button
+                    className={styles.refineBtn}
+                    onClick={handleRefine}
+                    disabled={refineLoading || !refineInput.trim()}
+                    title="Refine the generated code with a natural language instruction"
+                  >
+                    {refineLoading ? <span className={styles.spinner} /> : '\u2728'} Refine
+                  </button>
                 </div>
               )}
             </div>
@@ -1154,6 +1487,108 @@ export default function AiAssistant() {
                   the AI provider's API, never to any other server.
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* ─────── Migration Wizard View ─────── */}
+          {mode === 'migrate' && (
+            <div className={styles.migrateBody}>
+              <div className={styles.settingsSection}>
+                <h3 className={styles.settingsTitle}>🔀 Deprecation Migration Wizard</h3>
+                <p className={styles.settingsDescription}>
+                  Paste code that uses deprecated iX APIs. The wizard analyzes it and outputs
+                  upgraded code with a line-by-line diff and a plain-language migration summary.
+                </p>
+              </div>
+
+              <div className={styles.section}>
+                <label className={styles.label}>Your existing code</label>
+                <textarea
+                  className={styles.textarea}
+                  placeholder="Paste code that uses deprecated iX components or APIs…"
+                  value={migrateInput}
+                  onChange={(e) => setMigrateInput(e.target.value)}
+                  rows={7}
+                  disabled={migrateLoading}
+                />
+              </div>
+
+              <button
+                className={styles.generateBtn}
+                onClick={handleMigrate}
+                disabled={migrateLoading || !migrateInput.trim()}
+              >
+                {migrateLoading ? <span className={styles.spinner} /> : '🔍'}{' '}
+                {migrateLoading ? 'Analyzing…' : 'Analyze & Migrate'}
+              </button>
+
+              {!hasPremium && !migrateLoading && !migrateOutput && (
+                <div className={styles.info}>
+                  🔑 Migration requires an API key. Add one in
+                  <button className={styles.settingsLinkBtn} onClick={() => setMode('settings')} style={{ marginLeft: 6 }}>
+                    ⚙️ Settings →
+                  </button>
+                </div>
+              )}
+
+              {migrateError && (
+                <div className={styles.error}>
+                  ⚠️ {migrateError}
+                  <button className={styles.errorClose} onClick={() => setMigrateError('')}>✕</button>
+                </div>
+              )}
+
+              {migrateSummary && (
+                <div className={styles.migrateSummary}>
+                  <strong>📋 Summary:</strong> {migrateSummary}
+                </div>
+              )}
+
+              {migrateOutput && (
+                <>
+                  <div className={styles.section}>
+                    <label className={styles.label}>🔄 Diff (old → new)</label>
+                    <div className={styles.diffBlock}>
+                      {computeDiff(migrateInput, migrateOutput).map((line, i) => (
+                        <div
+                          key={i}
+                          className={
+                            line.type === 'added'
+                              ? styles.diffAdded
+                              : line.type === 'removed'
+                              ? styles.diffRemoved
+                              : styles.diffUnchanged
+                          }
+                        >
+                          <span className={styles.diffGutter}>
+                            {line.type === 'added' ? '+' : line.type === 'removed' ? '\u2212' : ' '}
+                          </span>
+                          <code>{line.text}</code>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className={styles.section}>
+                    <div className={styles.codeHeader}>
+                      <label className={styles.label}>Migrated Code</label>
+                      <button
+                        className={styles.copyBtn}
+                        onClick={() => handleMigrateCopy(migrateOutput.replace(/^```[\w-]*\n?/gm, '').replace(/```$/gm, '').trim())}
+                        title="Copy migrated code"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                          <rect x="5" y="1" width="9" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                          <rect x="2" y="4" width="9" height="11" rx="2" fill="var(--theme-color-primary,#00bde3)" stroke="currentColor" strokeWidth="1.5"/>
+                        </svg>
+                        Copy
+                      </button>
+                    </div>
+                    <pre className={styles.codeBlock}>
+                      <code>{migrateOutput.replace(/^```[\w-]*\n?/gm, '').replace(/```$/gm, '').trim()}</code>
+                    </pre>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
