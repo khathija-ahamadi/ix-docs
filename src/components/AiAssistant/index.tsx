@@ -222,6 +222,10 @@ export default function AiAssistant() {
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [showCodeGenHistory, setShowCodeGenHistory] = useState(false);
 
+  // ── Active session ID refs (prevent duplicates when saving) ──
+  const activeChatSessionIdRef = useRef<string | null>(null);
+  const activeCodeGenSessionIdRef = useRef<string | null>(null);
+
   // ── Load history on mount ──
   useEffect(() => {
     setChatHistory(loadChatHistory());
@@ -392,6 +396,8 @@ export default function AiAssistant() {
     setChatError('');
     setChatMessages((prev) => [...prev, { role: 'user', text: userMsg }]);
 
+    // New user message means any restored session is now modified — give it a fresh id on next save
+    activeChatSessionIdRef.current = null;
     setChatLoading(true);
     try {
       // Send conversation history for multi-turn context
@@ -437,19 +443,25 @@ export default function AiAssistant() {
     const hasUserMessages = chatMessages.some((m) => m.role === 'user');
     if (!hasUserMessages) return;
 
+    const id = activeChatSessionIdRef.current ?? Date.now().toString();
+    activeChatSessionIdRef.current = id;
+
     const session: ChatSession = {
-      id: Date.now().toString(),
+      id,
       title: deriveSessionTitle(chatMessages),
       timestamp: Date.now(),
       messages: chatMessages,
     };
-    const updated = [session, ...chatHistory].slice(0, MAX_HISTORY);
+    // Replace existing entry with same id (avoids duplicates on restore/clear cycles)
+    const filtered = chatHistory.filter((s) => s.id !== id);
+    const updated = [session, ...filtered].slice(0, MAX_HISTORY);
     setChatHistory(updated);
     saveChatHistory(updated);
   };
 
   const clearChat = () => {
     saveChatSession();
+    activeChatSessionIdRef.current = null; // next session gets a fresh id
     setChatMessages([
       { role: 'bot', text: 'Chat cleared. Ask me anything about Siemens iX!' },
     ]);
@@ -457,8 +469,9 @@ export default function AiAssistant() {
   };
 
   const restoreChatSession = (session: ChatSession) => {
-    // Save current before restoring
+    // Save current before restoring (replaces in-place if already tracked)
     saveChatSession();
+    activeChatSessionIdRef.current = session.id;
     setChatMessages(session.messages);
     setShowChatHistory(false);
   };
@@ -490,8 +503,10 @@ export default function AiAssistant() {
     setCodeMessage('');
     setCodeLoading(true);
 
-    // Auto-save previous generation before starting a new one
+    // Auto-save previous generation before starting a new one, then reset so
+    // the new generation gets a fresh history id (prevents duplicates)
     saveCodeGenSession();
+    activeCodeGenSessionIdRef.current = null;
 
     try {
       const res = await fetch(GENERATE_URL, {
@@ -555,8 +570,10 @@ export default function AiAssistant() {
   // ── Save current code gen session to history ──
   const saveCodeGenSession = () => {
     if (!generatedCode) return;
+    const id = activeCodeGenSessionIdRef.current ?? Date.now().toString();
+    activeCodeGenSessionIdRef.current = id;
     const session: CodeGenSession = {
-      id: Date.now().toString(),
+      id,
       title: description.length > 50 ? description.slice(0, 50) + '…' : description,
       timestamp: Date.now(),
       description,
@@ -564,13 +581,16 @@ export default function AiAssistant() {
       code: generatedCode,
       matchedComponents,
     };
-    const updated = [session, ...codeGenHistory].slice(0, MAX_HISTORY);
+    // Replace existing entry with same id (avoids duplicates on restore/clear cycles)
+    const filtered = codeGenHistory.filter((s) => s.id !== id);
+    const updated = [session, ...filtered].slice(0, MAX_HISTORY);
     setCodeGenHistory(updated);
     saveCodeGenHistory(updated);
   };
 
   const clearCodeGen = () => {
     saveCodeGenSession();
+    activeCodeGenSessionIdRef.current = null; // next session gets a fresh id
     setDescription('');
     setGeneratedCode('');
     setMatchedComponents([]);
@@ -580,8 +600,9 @@ export default function AiAssistant() {
   };
 
   const restoreCodeGenSession = (session: CodeGenSession) => {
-    // Save current before restoring
+    // Save current before restoring (replaces in-place if already tracked)
     saveCodeGenSession();
+    activeCodeGenSessionIdRef.current = session.id;
     setDescription(session.description);
     setFramework(session.framework);
     setGeneratedCode(session.code);
@@ -999,10 +1020,28 @@ export default function AiAssistant() {
                         disabled={codeLoading}
                         title="Regenerate code"
                       >
-                        ↺ Regenerate
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                          <path d="M13.65 2.35A8 8 0 1 0 15 8h-2a6 6 0 1 1-1.05-3.39L9.5 7H15V1.5l-1.35.85z" fill="currentColor"/>
+                        </svg>
+                        Regenerate
                       </button>
-                      <button className={styles.copyBtn} onClick={handleCopy}>
-                        {copied ? '✓ Copied!' : '📋 Copy'}
+                      <button className={styles.copyBtn} onClick={handleCopy} title={copied ? 'Copied!' : 'Copy code'}>
+                        {copied ? (
+                          <>
+                            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                              <path d="M2 8l4 4 8-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                              <rect x="5" y="1" width="9" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                              <rect x="2" y="4" width="9" height="11" rx="2" fill="var(--theme-color-primary,#00bde3)" stroke="currentColor" strokeWidth="1.5"/>
+                            </svg>
+                            Copy
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>

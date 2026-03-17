@@ -523,22 +523,36 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 4px;
 }
 
 .copyBtn {
-  background: var(--theme-color-2, #283236);
-  border: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.25));
-  border-radius: 5px;
-  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
-  font-size: 11px;
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--theme-color-primary, #00bde3);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
+  box-shadow: 0 2px 6px rgba(0, 189, 227, 0.25);
+  white-space: nowrap;
+  line-height: 1.4;
 }
 
 .copyBtn:hover {
-  background: var(--theme-color-3, #3c484d);
-  color: var(--theme-color-contrast-text, #fff);
+  background: var(--theme-color-dynamic, #00d9f5);
+  box-shadow: 0 3px 10px rgba(0, 189, 227, 0.4);
+  transform: translateY(-1px);
+}
+
+.copyBtn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 189, 227, 0.2);
 }
 
 .codeBlock {
@@ -1042,31 +1056,42 @@
 .codeActions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .regenerateBtn {
-  background: none;
-  border: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.25));
-  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid var(--theme-color-primary, #00bde3);
+  color: var(--theme-color-primary, #00bde3);
+  font-size: 12px;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 4px;
+  padding: 5px 12px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background 0.18s, color 0.18s, transform 0.12s, box-shadow 0.18s;
   white-space: nowrap;
+  line-height: 1.4;
 }
 
 .regenerateBtn:hover:not(:disabled) {
-  border-color: var(--theme-color-primary, #00bde3);
-  color: var(--theme-color-primary, #00bde3);
-  background: rgba(0, 189, 227, 0.08);
+  background: rgba(0, 189, 227, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 189, 227, 0.2);
+  transform: translateY(-1px);
+}
+
+.regenerateBtn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .regenerateBtn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
+  border-color: var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.25));
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.5));
 }
 
 /* ── Key loading state ─────────────────────────────────── */
