@@ -117,6 +117,64 @@
   background: rgba(0, 189, 227, 0.08);
 }
 
+/* ── ··· More overflow menu ───────────────────────────────── */
+.moreMenuWrapper {
+  position: relative;
+}
+
+.moreBtn {
+  /* inherits .tab — just needs a slightly lighter feel */
+  letter-spacing: 0.04em;
+}
+
+.moreBtnOpen {
+  color: var(--theme-color-contrast-text, #fff);
+  background: var(--theme-color-ghost--hover, rgba(140, 161, 171, 0.2));
+}
+
+/* Promoted overflow tab — subtle entry animation */
+.tabPromoted {
+  animation: fadeIn 0.18s ease;
+}
+
+.moreMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 160px;
+  background: var(--theme-color-2, #283236);
+  border: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.25));
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  overflow: hidden;
+  animation: fadeIn 0.15s ease;
+}
+
+.moreMenuItem {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.moreMenuItem:hover {
+  background: var(--theme-color-ghost--hover, rgba(140, 161, 171, 0.2));
+  color: var(--theme-color-std-text, rgba(245, 252, 255, 0.9));
+}
+
+.moreMenuItemActive {
+  color: var(--theme-color-primary, #00bde3);
+  background: rgba(0, 189, 227, 0.08);
+}
+
 .clearBtn {
   background: none;
   border: none;

@@ -324,6 +324,9 @@ export default function AiAssistant() {
   const [migrateError, setMigrateError] = useState('');
   const [migrateSummary, setMigrateSummary] = useState('');
 
+  // ── More-menu (overflow tabs) state ──
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+
   // ── Resize event handlers ──
   useEffect(() => {
     const onPointerMove = (e: PointerEvent) => {
@@ -384,14 +387,28 @@ export default function AiAssistant() {
     document.body.style.userSelect = 'none';
   };
 
-  // ── Escape key closes panel ──
+  // ── Escape key closes panel (or more-menu first) ──
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) setIsOpen(false);
+      if (e.key === 'Escape') {
+        if (showMoreMenu) { setShowMoreMenu(false); }
+        else if (isOpen) setIsOpen(false);
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isOpen]);
+  }, [isOpen, showMoreMenu]);
+
+  // ── Click-outside closes more menu ──
+  useEffect(() => {
+    if (!showMoreMenu) return;
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as Element;
+      if (!target.closest('[data-more-menu]')) setShowMoreMenu(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [showMoreMenu]);
 
   // ── Auto-scroll chat ──
   useEffect(() => {
@@ -874,42 +891,73 @@ export default function AiAssistant() {
           />
 
           {/* Header with mode tabs */}
-          <div className={styles.header}>
-            <div className={styles.tabs}>
-              <button
-                className={`${styles.tab} ${mode === 'chat' ? styles.tabActive : ''}`}
-                onClick={() => { setMode('chat'); setShowChatHistory(false); setShowCodeGenHistory(false); }}
-              >
-                💬 Chat
-              </button>
-              <button
-                className={`${styles.tab} ${mode === 'codegen' ? styles.tabActive : ''}`}
-                onClick={() => { setMode('codegen'); setShowChatHistory(false); setShowCodeGenHistory(false); }}
-              >
-                &lt;/&gt; Code Gen
-              </button>
-              <button
-                className={`${styles.tab} ${mode === 'migrate' ? styles.tabActive : ''}`}
-                onClick={() => { setMode('migrate'); setShowChatHistory(false); setShowCodeGenHistory(false); }}
-                title="Deprecation Migration Wizard"
-              >
-                🔀 Migrate
-              </button>
-              <button
-                className={`${styles.tab} ${mode === 'settings' ? styles.tabActive : ''}`}
-                onClick={() => { setMode('settings'); setShowChatHistory(false); setShowCodeGenHistory(false); }}
-                title="API Key Settings"
-              >
-                ⚙️ Settings
-              </button>
-              <button
-                className={`${styles.tab} ${mode === 'help' ? styles.tabActive : ''}`}
-                onClick={() => { setMode('help'); setShowChatHistory(false); setShowCodeGenHistory(false); }}
-                title="Help"
-              >
-                ❓ Help
-              </button>
-            </div>
+          {(() => {
+            // All overflow items with their labels
+            const MORE_ITEMS: { id: Mode; label: string }[] = [
+              { id: 'migrate',  label: '🔀 Migrate'  },
+              { id: 'settings', label: '⚙️ Settings' },
+              { id: 'help',     label: '❓ Help'     },
+            ];
+            // If the active mode is an overflow item, float it up as a visible tab.
+            const promotedItem = MORE_ITEMS.find((m) => m.id === mode) ?? null;
+            // Remaining items stay in the dropdown.
+            const dropdownItems = MORE_ITEMS.filter((m) => m.id !== mode);
+            const switchMode = (m: Mode) => {
+              setMode(m);
+              setShowChatHistory(false);
+              setShowCodeGenHistory(false);
+              setShowMoreMenu(false);
+            };
+            return (
+              <div className={styles.header}>
+                <div className={styles.tabs}>
+                  <button
+                    className={`${styles.tab} ${mode === 'chat' ? styles.tabActive : ''}`}
+                    onClick={() => switchMode('chat')}
+                  >
+                    💬 Chat
+                  </button>
+                  <button
+                    className={`${styles.tab} ${mode === 'codegen' ? styles.tabActive : ''}`}
+                    onClick={() => switchMode('codegen')}
+                  >
+                    &lt;/&gt; Code Gen
+                  </button>
+
+                  {/* Promoted "more" tab — shown when an overflow mode is active */}
+                  {promotedItem && (
+                    <button
+                      className={`${styles.tab} ${styles.tabActive} ${styles.tabPromoted}`}
+                      onClick={() => switchMode(promotedItem.id)}
+                    >
+                      {promotedItem.label}
+                    </button>
+                  )}
+
+                  {/* ── ··· More dropdown ── */}
+                  <div className={styles.moreMenuWrapper} data-more-menu>
+                    <button
+                      className={`${styles.tab} ${styles.moreBtn} ${showMoreMenu ? styles.moreBtnOpen : ''}`}
+                      onClick={() => setShowMoreMenu((v) => !v)}
+                      title="More options"
+                    >
+                      ··· More
+                    </button>
+                    {showMoreMenu && (
+                      <div className={styles.moreMenu}>
+                        {dropdownItems.map((item) => (
+                          <button
+                            key={item.id}
+                            className={styles.moreMenuItem}
+                            onClick={() => switchMode(item.id)}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
             <div className={styles.headerActions}>
               {mode !== 'settings' && mode !== 'migrate' && mode !== 'help' && (
                 <>
@@ -934,6 +982,8 @@ export default function AiAssistant() {
               )}
             </div>
           </div>
+            );
+          })()}
 
           {/* ─────── Tier banner ─────── */}
           {mode !== 'settings' && mode !== 'migrate' && mode !== 'help' && !keyLoading && (
