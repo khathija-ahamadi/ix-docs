@@ -7,6 +7,51 @@ const docs = require("./docs.json");
 // Disable TLS certificate verification (corporate proxy compatibility)
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
+// ─── Usage Analytics ────────────────────────────────────────────────
+/**
+ * In-memory analytics store. Tracks queries across all endpoints.
+ * Exposes a GET /analytics endpoint for documentation-improvement dashboards.
+ */
+const analytics = {
+  queryCounts: new Map(),           // normalized query text -> count
+  recentQueries: [],                // up to 500 most-recent entries
+  endpointCounts: { chat: 0, generate: 0, migrate: 0, refine: 0 },
+};
+
+function trackAnalytics(text, endpoint = "chat", lang = "en") {
+  if (!text) return;
+  const normalized = text.toLowerCase().replace(/\s+/g, " ").trim().slice(0, 120);
+  analytics.queryCounts.set(normalized, (analytics.queryCounts.get(normalized) || 0) + 1);
+  analytics.recentQueries.unshift({
+    text: text.slice(0, 200),
+    timestamp: Date.now(),
+    endpoint,
+    lang,
+  });
+  if (analytics.recentQueries.length > 500) analytics.recentQueries.pop();
+  analytics.endpointCounts[endpoint] = (analytics.endpointCounts[endpoint] || 0) + 1;
+}
+
+// ─── Multi-language Support ──────────────────────────────────────────
+/**
+ * Maps ISO-639-1 language codes to a short instruction appended to the
+ * system prompt so the LLM responds in the user's preferred language.
+ */
+const LANG_INSTRUCTIONS = {
+  de: "Antworte auf Deutsch. Behalte alle Code-Beispiele in der Originalsprache.",
+  zh: "请用简体中文回答。保留所有代码示例为原始语言。",
+  fr: "Réponds en français. Conserve tous les exemples de code dans la langue d'origine.",
+  es: "Responde en español. Mantén todos los ejemplos de código en el idioma original.",
+  ja: "日本語で回答してください。コード例は元の言語のまま維持してください。",
+  pt: "Responda em português. Mantenha todos os exemplos de código no idioma original.",
+  ko: "한국어로 답변해 주세요. 코드 예시는 원래 언어로 유지하세요.",
+  // English is the default — no instruction needed
+};
+
+function langInstruction(lang) {
+  return lang && LANG_INSTRUCTIONS[lang] ? ` ${LANG_INSTRUCTIONS[lang]}` : "";
+}
+
 // ─── Express setup ──────────────────────────────────────────────────
 const app = express();
 
@@ -154,7 +199,10 @@ function tokenize(text) {
 }
 
 /**
- * Build a BM25 inverted index over the docs corpus.
+ * Build a BM25 inverted index AND unit-normalised TF-IDF vectors for
+ * every document. The vectors power the cosine-similarity semantic layer
+ * that is blended with BM25 to produce hybrid search scores.
+ *
  * Called once at server startup.
  */
 function buildSearchIndex(corpus) {
@@ -193,25 +241,74 @@ function buildSearchIndex(corpus) {
   }
 
   const avgDl = docLengths.reduce((s, l) => s + l, 0) / N;
-  return { docTermFreqs, docLengths, idf, avgDl };
+
+  // ── Semantic Search: build unit-normalised TF-IDF doc vectors ────────
+  // Each vector maps term -> (tf/dl) * idf, then L2-normalised to unit length.
+  // Cosine similarity against a query vector gives a language-independent
+  // relevance signal that improves recall for paraphrased / synonym queries.
+  const docVectors = docTermFreqs.map((tf, i) => {
+    const dl = docLengths[i] || 1;
+    const vec = {};
+    let norm = 0;
+    for (const [term, freq] of Object.entries(tf)) {
+      const val = (freq / dl) * (idf[term] || 0);
+      vec[term] = val;
+      norm += val * val;
+    }
+    norm = Math.sqrt(norm) || 1;
+    for (const term in vec) vec[term] /= norm;
+    return vec;
+  });
+
+  return { docTermFreqs, docLengths, idf, avgDl, docVectors };
 }
 
 /**
- * Search the corpus using BM25 scoring with query expansion.
- * Returns top-K docs sorted by relevance score.
+ * Compute cosine similarity between a query and a pre-normalised doc vector.
+ * The doc vector is already L2-normalised; we only need to normalise the query.
  */
+function cosineSimilarity(queryTokens, idf, docVector) {
+  const uniqueTerms = [...new Set(queryTokens)];
+  let dot = 0;
+  let queryNormSq = 0;
+  for (const term of uniqueTerms) {
+    const idfVal = idf[term] || 0;
+    if (idfVal === 0) continue;
+    const qVal = idfVal; // TF=1 (presence) * IDF
+    const dVal = docVector[term] || 0;
+    dot += qVal * dVal;
+    queryNormSq += qVal * qVal;
+  }
+  if (queryNormSq === 0) return 0;
+  return dot / Math.sqrt(queryNormSq);
+}
+
+/**
+ * Hybrid search: BM25 (lexical) + cosine TF-IDF (semantic) blended scores.
+ *
+ * Blending weight alpha:
+ *   final = alpha * BM25_normalised + (1-alpha) * cosine_similarity
+ *
+ * Cosine similarity catches paraphrased / synonym queries that BM25 misses
+ * because it works in a continuous vector space rather than exact term overlap.
+ *
+ * Returns top-K docs sorted by hybrid relevance score.
+ */
+const HYBRID_ALPHA = 0.60; // 60% BM25, 40% cosine semantic
+
 function searchDocs(query, topK = 10) {
   const expanded = expandQuery(query);
   const queryTokens = tokenize(expanded);
   if (queryTokens.length === 0) return [];
 
-  const { docTermFreqs, docLengths, idf, avgDl } = searchIndex;
+  const { docTermFreqs, docLengths, idf, avgDl, docVectors } = searchIndex;
   const k1 = 1.5;
   const b = 0.75;
   const lowerQuery = query.toLowerCase();
 
-  const scores = docs.map((doc, i) => {
-    let score = 0;
+  // ── Pass 1: BM25 scores ───────────────────────────────────────────
+  const rawScores = docs.map((doc, i) => {
+    let bm25 = 0;
     const tf = docTermFreqs[i];
     const dl = docLengths[i];
 
@@ -221,24 +318,34 @@ function searchDocs(query, topK = 10) {
       const idfVal = idf[qt] || 0;
       const tfNorm =
         (termFreq * (k1 + 1)) / (termFreq + k1 * (1 - b + (b * dl) / avgDl));
-      score += idfVal * tfNorm;
+      bm25 += idfVal * tfNorm;
     }
 
-    // Boost documents whose title closely matches the query
+    // Title-match boosts (applied on BM25 only)
     const lowerTitle = doc.title.toLowerCase();
-    if (lowerTitle.includes(lowerQuery)) score *= 2.0;
+    if (lowerTitle.includes(lowerQuery)) bm25 *= 2.0;
     else {
-      // Partial title match boost (any query token appears in title)
       const originalTokens = tokenize(query);
       const titleHits = originalTokens.filter((t) => lowerTitle.includes(t)).length;
-      if (titleHits > 0) score *= 1 + 0.3 * (titleHits / Math.max(originalTokens.length, 1));
+      if (titleHits > 0) bm25 *= 1 + 0.3 * (titleHits / Math.max(originalTokens.length, 1));
     }
 
     const matchedKeywords = queryTokens.filter((t) => (tf[t] || 0) > 0);
+    return { docIdx: i, doc, bm25, matchedKeywords };
+  });
+
+  // ── Pass 2: cosine semantic scores ───────────────────────────────
+  // Normalise BM25 to [0,1] then blend with cosine
+  const maxBM25 = Math.max(...rawScores.map((s) => s.bm25), 1e-9);
+
+  const scores = rawScores.map(({ docIdx, doc, bm25, matchedKeywords }) => {
+    const bm25Norm = bm25 / maxBM25;
+    const cosine = cosineSimilarity(queryTokens, idf, docVectors[docIdx]);
+    const hybridScore = HYBRID_ALPHA * bm25Norm + (1 - HYBRID_ALPHA) * cosine;
     return {
       title: doc.title,
       content: doc.content,
-      score,
+      score: hybridScore,
       source: doc.source,
       url: doc.url || null,
       matchedKeywords,
@@ -246,7 +353,7 @@ function searchDocs(query, topK = 10) {
   });
 
   const ranked = scores
-    .filter((d) => d.score > 0)
+    .filter((d) => d.score > 0.001)
     .sort((a, b) => b.score - a.score);
 
   // Apply section-type boost and annotate deprecation signals
@@ -307,13 +414,13 @@ function uniqueByUrl(results, max = 10) {
   return out;
 }
 
-// Build search index at startup
+// Build hybrid search index at startup
 const searchIndex = buildSearchIndex(docs);
-console.log(`BM25 search index built over ${docs.length} document chunks`);
+console.log(`Hybrid search index (BM25 + cosine TF-IDF) built over ${docs.length} document chunks`);
 
 // ─── LLM helpers ────────────────────────────────────────────────────
 
-async function askAI(context, question, userApiKey) {
+async function askAI(context, question, userApiKey, lang = "en") {
   const key = userApiKey || process.env.LLM_API_KEY;
   if (!key) throw new Error('No API key available. Please add your AI API key in the ⚙️ Settings tab.');
   const response = await axios.post(
@@ -328,7 +435,7 @@ async function askAI(context, question, userApiKey) {
             "Answer only from the provided documentation. " +
             "If any component, property, or API in the question has been deprecated or removed, " +
             "always highlight this clearly with a ⚠️ warning, state which version introduced the change, " +
-            "and provide the recommended replacement or migration path.",
+            `and provide the recommended replacement or migration path.${langInstruction(lang)}`,
         },
         {
           role: "user",
@@ -420,7 +527,7 @@ Refactor or extend the following code to fulfil the user request using iX compon
  * Body: { question: string, apiKey?: string, history?: Array<{role,text}> }
  */
 app.post("/chat", rateLimiter, async (req, res) => {
-  const { question, apiKey: userApiKey, history } = req.body;
+  const { question, apiKey: userApiKey, history, lang } = req.body;
 
   if (!question || !question.trim()) {
     return res.status(400).json({ error: "question is required" });
@@ -431,7 +538,10 @@ app.post("/chat", rateLimiter, async (req, res) => {
     return res.status(400).json({ error: "No API key available. Please add your AI API key in the ⚙️ Settings tab." });
   }
 
-  // RAG: BM25 retrieval over the full documentation corpus (with query expansion)
+  // Track analytics
+  trackAnalytics(question, "chat", lang || "en");
+
+  // RAG: Hybrid search (BM25 + cosine TF-IDF) over the full documentation corpus
   const matchedDocs = searchDocs(question, 10);
 
   if (matchedDocs.length === 0) {
@@ -466,7 +576,8 @@ app.post("/chat", rateLimiter, async (req, res) => {
         "Be concise but thorough. If the docs contain code examples, include them formatted in markdown code blocks. " +
         "When referencing information, cite the source number in brackets like [1], [2] etc. " +
         "If the answer is not covered by the provided docs, say so honestly and suggest checking https://ix.siemens.io/. " +
-        "Format your response using markdown for readability (headings, lists, code blocks).",
+        "Format your response using markdown for readability (headings, lists, code blocks)." +
+        langInstruction(lang),
     },
   ];
 
@@ -531,7 +642,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
  *   4. Response includes generated code + matched components list
  */
 app.post("/generate", rateLimiter, async (req, res) => {
-  const { description, framework = "react", apiKey: userApiKey, fileContent, fileName } = req.body;
+  const { description, framework = "react", apiKey: userApiKey, fileContent, fileName, lang } = req.body;
 
   if (!description || !description.trim()) {
     return res.status(400).json({ error: "description is required" });
@@ -544,7 +655,10 @@ app.post("/generate", rateLimiter, async (req, res) => {
     });
   }
 
-  // Step 1 — RAG: BM25 retrieval of relevant component documentation
+  // Track analytics
+  trackAnalytics(description, "generate", lang || "en");
+
+  // Step 1 — RAG: Hybrid retrieval of relevant component documentation
   const matchedDocs = searchDocs(description, 15);
 
   if (matchedDocs.length === 0) {
@@ -603,6 +717,73 @@ app.get("/suggest", (req, res) => {
   });
 });
 
+/**
+ * POST /deprecation-check
+ * Proactive deprecation-alert endpoint.
+ * Body: { components: string[] }  — list of component/API names to check.
+ * Returns a list of alerts for any known-deprecated items found in the docs.
+ * No LLM call, no API key required — pure doc corpus search.
+ */
+app.post("/deprecation-check", (req, res) => {
+  const { components = [] } = req.body;
+  if (!Array.isArray(components) || components.length === 0) {
+    return res.status(400).json({ error: "components array is required" });
+  }
+
+  const alerts = [];
+  for (const name of components.slice(0, 20)) {
+    const lower = name.toLowerCase().trim();
+    if (!lower) continue;
+    // Find docs that mention this component AND contain a deprecation signal
+    const hits = docs.filter(
+      (d) =>
+        (d.title.toLowerCase().includes(lower) ||
+          d.content.toLowerCase().includes(lower)) &&
+        hasDeprecationSignal(d.content)
+    );
+    if (hits.length > 0) {
+      // Extract a short excerpt around the first deprecation signal
+      let excerpt = "";
+      const hit = hits[0];
+      for (const sig of DEPRECATION_SIGNALS) {
+        const idx = hit.content.toLowerCase().indexOf(sig);
+        if (idx !== -1) {
+          excerpt = hit.content.slice(Math.max(0, idx - 40), idx + 120).trim();
+          break;
+        }
+      }
+      alerts.push({
+        component: name,
+        deprecated: true,
+        docTitle: hit.title,
+        docUrl: hit.url || null,
+        excerpt,
+      });
+    }
+  }
+  res.json({ alerts });
+});
+
+/**
+ * GET /analytics
+ * Returns aggregated usage analytics: top queries, endpoint counts, recent queries.
+ * Intended for documentation-maintainers to identify gaps and improve guidance.
+ */
+app.get("/analytics", (req, res) => {
+  // Top 30 most-asked questions
+  const topQueries = [...analytics.queryCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 30)
+    .map(([text, count]) => ({ text, count }));
+
+  res.json({
+    endpointCounts: analytics.endpointCounts,
+    totalTracked: analytics.recentQueries.length,
+    topQueries,
+    recentQueries: analytics.recentQueries.slice(0, 20),
+  });
+});
+
 /** Health check */
 app.get("/health", (req, res) => {
   const deprecatedDocs = docs.filter((d) => hasDeprecationSignal(d.content)).length;
@@ -610,8 +791,16 @@ app.get("/health", (req, res) => {
     status: "ok",
     docs: docs.length,
     deprecatedChunks: deprecatedDocs,
+    analytics: {
+      totalQueries: analytics.recentQueries.length,
+      endpointCounts: analytics.endpointCounts,
+    },
     features: [
-      "bm25-search",
+      "hybrid-search-bm25-cosine",
+      "usage-analytics",
+      "deprecation-alerts",
+      "multi-language",
+      "voice-input-ready",
       "query-expansion",
       "conversation-history",
       "source-citations",

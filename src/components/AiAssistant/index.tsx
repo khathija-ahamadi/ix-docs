@@ -9,6 +9,31 @@ const CODEGEN_HISTORY_STORAGE = 'ix-assistant-codegen-history';
 const MAX_HISTORY = 10;
 const REFINE_URL = 'http://localhost:5000/refine';
 const MIGRATE_URL = 'http://localhost:5000/migrate';
+const DEPRECATION_CHECK_URL = 'http://localhost:5000/deprecation-check';
+const LANG_STORAGE = 'ix-assistant-lang';
+
+// ── Multi-language support ──────────────────────────────────────────────────
+type Language = 'en' | 'de' | 'zh' | 'fr' | 'es' | 'ja' | 'pt' | 'ko';
+
+const LANGUAGE_LABELS: Record<Language, string> = {
+  en: '🇬🇧 English',
+  de: '🇩🇪 Deutsch',
+  zh: '🇨🇳 中文',
+  fr: '🇫🇷 Français',
+  es: '🇪🇸 Español',
+  ja: '🇯🇵 日本語',
+  pt: '🇵🇹 Português',
+  ko: '🇰🇷 한국어',
+};
+
+// ── Deprecated iX component registry (for proactive hints) ──────────────
+const DEPRECATED_PATTERNS = [
+  'ix-datetime-picker', 'IxDatetimePicker',
+  'ix-time-picker', 'IxTimePicker',
+  'ix-date-picker', 'IxDatePicker',
+  'ix-input-group', 'IxInputGroup',
+  'ix-breadcrumb-next', 'IxBreadcrumbNext',
+];
 
 // ── IX Component registry (for Visual Component Picker) ───────────────────
 const IX_COMPONENTS = [
@@ -92,7 +117,7 @@ async function decryptApiKey(stored: string): Promise<string> {
   return new TextDecoder().decode(plainBuf);
 }
 
-type Mode = 'chat' | 'codegen' | 'settings' | 'migrate' | 'help';
+type Mode = 'chat' | 'codegen' | 'settings' | 'migrate' | 'help' | 'analytics';
 type Framework = 'react' | 'angular' | 'angular-standalone' | 'vue' | 'webcomponents';
 
 interface Source {
@@ -207,6 +232,100 @@ function deriveSessionTitle(messages: ChatMessage[]): string {
   const firstUser = messages.find((m) => m.role === 'user');
   if (!firstUser) return 'Empty session';
   return firstUser.text.length > 50 ? firstUser.text.slice(0, 50) + '…' : firstUser.text;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Usage Analytics View
+// Fetches live data from GET /analytics and renders top questions + counts.
+// ────────────────────────────────────────────────────────────────────────────
+function AnalyticsView() {
+  const [data, setData] = useState<{
+    endpointCounts: Record<string, number>;
+    totalTracked: number;
+    topQueries: { text: string; count: number }[];
+    recentQueries: { text: string; timestamp: number; endpoint: string; lang: string }[];
+  } | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('http://localhost:5000/analytics')
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((d) => { setData(d); setLoading(false); })
+      .catch((e) => { setError(e.message); setLoading(false); });
+  }, []);
+
+  return (
+    <div className={styles.settingsBody}>
+      <div className={styles.settingsSection}>
+        <h3 className={styles.settingsTitle}>📊 Usage Analytics</h3>
+        <p className={styles.settingsDescription}>
+          Track common questions to improve documentation and product guidance. Data is in-memory and resets on server restart.
+        </p>
+      </div>
+
+      {loading && <div className={styles.settingsDescription} style={{ padding: '0 16px' }}>Loading…</div>}
+      {error && <div className={styles.error} style={{ margin: '0 16px' }}>⚠️ Could not load analytics: {error}</div>}
+
+      {data && (
+        <>
+          {/* Endpoint counts */}
+          <div className={styles.settingsSection}>
+            <h3 className={styles.settingsTitle}>Queries by Feature</h3>
+            <table className={styles.tierTable}>
+              <thead><tr><th>Feature</th><th>Queries</th></tr></thead>
+              <tbody>
+                {Object.entries(data.endpointCounts).map(([k, v]) => (
+                  <tr key={k}><td>{k}</td><td>{v}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Top questions */}
+          {data.topQueries.length > 0 && (
+            <div className={styles.settingsSection}>
+              <h3 className={styles.settingsTitle}>Top Questions</h3>
+              <div className={styles.analyticsQueryList}>
+                {data.topQueries.map((q, i) => (
+                  <div key={i} className={styles.analyticsQueryItem}>
+                    <span className={styles.analyticsQueryText}>{q.text}</span>
+                    <span className={styles.analyticsQueryCount}>×{q.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recent queries */}
+          {data.recentQueries.length > 0 && (
+            <div className={styles.settingsSection}>
+              <h3 className={styles.settingsTitle}>Recent Queries</h3>
+              <div className={styles.analyticsQueryList}>
+                {data.recentQueries.map((q, i) => (
+                  <div key={i} className={styles.analyticsQueryItem}>
+                    <span className={styles.analyticsQueryText}>{q.text}</span>
+                    <span className={styles.analyticsQueryMeta}>
+                      {q.endpoint} · {q.lang} · {new Date(q.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {data.topQueries.length === 0 && data.recentQueries.length === 0 && (
+            <div className={styles.settingsDescription} style={{ padding: '0 16px 16px' }}>
+              No queries tracked yet. Use Chat or Code Gen to generate data.
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 
 export default function AiAssistant() {
@@ -329,8 +448,96 @@ export default function AiAssistant() {
   const [migrateError, setMigrateError] = useState('');
   const [migrateSummary, setMigrateSummary] = useState('');
 
+  // ── Language state ──
+  const [lang, setLang] = useState<Language>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem(LANG_STORAGE) as Language) || 'en';
+    }
+    return 'en';
+  });
+
+  // ── Voice input state ──
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // ── Proactive deprecation hint state ──
+  const [deprecationHint, setDeprecationHint] = useState('');
+
   // ── More-menu (overflow tabs) state ──
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+
+  // ── Persist language preference ──
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LANG_STORAGE, lang);
+    }
+  }, [lang]);
+
+  // ── Voice input: toggle listening ──
+  const toggleVoice = () => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setChatError('Voice input is not supported in this browser.');
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = lang === 'zh' ? 'zh-CN' :
+                       lang === 'ja' ? 'ja-JP' :
+                       lang === 'ko' ? 'ko-KR' :
+                       lang === 'de' ? 'de-DE' :
+                       lang === 'fr' ? 'fr-FR' :
+                       lang === 'es' ? 'es-ES' :
+                       lang === 'pt' ? 'pt-PT' : 'en-US';
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results as any[])
+        .map((r: any) => r[0].transcript)
+        .join('');
+      setQuestion(transcript);
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => { setIsListening(false); setChatError('Voice recognition error. Please try again.'); };
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  };
+
+  // ── Proactive deprecation hint ──
+  // Runs when the user pauses typing in the chat input (300 ms debounce).
+  useEffect(() => {
+    if (!question.trim()) { setDeprecationHint(''); return; }
+    const detected = DEPRECATED_PATTERNS.filter((p) =>
+      question.toLowerCase().includes(p.toLowerCase())
+    );
+    if (detected.length === 0) { setDeprecationHint(''); return; }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(DEPRECATION_CHECK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ components: detected }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.alerts?.length > 0) {
+            const names = data.alerts.map((a: any) => a.component).join(', ');
+            setDeprecationHint(`⚠️ Deprecated API detected: ${names}. The bot will suggest the correct replacement.`);
+          } else {
+            setDeprecationHint('');
+          }
+        }
+      } catch { /* non-blocking */ }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [question]);
 
   // ── Resize event handlers ──
   useEffect(() => {
@@ -481,7 +688,7 @@ export default function AiAssistant() {
       const res = await fetch(CHAT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: userMsg, apiKey, history: recentHistory }),
+        body: JSON.stringify({ question: userMsg, apiKey, history: recentHistory, lang }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -588,6 +795,7 @@ export default function AiAssistant() {
           description: description.trim(),
           framework,
           apiKey,
+          lang,
           ...(uploadedImage ? { screenshot: uploadedImage } : {}),
           ...(codeFileContent ? { fileContent: codeFileContent, fileName: codeFileName } : {}),
         }),
@@ -917,9 +1125,10 @@ export default function AiAssistant() {
           {(() => {
             // All overflow items with their labels
             const MORE_ITEMS: { id: Mode; label: string }[] = [
-              { id: 'migrate',  label: '🔀 Migrate'  },
-              { id: 'settings', label: '⚙️ Settings' },
-              { id: 'help',     label: '❓ Help'     },
+              { id: 'migrate',   label: '🔀 Migrate'   },
+              { id: 'analytics', label: '📊 Analytics' },
+              { id: 'settings',  label: '⚙️ Settings'  },
+              { id: 'help',      label: '❓ Help'      },
             ];
             // If the active mode is an overflow item, float it up as a visible tab.
             const promotedItem = MORE_ITEMS.find((m) => m.id === mode) ?? null;
@@ -982,7 +1191,7 @@ export default function AiAssistant() {
                   </div>
                 </div>
             <div className={styles.headerActions}>
-              {mode !== 'settings' && mode !== 'migrate' && mode !== 'help' && (
+              {mode !== 'settings' && mode !== 'migrate' && mode !== 'help' && mode !== 'analytics' && (
                 <>
                   <button
                     className={styles.historyBtn}
@@ -1009,7 +1218,7 @@ export default function AiAssistant() {
           })()}
 
           {/* ─────── Tier banner ─────── */}
-          {mode !== 'settings' && mode !== 'migrate' && mode !== 'help' && !keyLoading && (
+          {mode !== 'settings' && mode !== 'migrate' && mode !== 'help' && mode !== 'analytics' && !keyLoading && (
             <div className={hasPremium ? styles.tierBannerPremium : styles.tierBannerFree}>
               {hasPremium ? (
                 <>🔑 <strong>Premium</strong> — AI-powered via your API key</>
@@ -1132,12 +1341,35 @@ export default function AiAssistant() {
                 </div>
               )}
 
+              {deprecationHint && (
+                <div className={styles.deprecationHint}>
+                  {deprecationHint}
+                </div>
+              )}
               <div className={styles.inputRow}>
+                <button
+                  className={`${styles.micBtn} ${isListening ? styles.micBtnActive : ''}`}
+                  onClick={toggleVoice}
+                  title={isListening ? 'Stop listening' : 'Voice input'}
+                  aria-label={isListening ? 'Stop voice input' : 'Start voice input'}
+                >
+                  {isListening ? (
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <rect x="3" y="3" width="10" height="10" rx="2" fill="currentColor"/>
+                    </svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <rect x="5" y="1" width="6" height="9" rx="3" stroke="currentColor" strokeWidth="1.5"/>
+                      <path d="M2 8a6 6 0 0 0 12 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="8" y1="14" x2="8" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  )}
+                </button>
                 <input
                   ref={chatInputRef}
                   className={styles.input}
                   type="text"
-                  placeholder="Ask about Siemens iX..."
+                  placeholder={isListening ? 'Listening…' : 'Ask about Siemens iX...'}
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   onKeyDown={handleChatKeyDown}
@@ -1523,6 +1755,25 @@ export default function AiAssistant() {
           {/* ─────── Settings View ─────── */}
           {mode === 'settings' && (
             <div className={styles.settingsBody}>
+              {/* ─── Language selector ─── */}
+              <div className={styles.settingsSection}>
+                <h3 className={styles.settingsTitle}>🌍 Response Language</h3>
+                <p className={styles.settingsDescription}>
+                  The AI will respond in the selected language. Code examples always remain in their original language.
+                </p>
+                <div className={styles.langRow}>
+                  {(Object.entries(LANGUAGE_LABELS) as [Language, string][]).map(([code, label]) => (
+                    <button
+                      key={code}
+                      className={`${styles.langBtn} ${lang === code ? styles.langBtnActive : ''}`}
+                      onClick={() => setLang(code)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className={styles.settingsSection}>
                 <h3 className={styles.settingsTitle}>🔑 API Key</h3>
                 <p className={styles.settingsDescription}>
@@ -1680,6 +1931,11 @@ export default function AiAssistant() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ─────── Analytics View ─────── */}
+          {mode === 'analytics' && (
+            <AnalyticsView />
           )}
 
           {/* ─────── Migration Wizard View ─────── */}
