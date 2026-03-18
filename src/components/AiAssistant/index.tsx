@@ -889,18 +889,18 @@ export default function AiAssistant() {
                 &lt;/&gt; Code Gen
               </button>
               <button
-                className={`${styles.tab} ${mode === 'settings' ? styles.tabActive : ''}`}
-                onClick={() => { setMode('settings'); setShowChatHistory(false); setShowCodeGenHistory(false); }}
-                title="API Key Settings"
-              >
-                ⚙️ Settings
-              </button>
-              <button
                 className={`${styles.tab} ${mode === 'migrate' ? styles.tabActive : ''}`}
                 onClick={() => { setMode('migrate'); setShowChatHistory(false); setShowCodeGenHistory(false); }}
                 title="Deprecation Migration Wizard"
               >
                 🔀 Migrate
+              </button>
+              <button
+                className={`${styles.tab} ${mode === 'settings' ? styles.tabActive : ''}`}
+                onClick={() => { setMode('settings'); setShowChatHistory(false); setShowCodeGenHistory(false); }}
+                title="API Key Settings"
+              >
+                ⚙️ Settings
               </button>
               <button
                 className={`${styles.tab} ${mode === 'help' ? styles.tabActive : ''}`}
