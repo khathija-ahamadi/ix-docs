@@ -713,6 +713,41 @@
   color: var(--theme-color-dynamic, #00eaff);
 }
 
+/* ── Help links ──────────────────────────────────────────── */
+.helpLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.helpLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.helpLink:hover {
+  background: var(--theme-color-ghost-hover, rgba(224, 245, 255, 0.06));
+  color: var(--theme-color-std-text, rgba(245, 252, 255, 0.9));
+  text-decoration: none;
+}
+
+.helpLinkIcon {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.helpLink:hover .helpLinkIcon {
+  opacity: 1;
+}
+
 /* ── Key input area ──────────────────────────────────────── */
 .keyInput {
   width: 100%;
@@ -885,6 +920,31 @@
 .historyBtn:hover {
   opacity: 1;
   color: var(--theme-color-contrast-text, #fff);
+}
+
+.helpIconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
+  cursor: pointer;
+  opacity: 0.75;
+  padding: 8px;
+  border-radius: 6px;
+  transition: opacity 0.2s, background 0.15s, color 0.15s;
+}
+
+.helpIconBtn:hover {
+  opacity: 1;
+  color: var(--theme-color-contrast-text, #fff);
+  background: var(--theme-color-ghost-hover, rgba(224, 245, 255, 0.06));
+}
+
+.helpIconBtnActive {
+  opacity: 1;
+  color: var(--theme-color-primary, #00bde3);
 }
 
 .historyDrawer {

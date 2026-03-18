@@ -92,7 +92,7 @@ async function decryptApiKey(stored: string): Promise<string> {
   return new TextDecoder().decode(plainBuf);
 }
 
-type Mode = 'chat' | 'codegen' | 'settings' | 'migrate';
+type Mode = 'chat' | 'codegen' | 'settings' | 'migrate' | 'help';
 type Framework = 'react' | 'angular' | 'angular-standalone' | 'vue' | 'webcomponents';
 
 interface Source {
@@ -902,32 +902,41 @@ export default function AiAssistant() {
               >
                 🔀 Migrate
               </button>
+              <button
+                className={`${styles.tab} ${mode === 'help' ? styles.tabActive : ''}`}
+                onClick={() => { setMode('help'); setShowChatHistory(false); setShowCodeGenHistory(false); }}
+                title="Help"
+              >
+                ❓ Help
+              </button>
             </div>
-            {mode !== 'settings' && mode !== 'migrate' && (
-              <div className={styles.headerActions}>
-                <button
-                  className={styles.historyBtn}
-                  onClick={() => {
-                    if (mode === 'chat') setShowChatHistory((v) => !v);
-                    else setShowCodeGenHistory((v) => !v);
-                  }}
-                  title="History"
-                >
-                  🕘
-                </button>
-                <button
-                  className={styles.clearBtn}
-                  onClick={mode === 'chat' ? clearChat : clearCodeGen}
-                  title="Clear"
-                >
-                  🗑
-                </button>
-              </div>
-            )}
+            <div className={styles.headerActions}>
+              {mode !== 'settings' && mode !== 'migrate' && mode !== 'help' && (
+                <>
+                  <button
+                    className={styles.historyBtn}
+                    onClick={() => {
+                      if (mode === 'chat') setShowChatHistory((v) => !v);
+                      else setShowCodeGenHistory((v) => !v);
+                    }}
+                    title="History"
+                  >
+                    🕘
+                  </button>
+                  <button
+                    className={styles.clearBtn}
+                    onClick={mode === 'chat' ? clearChat : clearCodeGen}
+                    title="Clear"
+                  >
+                    🗑
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* ─────── Tier banner ─────── */}
-          {mode !== 'settings' && mode !== 'migrate' && !keyLoading && (
+          {mode !== 'settings' && mode !== 'migrate' && mode !== 'help' && !keyLoading && (
             <div className={hasPremium ? styles.tierBannerPremium : styles.tierBannerFree}>
               {hasPremium ? (
                 <>🔑 <strong>Premium</strong> — AI-powered via your API key</>
@@ -1486,6 +1495,69 @@ export default function AiAssistant() {
                   localStorage — it is never stored as plain text. The key is only sent to
                   the AI provider's API, never to any other server.
                 </p>
+              </div>
+
+            </div>
+          )}
+
+          {/* ─────── Help View ─────── */}
+          {mode === 'help' && (
+            <div className={styles.settingsBody}>
+              <div className={styles.settingsSection}>
+                <h3 className={styles.settingsTitle}>Help</h3>
+                <div className={styles.helpLinks}>
+                  <a
+                    href="https://ix.siemens.io/docs/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.helpLink}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className={styles.helpLinkIcon}>
+                      <rect x="3" y="1" width="10" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                      <line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                      <line x1="5.5" y1="8" x2="10.5" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                      <line x1="5.5" y1="10.5" x2="8.5" y2="10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                    </svg>
+                    Go to docs
+                  </a>
+                  <a
+                    href="https://github.com/siemens/ix/discussions"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.helpLink}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className={styles.helpLinkIcon}>
+                      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5"/>
+                      <path d="M6.5 6.5C6.5 5.67 7.17 5 8 5s1.5.67 1.5 1.5c0 1-1.5 1.5-1.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <circle cx="8" cy="11.5" r="0.75" fill="currentColor"/>
+                    </svg>
+                    Go to support forums
+                  </a>
+                  <a
+                    href="https://support.industry.siemens.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.helpLink}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className={styles.helpLinkIcon}>
+                      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5"/>
+                      <path d="M6.5 6.5C6.5 5.67 7.17 5 8 5s1.5.67 1.5 1.5c0 1-1.5 1.5-1.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <circle cx="8" cy="11.5" r="0.75" fill="currentColor"/>
+                    </svg>
+                    Contact support
+                  </a>
+                  <a
+                    href="https://www.siemens.com/global/en/company/contact.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.helpLink}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className={styles.helpLinkIcon}>
+                      <path d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v7A1.5 1.5 0 0112.5 12H5l-3 2.5V3.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+                    </svg>
+                    Contact sales
+                  </a>
+                </div>
               </div>
             </div>
           )}
