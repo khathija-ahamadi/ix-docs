@@ -8,7 +8,12 @@ const docs = require("./docs.json");
 // ─── SSL ────────────────────────────────────────────────────────────
 // Behind corporate proxies set ALLOW_INSECURE_SSL=true in .env — never in prod.
 const allowInsecureSSL = process.env.ALLOW_INSECURE_SSL === "true";
-if (allowInsecureSSL) console.warn("⚠️  SSL verification disabled (ALLOW_INSECURE_SSL=true)");
+if (allowInsecureSSL) {
+  // Disable TLS verification globally for all Node.js HTTPS connections
+  // (covers corporate proxies that intercept and re-sign TLS traffic)
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  console.warn("⚠️  SSL verification disabled (ALLOW_INSECURE_SSL=true)");
+}
 const httpsAgent = new https.Agent({ rejectUnauthorized: !allowInsecureSSL });
 
 // ─── Express setup ──────────────────────────────────────────────────
