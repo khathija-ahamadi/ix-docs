@@ -313,6 +313,11 @@ export default function AiAssistant() {
   const [imageFileName, setImageFileName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Code File Upload state ──
+  const [codeFileContent, setCodeFileContent] = useState<string | null>(null);
+  const [codeFileName, setCodeFileName] = useState('');
+  const codeFileInputRef = useRef<HTMLInputElement>(null);
+
   // ── Visual Component Picker state ──
   const [showCompPicker, setShowCompPicker] = useState(false);
   const [compSearch, setCompSearch] = useState('');
@@ -584,6 +589,7 @@ export default function AiAssistant() {
           framework,
           apiKey,
           ...(uploadedImage ? { screenshot: uploadedImage } : {}),
+          ...(codeFileContent ? { fileContent: codeFileContent, fileName: codeFileName } : {}),
         }),
       });
       if (!res.ok) {
@@ -668,6 +674,8 @@ export default function AiAssistant() {
     setMatchedComponents([]);
     setCodeError('');
     setCodeMessage('');
+    setCodeFileContent(null);
+    setCodeFileName('');
     textareaRef.current?.focus();
   };
 
@@ -791,6 +799,21 @@ export default function AiAssistant() {
   const clearUploadedImage = () => {
     setUploadedImage(null);
     setImageFileName('');
+  };
+
+  const handleCodeFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCodeFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => setCodeFileContent(reader.result as string);
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const clearCodeFile = () => {
+    setCodeFileContent(null);
+    setCodeFileName('');
   };
 
   // ════════════════════════════════════════════════════════════
@@ -1178,33 +1201,80 @@ export default function AiAssistant() {
                 </div>
               )}
 
-              {/* ── Feature 4: Image-to-Code upload ────────────────────────── */}
-              <div className={styles.imageUploadRow}>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  onChange={handleImageUpload}
-                />
-                {!uploadedImage ? (
-                  <button
-                    className={styles.imageUploadBtn}
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={codeLoading}
-                    title="Upload a UI screenshot to generate code from it (requires API key)"
-                  >
-                    📷 Screenshot → Code
-                  </button>
-                ) : (
-                  <div className={styles.imagePreviewRow}>
-                    <img src={uploadedImage} alt={imageFileName} className={styles.imagePreview} />
-                    <div className={styles.imagePreviewInfo}>
-                      <span className={styles.imagePreviewName}>{imageFileName}</span>
-                      <button className={styles.imageClearBtn} onClick={clearUploadedImage} title="Remove screenshot">✕ Remove</button>
+              {/* ── Upload tools: Screenshot → Code + Code File ─────────── */}
+              <div className={styles.uploadGrid}>
+                {/* Screenshot slot */}
+                <div className={styles.uploadSlot}>
+                  <span className={styles.uploadSlotLabel}>📷 Screenshot</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleImageUpload}
+                  />
+                  {!uploadedImage ? (
+                    <button
+                      className={styles.uploadSlotBtn}
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={codeLoading}
+                      title="Upload a UI screenshot to generate code from it (requires API key)"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M1 12V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z" stroke="currentColor" strokeWidth="1.2"/>
+                        <circle cx="5.5" cy="7" r="1.5" stroke="currentColor" strokeWidth="1.2"/>
+                        <path d="M1 10l3.5-3 3 3 2-2 4 4" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                      </svg>
+                      Upload image
+                    </button>
+                  ) : (
+                    <div className={styles.uploadSlotPreview}>
+                      <img src={uploadedImage} alt={imageFileName} className={styles.uploadSlotThumb} />
+                      <div className={styles.uploadSlotMeta}>
+                        <span className={styles.uploadSlotName}>{imageFileName}</span>
+                        <button className={styles.uploadSlotClear} onClick={clearUploadedImage} title="Remove screenshot">✕ Remove</button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+
+                {/* Code file slot */}
+                <div className={styles.uploadSlot}>
+                  <span className={styles.uploadSlotLabel}>📄 Code File</span>
+                  <input
+                    ref={codeFileInputRef}
+                    type="file"
+                    accept=".html,.htm,.tsx,.ts,.jsx,.js,.css,.scss,.vue,.json,.md,.txt"
+                    style={{ display: 'none' }}
+                    onChange={handleCodeFileUpload}
+                  />
+                  {!codeFileContent ? (
+                    <button
+                      className={styles.uploadSlotBtn}
+                      onClick={() => codeFileInputRef.current?.click()}
+                      disabled={codeLoading}
+                      title="Upload an existing code file to refactor or extend it with iX components"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.2"/>
+                        <path d="M10 2v3h3" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                        <path d="M6 8h4M6 10.5h2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                      </svg>
+                      Upload file
+                    </button>
+                  ) : (
+                    <div className={styles.uploadSlotPreview}>
+                      <div className={styles.uploadSlotFileIcon}>
+                        {codeFileName.split('.').pop()?.toUpperCase() || 'FILE'}
+                      </div>
+                      <div className={styles.uploadSlotMeta}>
+                        <span className={styles.uploadSlotName}>{codeFileName}</span>
+                        <span className={styles.uploadSlotSize}>{codeFileContent.length.toLocaleString()} chars</span>
+                        <button className={styles.uploadSlotClear} onClick={clearCodeFile} title="Remove file">✕ Remove</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Description input */}

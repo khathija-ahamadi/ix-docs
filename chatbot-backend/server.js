@@ -351,7 +351,7 @@ async function askAI(context, question, userApiKey) {
  * Code-generation-specific LLM call.
  * Receives multiple component docs + the user description + target framework.
  */
-async function generateCode(componentDocs, description, framework, userApiKey) {
+async function generateCode(componentDocs, description, framework, userApiKey, fileContent, fileName) {
   const key = userApiKey || process.env.LLM_API_KEY;
   if (!key) throw new Error('No API key available. Please add your AI API key in the ⚙️ Settings tab.');
   const frameworkGuide = {
@@ -381,17 +381,13 @@ RULES:
 9. Make the code copy-paste ready — a developer should be able to use it immediately.
 10. If any component in the documentation is marked deprecated, do NOT use it — use the recommended replacement instead and add a MIGRATION comment explaining the change.`;
 
-  const userPrompt = `## Component Documentation (retrieved from iX docs)
+  const fileSection = fileContent
+    ? `\n---\n\n## Existing Code File ("${fileName || 'uploaded file'}")
 
-${docsContext}
+Refactor or extend the following code to fulfil the user request using iX components:\n\n\`\`\`\n${fileContent.slice(0, 6000)}${fileContent.length > 6000 ? '\n// ... (truncated)' : ''}\n\`\`\`\n`
+    : '';
 
----
-
-## User Request
-
-"${description}"
-
-Generate the complete ${framework} code for this UI.`;
+  const userPrompt = `## Component Documentation (retrieved from iX docs)\n\n${docsContext}\n\n---\n\n## User Request\n\n"${description}"${fileSection}\n\nGenerate the complete ${framework} code for this UI.`;
 
   const response = await axios.post(
     "https://api.siemens.com/llm/v1/chat/completions",
@@ -535,7 +531,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
  *   4. Response includes generated code + matched components list
  */
 app.post("/generate", rateLimiter, async (req, res) => {
-  const { description, framework = "react", apiKey: userApiKey } = req.body;
+  const { description, framework = "react", apiKey: userApiKey, fileContent, fileName } = req.body;
 
   if (!description || !description.trim()) {
     return res.status(400).json({ error: "description is required" });
@@ -565,7 +561,7 @@ app.post("/generate", rateLimiter, async (req, res) => {
 
   try {
     // Step 2 — LLM: generate code using retrieved docs
-    const code = await generateCode(topDocs, description, framework, userApiKey);
+    const code = await generateCode(topDocs, description, framework, userApiKey, fileContent, fileName);
 
     res.json({
       code,
