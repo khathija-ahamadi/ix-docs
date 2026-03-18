@@ -2,19 +2,10 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
-const https = require("https");
 const docs = require("./docs.json");
 
-// ─── SSL ────────────────────────────────────────────────────────────
-// Behind corporate proxies set ALLOW_INSECURE_SSL=true in .env — never in prod.
-const allowInsecureSSL = process.env.ALLOW_INSECURE_SSL === "true";
-if (allowInsecureSSL) {
-  // Disable TLS verification globally for all Node.js HTTPS connections
-  // (covers corporate proxies that intercept and re-sign TLS traffic)
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-  console.warn("⚠️  SSL verification disabled (ALLOW_INSECURE_SSL=true)");
-}
-const httpsAgent = new https.Agent({ rejectUnauthorized: !allowInsecureSSL });
+// Disable TLS certificate verification (corporate proxy compatibility)
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 // ─── Express setup ──────────────────────────────────────────────────
 const app = express();
@@ -350,7 +341,6 @@ async function askAI(context, question, userApiKey) {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
-      httpsAgent,
     }
   );
 
@@ -419,7 +409,6 @@ Generate the complete ${framework} code for this UI.`;
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
-      httpsAgent,
     }
   );
 
@@ -517,7 +506,6 @@ app.post("/chat", rateLimiter, async (req, res) => {
           Authorization: `Bearer ${key}`,
           "Content-Type": "application/json",
         },
-        httpsAgent,
       }
     );
 
