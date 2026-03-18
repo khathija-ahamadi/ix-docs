@@ -314,12 +314,12 @@ console.log(`BM25 search index built over ${docs.length} document chunks`);
 // ─── LLM helpers ────────────────────────────────────────────────────
 
 async function askAI(context, question, userApiKey) {
-  const key = userApiKey || process.env.GROQ_API_KEY;
+  const key = userApiKey || process.env.LLM_API_KEY;
   if (!key) throw new Error('No API key available. Please add your AI API key in the ⚙️ Settings tab.');
   const response = await axios.post(
-    "https://api.groq.com/openai/v1/chat/completions",
+    "https://api.siemens.com/llm/v1/chat/completions",
     {
-      model: "llama-3.3-70b-versatile",
+      model: "qwen3-30b-a3b-instruct-2507",
       messages: [
         {
           role: "system",
@@ -352,7 +352,7 @@ async function askAI(context, question, userApiKey) {
  * Receives multiple component docs + the user description + target framework.
  */
 async function generateCode(componentDocs, description, framework, userApiKey) {
-  const key = userApiKey || process.env.GROQ_API_KEY;
+  const key = userApiKey || process.env.LLM_API_KEY;
   if (!key) throw new Error('No API key available. Please add your AI API key in the ⚙️ Settings tab.');
   const frameworkGuide = {
     react: `Use React with @siemens/ix-react. Import components like: import { IxButton, IxInput } from '@siemens/ix-react'; Use JSX with PascalCase tags (e.g. <IxButton>, <IxInput>). For boolean props use prop={true}. For events use onEventName.`,
@@ -394,9 +394,9 @@ ${docsContext}
 Generate the complete ${framework} code for this UI.`;
 
   const response = await axios.post(
-    "https://api.groq.com/openai/v1/chat/completions",
+    "https://api.siemens.com/llm/v1/chat/completions",
     {
-      model: "llama-3.3-70b-versatile",
+      model: "qwen3-30b-a3b-instruct-2507",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -430,7 +430,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
     return res.status(400).json({ error: "question is required" });
   }
 
-  const key = userApiKey || process.env.GROQ_API_KEY;
+  const key = userApiKey || process.env.LLM_API_KEY;
   if (!key) {
     return res.status(400).json({ error: "No API key available. Please add your AI API key in the ⚙️ Settings tab." });
   }
@@ -494,9 +494,9 @@ app.post("/chat", rateLimiter, async (req, res) => {
 
   try {
     const response = await axios.post(
-      "https://api.groq.com/openai/v1/chat/completions",
+      "https://api.siemens.com/llm/v1/chat/completions",
       {
-        model: "llama-3.3-70b-versatile",
+        model: "qwen3-30b-a3b-instruct-2507",
         messages,
         temperature: 0.3,
         max_tokens: 2048,
@@ -519,7 +519,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
   } catch (err) {
     const status = err.response?.status || 500;
     const message = err.response?.data?.error?.message || err.message;
-    console.error("Groq API error:", status, message);
+    console.error("Siemens LLM API error:", status, message);
     res.status(status).json({ error: message });
   }
 });

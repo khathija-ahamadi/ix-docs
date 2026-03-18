@@ -1456,17 +1456,17 @@ export default function AiAssistant() {
               <div className={styles.settingsSection}>
                 <h3 className={styles.settingsTitle}>🔑 API Key</h3>
                 <p className={styles.settingsDescription}>
-                  iX AI Assistant is open-source. To keep it free for everyone, AI features
-                  use <strong>your own AI API key</strong>. Many providers (Groq, OpenAI,
-                  Mistral, etc.) offer free tiers — no credit card needed.
+                  iX AI Assistant uses the <strong>Siemens LLM API</strong> (code.siemens.com).
+                  Generate your personal API key on <strong>my.siemens.com</strong> — available
+                  to every Siemens employee, no credit card needed.
                 </p>
                 <a
-                  href="https://console.groq.com/keys"
+                  href="https://my.siemens.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   className={styles.settingsLink}
                 >
-                  ↗ Get a free Groq key (recommended — no credit card)
+                  ↗ Get your Siemens LLM API key (my.siemens.com → My Keys → Create, scope: llm)
                 </a>
               </div>
 
@@ -1501,7 +1501,7 @@ export default function AiAssistant() {
                     <input
                       className={styles.keyInput}
                       type="password"
-                      placeholder="sk-••••••••••••••••••••••••••••••••••••"
+                      placeholder="SIAK-••••••••••••••••••••••••••••••••••"
                       value={apiKeyInput}
                       onChange={(e) => setApiKeyInput(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') saveApiKey(); }}
