@@ -55,6 +55,234 @@ function langInstruction(lang) {
   return lang && LANG_INSTRUCTIONS[lang] ? ` ${LANG_INSTRUCTIONS[lang]}` : "";
 }
 
+function normalizeLang(lang) {
+  const normalized = String(lang || "en").toLowerCase();
+  return LANG_INSTRUCTIONS[normalized] ? normalized : "en";
+}
+
+const LOCALIZED_TEXT = {
+  en: {
+    noDocsFound:
+      "I couldn't find relevant information in the iX documentation for that question. Try rephrasing or ask about a specific component, installation, theming, or guidelines.",
+    freeTierHeader: "Free-tier documentation answer (no AI key configured):",
+    questionLabel: "Question:",
+    relevantDocsLabel: "Relevant iX docs:",
+    addKeyHint:
+      "Add an API key in Settings to enable full AI chat responses and deeper synthesis.",
+  },
+  de: {
+    noDocsFound:
+      "Ich konnte in der iX-Dokumentation keine passenden Informationen zu dieser Frage finden. Formuliere die Frage anders oder frage nach einer bestimmten Komponente, Installation, Theming oder Richtlinie.",
+    freeTierHeader: "Free-Tier-Dokumentationsantwort (kein AI-Schlüssel konfiguriert):",
+    questionLabel: "Frage:",
+    relevantDocsLabel: "Relevante iX-Dokumentation:",
+    addKeyHint:
+      "Füge in den Einstellungen einen API-Schlüssel hinzu, um vollständige KI-Antworten und tiefere Synthese zu aktivieren.",
+  },
+  zh: {
+    noDocsFound:
+      "我在 iX 文档中未找到与该问题相关的信息。请尝试换一种问法，或询问具体组件、安装、主题或指南。",
+    freeTierHeader: "免费层文档回答（未配置 AI Key）：",
+    questionLabel: "问题：",
+    relevantDocsLabel: "相关 iX 文档：",
+    addKeyHint: "请在设置中添加 API Key，以启用完整 AI 对话与更深入总结。",
+  },
+  fr: {
+    noDocsFound:
+      "Je n'ai pas trouvé d'informations pertinentes dans la documentation iX pour cette question. Reformule la question ou demande un composant, l'installation, le theming ou les guidelines.",
+    freeTierHeader: "Réponse documentation en mode gratuit (aucune clé AI configurée) :",
+    questionLabel: "Question :",
+    relevantDocsLabel: "Documentation iX pertinente :",
+    addKeyHint:
+      "Ajoute une clé API dans les paramètres pour activer les réponses AI complètes et une synthèse plus approfondie.",
+  },
+  es: {
+    noDocsFound:
+      "No pude encontrar información relevante en la documentación de iX para esa pregunta. Intenta reformularla o pregunta por un componente, instalación, theming o guía específica.",
+    freeTierHeader: "Respuesta de documentación en capa gratuita (sin clave de IA configurada):",
+    questionLabel: "Pregunta:",
+    relevantDocsLabel: "Documentación iX relevante:",
+    addKeyHint:
+      "Agrega una clave API en Configuración para habilitar respuestas completas de IA y una síntesis más profunda.",
+  },
+  ja: {
+    noDocsFound:
+      "その質問に関する情報は iX ドキュメントで見つかりませんでした。言い換えるか、特定のコンポーネント、インストール、テーマ、ガイドラインについて質問してください。",
+    freeTierHeader: "無料ティアのドキュメント回答（AIキー未設定）:",
+    questionLabel: "質問:",
+    relevantDocsLabel: "関連する iX ドキュメント:",
+    addKeyHint: "設定で API キーを追加すると、完全な AI チャット応答とより深い要約が利用できます。",
+  },
+  pt: {
+    noDocsFound:
+      "Não encontrei informações relevantes na documentação do iX para essa pergunta. Tente reformular ou pergunte sobre um componente, instalação, tema ou diretriz específica.",
+    freeTierHeader: "Resposta de documentação no plano gratuito (sem chave de IA configurada):",
+    questionLabel: "Pergunta:",
+    relevantDocsLabel: "Documentação iX relevante:",
+    addKeyHint:
+      "Adicione uma chave de API em Configurações para habilitar respostas completas de IA e síntese mais profunda.",
+  },
+  ko: {
+    noDocsFound:
+      "해당 질문에 대한 관련 정보를 iX 문서에서 찾지 못했습니다. 질문을 바꿔서 다시 시도하거나 특정 컴포넌트, 설치, 테마, 가이드라인을 물어보세요.",
+    freeTierHeader: "무료 티어 문서 답변(AI 키가 설정되지 않음):",
+    questionLabel: "질문:",
+    relevantDocsLabel: "관련 iX 문서:",
+    addKeyHint: "설정에서 API 키를 추가하면 전체 AI 채팅 응답과 더 깊은 요약을 사용할 수 있습니다.",
+  },
+};
+
+function getLocalizedText(lang) {
+  return LOCALIZED_TEXT[normalizeLang(lang)] || LOCALIZED_TEXT.en;
+}
+
+const LOCALIZED_MESSAGES = {
+  en: {
+    rateLimitExceeded: "Rate limit exceeded. Please wait a moment before trying again.",
+    questionRequired: "question is required",
+    descriptionRequired: "description is required",
+    invalidFramework: "Invalid framework. Choose one of: {frameworks}",
+    noMatchingComponents:
+      "No matching components found for your description. Try mentioning specific component names like button, input, checkbox, modal, etc.",
+    codeRequired: "code is required",
+    codeAndInstructionRequired: "code and instruction are required",
+    componentsArrayRequired: "components array is required",
+    noApiKeyAiSettings: "No API key available. Please add your AI API key in the ⚙️ Settings tab.",
+    noApiKeySettings: "No API key available. Please add your API key in ⚙️ Settings.",
+    migrationFailed: "Migration failed",
+  },
+  de: {
+    rateLimitExceeded: "Ratenlimit überschritten. Bitte warte einen Moment, bevor du es erneut versuchst.",
+    questionRequired: "Frage ist erforderlich",
+    descriptionRequired: "Beschreibung ist erforderlich",
+    invalidFramework: "Ungültiges Framework. Wähle eines von: {frameworks}",
+    noMatchingComponents:
+      "Für deine Beschreibung wurden keine passenden Komponenten gefunden. Nenne z. B. konkrete Komponenten wie button, input, checkbox oder modal.",
+    codeRequired: "Code ist erforderlich",
+    codeAndInstructionRequired: "Code und Anweisung sind erforderlich",
+    componentsArrayRequired: "Ein components-Array ist erforderlich",
+    noApiKeyAiSettings: "Kein API-Schlüssel verfügbar. Bitte füge deinen KI-API-Schlüssel im Tab ⚙️ Einstellungen hinzu.",
+    noApiKeySettings: "Kein API-Schlüssel verfügbar. Bitte füge deinen API-Schlüssel in ⚙️ Einstellungen hinzu.",
+    migrationFailed: "Migration fehlgeschlagen",
+  },
+  zh: {
+    rateLimitExceeded: "请求过于频繁。请稍后再试。",
+    questionRequired: "必须提供 question",
+    descriptionRequired: "必须提供 description",
+    invalidFramework: "无效的框架。请选择以下之一：{frameworks}",
+    noMatchingComponents:
+      "未找到与描述匹配的组件。请尝试提及具体组件名称，例如 button、input、checkbox、modal 等。",
+    codeRequired: "必须提供 code",
+    codeAndInstructionRequired: "必须同时提供 code 和 instruction",
+    componentsArrayRequired: "必须提供 components 数组",
+    noApiKeyAiSettings: "没有可用的 API Key。请在 ⚙️ 设置中添加你的 AI API Key。",
+    noApiKeySettings: "没有可用的 API Key。请在 ⚙️ 设置中添加你的 API Key。",
+    migrationFailed: "迁移失败",
+  },
+  fr: {
+    rateLimitExceeded: "Limite de requêtes dépassée. Merci d'attendre un instant avant de réessayer.",
+    questionRequired: "question est requis",
+    descriptionRequired: "description est requise",
+    invalidFramework: "Framework invalide. Choisissez l'un des suivants : {frameworks}",
+    noMatchingComponents:
+      "Aucun composant correspondant trouvé pour votre description. Essayez de mentionner des noms précis comme button, input, checkbox, modal, etc.",
+    codeRequired: "code est requis",
+    codeAndInstructionRequired: "code et instruction sont requis",
+    componentsArrayRequired: "un tableau components est requis",
+    noApiKeyAiSettings: "Aucune clé API disponible. Veuillez ajouter votre clé API IA dans l'onglet ⚙️ Paramètres.",
+    noApiKeySettings: "Aucune clé API disponible. Veuillez ajouter votre clé API dans ⚙️ Paramètres.",
+    migrationFailed: "La migration a échoué",
+  },
+  es: {
+    rateLimitExceeded: "Límite de solicitudes excedido. Espera un momento antes de volver a intentarlo.",
+    questionRequired: "question es obligatorio",
+    descriptionRequired: "description es obligatorio",
+    invalidFramework: "Framework inválido. Elige uno de: {frameworks}",
+    noMatchingComponents:
+      "No se encontraron componentes coincidentes para tu descripción. Intenta mencionar componentes específicos como button, input, checkbox, modal, etc.",
+    codeRequired: "code es obligatorio",
+    codeAndInstructionRequired: "code e instruction son obligatorios",
+    componentsArrayRequired: "se requiere un arreglo components",
+    noApiKeyAiSettings: "No hay una clave API disponible. Agrega tu clave API de IA en la pestaña ⚙️ Configuración.",
+    noApiKeySettings: "No hay una clave API disponible. Agrega tu clave API en ⚙️ Configuración.",
+    migrationFailed: "La migración falló",
+  },
+  ja: {
+    rateLimitExceeded: "レート制限を超えました。しばらく待ってから再試行してください。",
+    questionRequired: "question は必須です",
+    descriptionRequired: "description は必須です",
+    invalidFramework: "無効なフレームワークです。次から選択してください: {frameworks}",
+    noMatchingComponents:
+      "説明に一致するコンポーネントが見つかりませんでした。button、input、checkbox、modal などの具体名を指定してください。",
+    codeRequired: "code は必須です",
+    codeAndInstructionRequired: "code と instruction は必須です",
+    componentsArrayRequired: "components 配列が必要です",
+    noApiKeyAiSettings: "利用可能な API キーがありません。⚙️ 設定タブで AI API キーを追加してください。",
+    noApiKeySettings: "利用可能な API キーがありません。⚙️ 設定で API キーを追加してください。",
+    migrationFailed: "移行に失敗しました",
+  },
+  pt: {
+    rateLimitExceeded: "Limite de requisições excedido. Aguarde um momento antes de tentar novamente.",
+    questionRequired: "question é obrigatório",
+    descriptionRequired: "description é obrigatório",
+    invalidFramework: "Framework inválido. Escolha um dos seguintes: {frameworks}",
+    noMatchingComponents:
+      "Nenhum componente correspondente foi encontrado para sua descrição. Tente mencionar nomes específicos como button, input, checkbox, modal, etc.",
+    codeRequired: "code é obrigatório",
+    codeAndInstructionRequired: "code e instruction são obrigatórios",
+    componentsArrayRequired: "um array components é obrigatório",
+    noApiKeyAiSettings: "Nenhuma chave de API disponível. Adicione sua chave de API de IA na aba ⚙️ Configurações.",
+    noApiKeySettings: "Nenhuma chave de API disponível. Adicione sua chave de API em ⚙️ Configurações.",
+    migrationFailed: "Falha na migração",
+  },
+  ko: {
+    rateLimitExceeded: "요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.",
+    questionRequired: "question 값이 필요합니다",
+    descriptionRequired: "description 값이 필요합니다",
+    invalidFramework: "유효하지 않은 프레임워크입니다. 다음 중 하나를 선택하세요: {frameworks}",
+    noMatchingComponents:
+      "설명과 일치하는 컴포넌트를 찾지 못했습니다. button, input, checkbox, modal 같은 구체적인 이름을 입력해 보세요.",
+    codeRequired: "code 값이 필요합니다",
+    codeAndInstructionRequired: "code와 instruction 값이 필요합니다",
+    componentsArrayRequired: "components 배열이 필요합니다",
+    noApiKeyAiSettings: "사용 가능한 API 키가 없습니다. ⚙️ 설정 탭에서 AI API 키를 추가해 주세요.",
+    noApiKeySettings: "사용 가능한 API 키가 없습니다. ⚙️ 설정에서 API 키를 추가해 주세요.",
+    migrationFailed: "마이그레이션에 실패했습니다",
+  },
+};
+
+function localize(lang, key, vars = {}) {
+  const resolvedLang = normalizeLang(lang);
+  const template =
+    LOCALIZED_MESSAGES[resolvedLang]?.[key] ||
+    LOCALIZED_MESSAGES.en[key] ||
+    "";
+  return template.replace(/\{(\w+)\}/g, (_, token) => String(vars[token] ?? `{${token}}`));
+}
+
+function getRequestLang(req, explicitLang) {
+  if (explicitLang) return normalizeLang(explicitLang);
+
+  const queryLang = req?.query?.lang;
+  if (typeof queryLang === "string" && queryLang.trim()) {
+    return normalizeLang(queryLang);
+  }
+
+  const bodyLang = req?.body?.lang;
+  if (typeof bodyLang === "string" && bodyLang.trim()) {
+    return normalizeLang(bodyLang);
+  }
+
+  const acceptLanguage = req?.headers?.["accept-language"];
+  if (typeof acceptLanguage === "string" && acceptLanguage.trim()) {
+    const firstTag = acceptLanguage.split(",")[0]?.trim().toLowerCase();
+    const iso639 = firstTag?.split("-")[0];
+    if (iso639) return normalizeLang(iso639);
+  }
+
+  return "en";
+}
+
 // ─── Express setup ──────────────────────────────────────────────────
 const app = express();
 
@@ -81,6 +309,7 @@ const RATE_LIMIT_MAX = 30;       // 30 requests per window
 const _rateMap = new Map();
 
 function rateLimiter(req, res, next) {
+  const lang = getRequestLang(req);
   const ip =
     req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
     req.socket?.remoteAddress ||
@@ -95,7 +324,7 @@ function rateLimiter(req, res, next) {
   if (entry.count > RATE_LIMIT_MAX) {
     return res
       .status(429)
-      .json({ error: "Rate limit exceeded. Please wait a moment before trying again." });
+      .json({ error: localize(lang, "rateLimitExceeded") });
   }
   next();
 }
@@ -417,12 +646,10 @@ function uniqueByUrl(results, max = 10) {
   return out;
 }
 
-function buildFreeTierAnswer(question, docsForAnswer = []) {
+function buildFreeTierAnswer(question, docsForAnswer = [], lang = "en") {
+  const t = getLocalizedText(lang);
   if (!Array.isArray(docsForAnswer) || docsForAnswer.length === 0) {
-    return (
-      "I couldn't find relevant information in the iX documentation for that question. " +
-      "Try rephrasing or ask about a specific component, installation, theming, or guidelines."
-    );
+    return t.noDocsFound;
   }
 
   const preview = docsForAnswer
@@ -439,14 +666,14 @@ function buildFreeTierAnswer(question, docsForAnswer = []) {
     .join("\n");
 
   return [
-    "Free-tier documentation answer (no AI key configured):",
+    t.freeTierHeader,
     "",
-    `Question: ${question.trim()}`,
+    `${t.questionLabel} ${question.trim()}`,
     "",
-    "Relevant iX docs:",
+    t.relevantDocsLabel,
     preview,
     "",
-    "Add an API key in Settings to enable full AI chat responses and deeper synthesis.",
+    t.addKeyHint,
   ].join("\n");
 }
 
@@ -545,7 +772,11 @@ async function callLLM({ messages, apiKey, provider = "siemens", model, task = "
 
 async function askAI(context, question, userApiKey, lang = "en", provider = "siemens", model = null) {
   const key = userApiKey || process.env.LLM_API_KEY;
-  if (!key) throw new Error('No API key available. Please add your AI API key in the ⚙️ Settings tab.');
+  if (!key) {
+    const err = new Error("NO_API_KEY");
+    err.code = "NO_API_KEY";
+    throw err;
+  }
 
   const messages = [
     {
@@ -570,9 +801,13 @@ async function askAI(context, question, userApiKey, lang = "en", provider = "sie
  * Code-generation-specific LLM call.
  * Receives multiple component docs + the user description + target framework.
  */
-async function generateCode(componentDocs, description, framework, userApiKey, fileContent, fileName, provider = "siemens", model = null) {
+async function generateCode(componentDocs, description, framework, userApiKey, fileContent, fileName, provider = "siemens", model = null, lang = "en") {
   const key = userApiKey || process.env.LLM_API_KEY;
-  if (!key) throw new Error('No API key available. Please add your AI API key in the ⚙️ Settings tab.');
+  if (!key) {
+    const err = new Error("NO_API_KEY");
+    err.code = "NO_API_KEY";
+    throw err;
+  }
   const frameworkGuide = {
     react: `Use React with @siemens/ix-react. Import components like: import { IxButton, IxInput } from '@siemens/ix-react'; Use JSX with PascalCase tags (e.g. <IxButton>, <IxInput>). For boolean props use prop={true}. For events use onEventName.`,
     angular: `Use Angular with @siemens/ix-angular. For standalone components: import { IxButton } from '@siemens/ix-angular/standalone'; For module setup: import { IxModule } from '@siemens/ix-angular'. Use kebab-case tags in templates (e.g. <ix-button>, <ix-input>). Bind props with [prop]="value". Bind events with (eventName)="handler($event)".`,
@@ -598,7 +833,8 @@ RULES:
 7. Return ONLY the code inside a single fenced code block — no prose before or after.
 8. Add brief inline comments explaining key sections.
 9. Make the code copy-paste ready — a developer should be able to use it immediately.
-10. If any component in the documentation is marked deprecated, do NOT use it — use the recommended replacement instead and add a MIGRATION comment explaining the change.`;
+10. If any component in the documentation is marked deprecated, do NOT use it — use the recommended replacement instead and add a MIGRATION comment explaining the change.
+11. Keep code syntax, identifiers, and imports in their original programming language conventions.${langInstruction(lang)}`;
 
   const fileSection = fileContent
     ? `\n---\n\n## Existing Code File ("${fileName || 'uploaded file'}")
@@ -626,15 +862,16 @@ Refactor or extend the following code to fulfil the user request using iX compon
  */
 app.post("/chat", rateLimiter, async (req, res) => {
   const { question, apiKey: userApiKey, history, lang, provider = "siemens", model } = req.body;
+  const resolvedLang = normalizeLang(lang);
 
   if (!question || !question.trim()) {
-    return res.status(400).json({ error: "question is required" });
+    return res.status(400).json({ error: localize(resolvedLang, "questionRequired") });
   }
 
   const key = userApiKey || process.env.LLM_API_KEY;
 
   // Track analytics
-  trackAnalytics(question, "chat", lang || "en");
+  trackAnalytics(question, "chat", resolvedLang);
 
   // RAG: Hybrid search (BM25 + cosine TF-IDF) over the full documentation corpus
   const matchedDocs = searchDocs(question, 10);
@@ -642,8 +879,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
   if (matchedDocs.length === 0) {
     return res.json({
       answer:
-        "I couldn't find relevant information in the iX documentation for that question. " +
-        "Try rephrasing or ask about a specific component, installation, theming, or guidelines.",
+        getLocalizedText(resolvedLang).noDocsFound,
       tier: "free",
       sources: [],
     });
@@ -665,7 +901,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
   // Free-tier fallback: no key available -> return extractive docs answer without LLM
   if (!key) {
     return res.json({
-      answer: buildFreeTierAnswer(question, topDocs),
+      answer: buildFreeTierAnswer(question, topDocs, resolvedLang),
       tier: "free",
       sources,
       hasDeprecationWarnings: topDocs.some((d) => d.deprecated),
@@ -683,7 +919,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
         "When referencing information, cite the source number in brackets like [1], [2] etc. " +
         "If the answer is not covered by the provided docs, say so honestly and suggest checking https://ix.siemens.io/. " +
         "Format your response using markdown for readability (headings, lists, code blocks)." +
-        langInstruction(lang),
+        langInstruction(resolvedLang),
     },
   ];
 
@@ -733,20 +969,21 @@ app.post("/chat", rateLimiter, async (req, res) => {
  */
 app.post("/generate", rateLimiter, async (req, res) => {
   const { description, framework = "react", apiKey: userApiKey, fileContent, fileName, lang, provider = "siemens", model } = req.body;
+  const resolvedLang = normalizeLang(lang);
 
   if (!description || !description.trim()) {
-    return res.status(400).json({ error: "description is required" });
+    return res.status(400).json({ error: localize(resolvedLang, "descriptionRequired") });
   }
 
   const validFrameworks = ["react", "angular", "angular-standalone", "vue", "webcomponents"];
   if (!validFrameworks.includes(framework)) {
     return res.status(400).json({
-      error: `Invalid framework. Choose one of: ${validFrameworks.join(", ")}`,
+      error: localize(resolvedLang, "invalidFramework", { frameworks: validFrameworks.join(", ") }),
     });
   }
 
   // Track analytics
-  trackAnalytics(description, "generate", lang || "en");
+  trackAnalytics(description, "generate", resolvedLang);
 
   // Step 1 — RAG: Hybrid retrieval of relevant component documentation
   const matchedDocs = searchDocs(description, 15);
@@ -755,8 +992,7 @@ app.post("/generate", rateLimiter, async (req, res) => {
     return res.json({
       code: null,
       matchedComponents: [],
-      message:
-        "No matching components found for your description. Try mentioning specific component names like button, input, checkbox, modal, etc.",
+      message: localize(resolvedLang, "noMatchingComponents"),
     });
   }
 
@@ -765,7 +1001,7 @@ app.post("/generate", rateLimiter, async (req, res) => {
 
   try {
     // Step 2 — LLM: generate code using retrieved docs
-    const code = await generateCode(topDocs, description, framework, userApiKey, fileContent, fileName, provider, model);
+    const code = await generateCode(topDocs, description, framework, userApiKey, fileContent, fileName, provider, model, resolvedLang);
 
     res.json({
       code,
@@ -783,7 +1019,10 @@ app.post("/generate", rateLimiter, async (req, res) => {
     });
   } catch (err) {
     const status = err.response?.status || 500;
-    const message = err.response?.data?.error?.message || err.message;
+    const message =
+      err?.code === "NO_API_KEY"
+        ? localize(resolvedLang, "noApiKeyAiSettings")
+        : (err.response?.data?.error?.message || err.message);
     console.error("Code generation error:", status, message);
     res.status(status).json({ error: message });
   }
@@ -796,17 +1035,18 @@ app.post("/generate", rateLimiter, async (req, res) => {
  */
 app.post("/migrate", rateLimiter, async (req, res) => {
   const { code, apiKey: userApiKey, lang, provider = "siemens", model } = req.body || {};
+  const resolvedLang = normalizeLang(lang);
   if (!code || !code.toString().trim()) {
-    return res.status(400).json({ error: "code is required" });
+    return res.status(400).json({ error: localize(resolvedLang, "codeRequired") });
   }
 
   const key = userApiKey || process.env.LLM_API_KEY;
   if (!key) {
-    return res.status(400).json({ error: "No API key available. Please add your AI API key in the ⚙️ Settings tab." });
+    return res.status(400).json({ error: localize(resolvedLang, "noApiKeyAiSettings") });
   }
 
   // Track analytics
-  trackAnalytics(code.toString().slice(0, 200), "migrate", lang || "en");
+  trackAnalytics(code.toString().slice(0, 200), "migrate", resolvedLang);
 
   try {
     // Retrieve relevant docs to give the LLM context about iX components
@@ -823,7 +1063,8 @@ app.post("/migrate", rateLimiter, async (req, res) => {
       code.toString(),
       "uploaded-file",
       provider,
-      model
+      model,
+      resolvedLang
     );
 
     // Ask for a brief summary of the migration steps performed
@@ -834,12 +1075,15 @@ app.post("/migrate", rateLimiter, async (req, res) => {
     const summaryQuestion =
       "Provide a short (2-6 sentence) summary of the migration performed: list deprecated components replaced, notable API changes, and any manual follow-ups the developer should verify.";
 
-    const summary = await askAI(docsContext, `${summaryQuestion}\n\nOriginal code:\n${code.toString().slice(0, 4000)}`, userApiKey, lang || "en", provider, model);
+    const summary = await askAI(docsContext, `${summaryQuestion}\n\nOriginal code:\n${code.toString().slice(0, 4000)}`, userApiKey, resolvedLang, provider, model);
 
     res.json({ migratedCode, summary });
   } catch (err) {
     const status = err.response?.status || 500;
-    const message = err.response?.data?.error?.message || err.message || "Migration failed";
+    const message =
+      err?.code === "NO_API_KEY"
+        ? localize(resolvedLang, "noApiKeyAiSettings")
+        : (err.response?.data?.error?.message || err.message || localize(resolvedLang, "migrationFailed"));
     console.error("Migration error:", status, message);
     res.status(status).json({ error: message });
   }
@@ -851,18 +1095,19 @@ app.post("/migrate", rateLimiter, async (req, res) => {
  * Returns: { code: string }
  */
 app.post("/refine", rateLimiter, async (req, res) => {
-  const { code, instruction, framework = "react", apiKey: userApiKey, provider = "siemens", model } = req.body || {};
+  const { code, instruction, framework = "react", apiKey: userApiKey, lang, provider = "siemens", model } = req.body || {};
+  const resolvedLang = normalizeLang(lang);
   if (!code || !instruction) {
-    return res.status(400).json({ error: "code and instruction are required" });
+    return res.status(400).json({ error: localize(resolvedLang, "codeAndInstructionRequired") });
   }
   const key = userApiKey || process.env.LLM_API_KEY;
   if (!key) {
-    return res.status(400).json({ error: "No API key available. Please add your API key in ⚙️ Settings." });
+    return res.status(400).json({ error: localize(resolvedLang, "noApiKeySettings") });
   }
 
   const systemPrompt = `You are an expert code editor for the Siemens Industrial Experience (iX) design system. 
 Modify the provided code ONLY according to the user's instruction and return the complete updated code in a single fenced code block.
-Do not explain — only return the full updated code.`;
+Do not explain — only return the full updated code.${langInstruction(resolvedLang)}`;
 
   const userPrompt = `Framework: ${framework}\n\nExisting code:\n\`\`\`\n${code}\n\`\`\`\n\nInstruction: ${instruction}\n\nReturn the complete updated code.`;
 
@@ -915,9 +1160,10 @@ app.get("/suggest", (req, res) => {
  * No LLM call, no API key required — pure doc corpus search.
  */
 app.post("/deprecation-check", (req, res) => {
-  const { components = [] } = req.body;
+  const { components = [], lang } = req.body;
+  const resolvedLang = getRequestLang(req, lang);
   if (!Array.isArray(components) || components.length === 0) {
-    return res.status(400).json({ error: "components array is required" });
+    return res.status(400).json({ error: localize(resolvedLang, "componentsArrayRequired") });
   }
 
   const alerts = [];

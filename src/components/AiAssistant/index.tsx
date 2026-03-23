@@ -75,6 +75,263 @@ const LANGUAGE_LABELS: Record<Language, string> = {
   ko: '🇰🇷 한국어',
 };
 
+const UI_TEXT: Record<Language, Record<string, string>> = {
+  en: {
+    analyticsTitle: '📊 Usage Analytics',
+    analyticsDescription: 'Track common questions to improve documentation and product guidance. Data is in-memory and resets on server restart.',
+    loading: 'Loading…',
+    analyticsLoadError: '⚠️ Could not load analytics: {error}',
+    queriesByFeature: 'Queries by Feature',
+    topQuestions: 'Top Questions',
+    recentQueries: 'Recent Queries',
+    noQueriesYet: 'No queries tracked yet. Use Chat or Code Gen to generate data.',
+    feature: 'Feature',
+    queries: 'Queries',
+    chat: 'Chat',
+    codeGen: 'Code Gen',
+    more: 'More',
+    moreOptions: 'More options',
+    history: 'History',
+    clear: 'Clear',
+    freeTier: 'Free tier',
+    addApiKey: 'Add API key',
+    forAiResponses: 'for AI responses.',
+    responseLanguageTitle: '🌍 Response Language',
+    responseLanguageDescription: 'The AI will respond in the selected language. Code examples always remain in their original language.',
+    settings: 'Settings',
+    help: 'Help',
+    migrate: 'Migrate',
+    openAssistant: 'Open AI Assistant',
+    closeAssistant: 'Close AI Assistant',
+    assistantTitle: 'iX AI Assistant',
+    send: 'Send',
+    askPlaceholder: 'Ask about Siemens iX...',
+    listening: 'Listening…',
+    settingsApiKey: '🔑 API Key',
+    providerKeyToManage: 'Provider key to manage',
+    providerModelTitle: '🤖 AI Provider & Model',
+    providerModelDescription: 'Configure Chat and Code Gen independently. Each can use a different provider and model.',
+    freeVsAi: '🆓 Free vs AI Assistant',
+    docs: 'Go to docs',
+    blog: 'Blog',
+    support: 'Support',
+    starterApp: 'Starter app',
+    migrationTitle: '🔀 Deprecation Migration Wizard',
+    migrationDescription: 'Paste code that uses deprecated iX APIs. The wizard analyzes it and outputs upgraded code with a line-by-line diff and a plain-language migration summary.',
+    yourExistingCode: 'Your existing code',
+    migrationPlaceholder: 'Paste code that uses deprecated iX components or APIs…',
+    analyzing: 'Analyzing…',
+    analyzeAndMigrate: 'Analyze & Migrate',
+    summary: 'Summary:',
+    diff: '🔄 Diff (old → new)',
+    migratedCode: 'Migrated Code',
+    copy: 'Copy',
+    voiceInputNotSupported: 'Voice input is not supported in this browser.',
+    voiceRecognitionError: 'Voice recognition error. Please try again.',
+    deprecationHint: '⚠️ Deprecated API detected: {names}. The bot will suggest the correct replacement.',
+    chatCleared: 'Chat cleared. Ask me anything about Siemens iX!',
+    codeGenerationNeedsKey: '🔑 Code generation requires an AI model. Add your AI API key in the ⚙️ Settings tab to unlock this feature.',
+    deprecationWarningCodegen: '⚠️ Some matched components contain deprecation notices. Review the generated code comments carefully and check the migration guide.',
+    noCodeGenerated: 'No code generated.',
+    somethingWentWrong: 'Something went wrong',
+    couldNotDownloadGenerated: 'Could not download generated content.',
+    refinementNeedsKey: '🔑 Code refinement requires an API key — add one in ⚙️ Settings.',
+    refinementFailed: 'Refinement failed',
+    migrationNeedsKey: '🔑 Migration analysis requires an API key — add one in ⚙️ Settings.',
+    migrationFailed: 'Migration analysis failed',
+    migrationRequiresApiKey: '🔑 Migration requires an API key. Add one in',
+    settingsArrow: '⚙️ Settings →',
+    chatHistory: 'Chat History',
+    noSavedChatSessions: 'No saved sessions yet. Chat sessions are saved when you clear or start a new conversation.',
+    codeGenHistory: 'Code Gen History',
+    noSavedCodegenSessions: 'No saved generations yet. Code sessions are saved when you clear or start a new generation.',
+    restore: 'Restore',
+    delete: 'Delete',
+    you: 'You',
+    ixBot: 'iX Bot',
+    ixBotPremium: 'iX Bot ✨',
+    responseHasDeprecationWarning: '⚠️ This response mentions deprecated APIs or breaking changes. Check migration docs.',
+    sourcesLabel: 'Sources:',
+    thinking: 'Thinking…',
+    stopListening: 'Stop listening',
+    voiceInput: 'Voice input',
+    stopVoiceInput: 'Stop voice input',
+    startVoiceInput: 'Start voice input',
+    describeYourUi: 'Describe your UI',
+    describeUiPlaceholder: 'e.g. Create a login page with username, password, and login button',
+    pressCtrlEnter: 'Press Ctrl+Enter to generate',
+    tryExample: 'Try an example',
+    componentPicker: 'Component Picker',
+    hide: 'Hide',
+    browseAndAdd: 'Browse & add ▾',
+    searchComponentsPlaceholder: 'Search components… (e.g. button, modal, input)',
+    addComponentToPrompt: 'Add {component} to prompt',
+    framework: 'Framework',
+    generating: 'Generating…',
+    generateCode: 'Generate Code',
+    componentsUsed: 'Components used ({count})',
+    generatedCode: 'Generated Code',
+    openInStackblitz: 'Open in StackBlitz live sandbox',
+    regenerateCode: 'Regenerate code',
+    regenerate: 'Regenerate',
+    downloadCode: 'Download code',
+    download: 'Download',
+    copyCode: 'Copy code',
+    copied: 'Copied!',
+    refinePlaceholder: 'Refine: e.g. “make the button secondary” or “add a loading state”…',
+    refineTitle: 'Refine the generated code with a natural language instruction',
+    refine: 'Refine',
+    siemensKeyDescription: 'Available to every Siemens employee — no credit card needed. Generate your key on my.siemens.com → My Keys → Create, scope: llm.',
+    siemensKeyLink: '↗ Get your Siemens LLM API key (my.siemens.com → My Keys → Create, scope: llm)',
+    groqKeyDescription: 'Get your free Groq API key at console.groq.com. Groq provides ultra-fast inference for open-weight models.',
+    groqKeyLink: '↗ Get your Groq API key (console.groq.com → API Keys)',
+    keyLoadingLabel: 'Loading…',
+    keyDecrypting: 'Decrypting…',
+    siemensKeySavedEncrypted: '✅ Siemens API key (saved & encrypted)',
+    enterSiemensApiKey: 'Enter your Siemens API key',
+    removeKey: 'Remove key',
+    saveKey: 'Save Key',
+    siemensSavedBadge: '✓ Siemens key saved! AI features unlocked.',
+    groqKeySavedEncrypted: '✅ Groq API key (saved & encrypted)',
+    enterGroqApiKey: 'Enter your Groq API key',
+    groqSavedBadge: '✓ Groq key saved! AI features unlocked.',
+    provider: 'Provider',
+    model: 'Model',
+    keySavedSuffix: ' ✓ key saved',
+    addKeyFirstSuffix: ' (add key first)',
+    free: 'Free',
+    withKey: 'With Key',
+    ixFaqAnswers: 'iX FAQ answers',
+    componentLookup: 'Component lookup',
+    chatAnswers: 'Chat answers',
+    docsOnly: 'Docs-only',
+    aiLlm: 'AI (LLM)',
+    codeGeneration: 'Code generation',
+    modelSelection: 'Model selection',
+    keysEncryptedPrefix: '🔒 Your keys are',
+    keysEncryptedCore: 'AES-256-GCM encrypted',
+    keysEncryptedSuffix: "before being saved to localStorage — never stored as plain text. Keys are only sent to the chosen provider's API endpoint.",
+    changeProviderModel: 'Change provider and model',
+    addKeyInSettingsSuffix: ' (add key in Settings)',
+  },
+  de: {
+    analyticsTitle: '📊 Nutzungsanalyse',
+    analyticsDescription: 'Verfolge häufige Fragen, um Dokumentation und Produkt-Hinweise zu verbessern. Die Daten sind im Speicher und werden beim Server-Neustart zurückgesetzt.',
+    loading: 'Wird geladen…',
+    analyticsLoadError: '⚠️ Analyse konnte nicht geladen werden: {error}',
+    queriesByFeature: 'Anfragen nach Funktion',
+    topQuestions: 'Top-Fragen',
+    recentQueries: 'Letzte Anfragen',
+    noQueriesYet: 'Noch keine Anfragen erfasst. Nutze Chat oder Code Gen, um Daten zu erzeugen.',
+    feature: 'Funktion',
+    queries: 'Anfragen',
+    chat: 'Chat',
+    codeGen: 'Code-Gen',
+    more: 'Mehr',
+    moreOptions: 'Weitere Optionen',
+    history: 'Verlauf',
+    clear: 'Leeren',
+    freeTier: 'Kostenlose Stufe',
+    addApiKey: 'API-Schlüssel hinzufügen',
+    forAiResponses: 'für KI-Antworten.',
+    responseLanguageTitle: '🌍 Antwortsprache',
+    responseLanguageDescription: 'Die KI antwortet in der ausgewählten Sprache. Codebeispiele bleiben in ihrer Originalsprache.',
+    settings: 'Einstellungen',
+    help: 'Hilfe',
+    migrate: 'Migrieren',
+    openAssistant: 'AI Assistant öffnen',
+    closeAssistant: 'AI Assistant schließen',
+    assistantTitle: 'iX AI Assistant',
+    send: 'Senden',
+    askPlaceholder: 'Frage zu Siemens iX stellen...',
+    listening: 'Hört zu…',
+    settingsApiKey: '🔑 API-Schlüssel',
+    providerKeyToManage: 'Zu verwaltender Provider-Schlüssel',
+    providerModelTitle: '🤖 KI-Provider & Modell',
+    providerModelDescription: 'Konfiguriere Chat und Code Gen unabhängig voneinander. Jeder kann einen anderen Provider und ein anderes Modell nutzen.',
+    freeVsAi: '🆓 Kostenlos vs. KI-Assistent',
+    docs: 'Zur Doku',
+    blog: 'Blog',
+    support: 'Support',
+    starterApp: 'Starter-App',
+    migrationTitle: '🔀 Deprecation-Migrationsassistent',
+    migrationDescription: 'Füge Code ein, der veraltete iX-APIs verwendet. Der Assistent analysiert ihn und erzeugt aktualisierten Code mit Zeilen-Diff und verständlicher Zusammenfassung.',
+    yourExistingCode: 'Dein bestehender Code',
+    migrationPlaceholder: 'Code mit veralteten iX-Komponenten oder APIs einfügen…',
+    analyzing: 'Analysiere…',
+    analyzeAndMigrate: 'Analysieren & Migrieren',
+    summary: 'Zusammenfassung:',
+    diff: '🔄 Diff (alt → neu)',
+    migratedCode: 'Migrierter Code',
+    copy: 'Kopieren',
+  },
+  zh: {
+    chat: '聊天', codeGen: '代码生成', more: '更多', settings: '设置', help: '帮助', migrate: '迁移',
+    responseLanguageTitle: '🌍 回复语言',
+    responseLanguageDescription: 'AI 将使用所选语言回复，代码示例始终保持原始语言。',
+    send: '发送', askPlaceholder: '询问 Siemens iX 相关问题...', listening: '正在聆听…',
+    analyticsTitle: '📊 使用分析', loading: '加载中…', topQuestions: '热门问题', recentQueries: '最近查询',
+    settingsApiKey: '🔑 API 密钥', providerModelTitle: '🤖 AI 提供商与模型', freeVsAi: '🆓 免费版 vs AI 助手',
+    docs: '查看文档', blog: '博客', support: '支持', starterApp: '入门应用',
+    migrationTitle: '🔀 弃用迁移向导', yourExistingCode: '你的现有代码', analyzeAndMigrate: '分析并迁移', migratedCode: '迁移后的代码', copy: '复制'
+  },
+  fr: {
+    chat: 'Chat', codeGen: 'Génération de code', more: 'Plus', settings: 'Paramètres', help: 'Aide', migrate: 'Migrer',
+    responseLanguageTitle: '🌍 Langue de réponse',
+    responseLanguageDescription: 'L’IA répond dans la langue sélectionnée. Les exemples de code restent dans leur langue d’origine.',
+    send: 'Envoyer', askPlaceholder: 'Posez une question sur Siemens iX...', listening: 'Écoute…',
+    analyticsTitle: '📊 Analytique d’usage', loading: 'Chargement…', topQuestions: 'Questions fréquentes', recentQueries: 'Requêtes récentes',
+    settingsApiKey: '🔑 Clé API', providerModelTitle: '🤖 Fournisseur IA & modèle', freeVsAi: '🆓 Gratuit vs Assistant IA',
+    docs: 'Aller à la doc', blog: 'Blog', support: 'Support', starterApp: 'Starter app',
+    migrationTitle: '🔀 Assistant de migration', yourExistingCode: 'Votre code existant', analyzeAndMigrate: 'Analyser & migrer', migratedCode: 'Code migré', copy: 'Copier'
+  },
+  es: {
+    chat: 'Chat', codeGen: 'Gen. de código', more: 'Más', settings: 'Ajustes', help: 'Ayuda', migrate: 'Migrar',
+    responseLanguageTitle: '🌍 Idioma de respuesta',
+    responseLanguageDescription: 'La IA responderá en el idioma seleccionado. Los ejemplos de código se mantienen en su idioma original.',
+    send: 'Enviar', askPlaceholder: 'Pregunta sobre Siemens iX...', listening: 'Escuchando…',
+    analyticsTitle: '📊 Analítica de uso', loading: 'Cargando…', topQuestions: 'Preguntas principales', recentQueries: 'Consultas recientes',
+    settingsApiKey: '🔑 Clave API', providerModelTitle: '🤖 Proveedor IA y modelo', freeVsAi: '🆓 Gratis vs Asistente IA',
+    docs: 'Ir a la documentación', blog: 'Blog', support: 'Soporte', starterApp: 'App inicial',
+    migrationTitle: '🔀 Asistente de migración', yourExistingCode: 'Tu código actual', analyzeAndMigrate: 'Analizar y migrar', migratedCode: 'Código migrado', copy: 'Copiar'
+  },
+  ja: {
+    chat: 'チャット', codeGen: 'コード生成', more: 'その他', settings: '設定', help: 'ヘルプ', migrate: '移行',
+    responseLanguageTitle: '🌍 応答言語',
+    responseLanguageDescription: 'AI は選択した言語で回答します。コード例は元の言語のままです。',
+    send: '送信', askPlaceholder: 'Siemens iX について質問...', listening: '音声入力中…',
+    analyticsTitle: '📊 利用分析', loading: '読み込み中…', topQuestions: 'よくある質問', recentQueries: '最近の問い合わせ',
+    settingsApiKey: '🔑 API キー', providerModelTitle: '🤖 AI プロバイダーとモデル', freeVsAi: '🆓 無料版とAIアシスタント',
+    docs: 'ドキュメントへ', blog: 'ブログ', support: 'サポート', starterApp: 'スターターアプリ',
+    migrationTitle: '🔀 非推奨移行ウィザード', yourExistingCode: '既存コード', analyzeAndMigrate: '解析して移行', migratedCode: '移行後コード', copy: 'コピー'
+  },
+  pt: {
+    chat: 'Chat', codeGen: 'Geração de código', more: 'Mais', settings: 'Configurações', help: 'Ajuda', migrate: 'Migrar',
+    responseLanguageTitle: '🌍 Idioma da resposta',
+    responseLanguageDescription: 'A IA responderá no idioma selecionado. Exemplos de código permanecem no idioma original.',
+    send: 'Enviar', askPlaceholder: 'Pergunte sobre Siemens iX...', listening: 'Ouvindo…',
+    analyticsTitle: '📊 Análise de uso', loading: 'Carregando…', topQuestions: 'Perguntas principais', recentQueries: 'Consultas recentes',
+    settingsApiKey: '🔑 Chave de API', providerModelTitle: '🤖 Provedor e modelo de IA', freeVsAi: '🆓 Gratuito vs Assistente IA',
+    docs: 'Ir para docs', blog: 'Blog', support: 'Suporte', starterApp: 'App inicial',
+    migrationTitle: '🔀 Assistente de migração', yourExistingCode: 'Seu código atual', analyzeAndMigrate: 'Analisar e migrar', migratedCode: 'Código migrado', copy: 'Copiar'
+  },
+  ko: {
+    chat: '채팅', codeGen: '코드 생성', more: '더보기', settings: '설정', help: '도움말', migrate: '마이그레이션',
+    responseLanguageTitle: '🌍 응답 언어',
+    responseLanguageDescription: 'AI는 선택한 언어로 응답합니다. 코드 예시는 원래 언어를 유지합니다.',
+    send: '보내기', askPlaceholder: 'Siemens iX에 대해 질문하세요...', listening: '듣는 중…',
+    analyticsTitle: '📊 사용 분석', loading: '로딩 중…', topQuestions: '상위 질문', recentQueries: '최근 질문',
+    settingsApiKey: '🔑 API 키', providerModelTitle: '🤖 AI 제공자 및 모델', freeVsAi: '🆓 무료 vs AI 어시스턴트',
+    docs: '문서로 이동', blog: '블로그', support: '지원', starterApp: '스타터 앱',
+    migrationTitle: '🔀 사용 중단 마이그레이션 마법사', yourExistingCode: '기존 코드', analyzeAndMigrate: '분석 및 마이그레이션', migratedCode: '마이그레이션된 코드', copy: '복사'
+  },
+};
+
+function uiText(lang: Language, key: string, vars: Record<string, string | number> = {}) {
+  const template = UI_TEXT[lang]?.[key] || UI_TEXT.en[key] || key;
+  return template.replace(/\{(\w+)\}/g, (_, token) => String(vars[token] ?? `{${token}}`));
+}
+
 // ── Deprecated iX component registry (for proactive hints) ──────────────
 const DEPRECATED_PATTERNS = [
   'ix-datetime-picker', 'IxDatetimePicker',
@@ -315,7 +572,7 @@ function deriveSessionTitle(messages: ChatMessage[]): string {
 // Usage Analytics View
 // Fetches live data from GET /analytics and renders top questions + counts.
 // ────────────────────────────────────────────────────────────────────────────
-function AnalyticsView() {
+function AnalyticsView({ lang }: { lang: Language }) {
   const [data, setData] = useState<{
     endpointCounts: Record<string, number>;
     totalTracked: number;
@@ -338,22 +595,22 @@ function AnalyticsView() {
   return (
     <div className={styles.settingsBody}>
       <div className={styles.settingsSection}>
-        <h3 className={styles.settingsTitle}>📊 Usage Analytics</h3>
+        <h3 className={styles.settingsTitle}>{uiText(lang, 'analyticsTitle')}</h3>
         <p className={styles.settingsDescription}>
-          Track common questions to improve documentation and product guidance. Data is in-memory and resets on server restart.
+          {uiText(lang, 'analyticsDescription')}
         </p>
       </div>
 
-      {loading && <div className={styles.settingsDescription} style={{ padding: '0 16px' }}>Loading…</div>}
-      {error && <div className={styles.error} style={{ margin: '0 16px' }}>⚠️ Could not load analytics: {error}</div>}
+      {loading && <div className={styles.settingsDescription} style={{ padding: '0 16px' }}>{uiText(lang, 'loading')}</div>}
+      {error && <div className={styles.error} style={{ margin: '0 16px' }}>{uiText(lang, 'analyticsLoadError', { error })}</div>}
 
       {data && (
         <>
           {/* Endpoint counts */}
           <div className={styles.settingsSection}>
-            <h3 className={styles.settingsTitle}>Queries by Feature</h3>
+            <h3 className={styles.settingsTitle}>{uiText(lang, 'queriesByFeature')}</h3>
             <table className={styles.tierTable}>
-              <thead><tr><th>Feature</th><th>Queries</th></tr></thead>
+              <thead><tr><th>{uiText(lang, 'feature')}</th><th>{uiText(lang, 'queries')}</th></tr></thead>
               <tbody>
                 {Object.entries(data.endpointCounts).map(([k, v]) => (
                   <tr key={k}><td>{k}</td><td>{v}</td></tr>
@@ -365,7 +622,7 @@ function AnalyticsView() {
           {/* Top questions */}
           {data.topQueries.length > 0 && (
             <div className={styles.settingsSection}>
-              <h3 className={styles.settingsTitle}>Top Questions</h3>
+              <h3 className={styles.settingsTitle}>{uiText(lang, 'topQuestions')}</h3>
               <div className={styles.analyticsQueryList}>
                 {data.topQueries.map((q, i) => (
                   <div key={i} className={styles.analyticsQueryItem}>
@@ -380,7 +637,7 @@ function AnalyticsView() {
           {/* Recent queries */}
           {data.recentQueries.length > 0 && (
             <div className={styles.settingsSection}>
-              <h3 className={styles.settingsTitle}>Recent Queries</h3>
+              <h3 className={styles.settingsTitle}>{uiText(lang, 'recentQueries')}</h3>
               <div className={styles.analyticsQueryList}>
                 {data.recentQueries.map((q, i) => (
                   <div key={i} className={styles.analyticsQueryItem}>
@@ -396,7 +653,7 @@ function AnalyticsView() {
 
           {data.topQueries.length === 0 && data.recentQueries.length === 0 && (
             <div className={styles.settingsDescription} style={{ padding: '0 16px 16px' }}>
-              No queries tracked yet. Use Chat or Code Gen to generate data.
+              {uiText(lang, 'noQueriesYet')}
             </div>
           )}
         </>
@@ -635,6 +892,7 @@ export default function AiAssistant() {
     }
     return 'en';
   });
+  const ui = (key: string, vars?: Record<string, string | number>) => uiText(lang, key, vars);
 
   // ── Settings API key target selector ──
   const [settingsKeyProvider, setSettingsKeyProvider] = useState<Provider>('siemens');
@@ -679,7 +937,7 @@ export default function AiAssistant() {
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setChatError('Voice input is not supported in this browser.');
+      setChatError(ui('voiceInputNotSupported'));
       return;
     }
     if (isListening) {
@@ -704,7 +962,7 @@ export default function AiAssistant() {
       setQuestion(transcript);
     };
     recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => { setIsListening(false); setChatError('Voice recognition error. Please try again.'); };
+    recognition.onerror = () => { setIsListening(false); setChatError(ui('voiceRecognitionError')); };
     recognitionRef.current = recognition;
     recognition.start();
     setIsListening(true);
@@ -723,13 +981,13 @@ export default function AiAssistant() {
         const res = await fetch(DEPRECATION_CHECK_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ components: detected }),
+          body: JSON.stringify({ components: detected, lang }),
         });
         if (res.ok) {
           const data = await res.json();
           if (data.alerts?.length > 0) {
             const names = data.alerts.map((a: any) => a.component).join(', ');
-            setDeprecationHint(`⚠️ Deprecated API detected: ${names}. The bot will suggest the correct replacement.`);
+            setDeprecationHint(ui('deprecationHint', { names }));
           } else {
             setDeprecationHint('');
           }
@@ -737,7 +995,7 @@ export default function AiAssistant() {
       } catch { /* non-blocking */ }
     }, 300);
     return () => clearTimeout(timer);
-  }, [question]);
+  }, [question, lang]);
 
   // ── Resize event handlers ──
   useEffect(() => {
@@ -997,7 +1255,7 @@ export default function AiAssistant() {
     saveChatSession();
     activeChatSessionIdRef.current = null; // next session gets a fresh id
     setChatMessages([
-      { role: 'bot', text: 'Chat cleared. Ask me anything about Siemens iX!' },
+      { role: 'bot', text: ui('chatCleared') },
     ]);
     setChatError('');
   };
@@ -1026,7 +1284,7 @@ export default function AiAssistant() {
     // Gate code generation behind API key
     if (!hasCodegenPremium) {
       setCodeMessage(
-        '🔑 Code generation requires an AI model. Add your AI API key in the ⚙️ Settings tab to unlock this feature.'
+        ui('codeGenerationNeedsKey')
       );
       return;
     }
@@ -1067,14 +1325,14 @@ export default function AiAssistant() {
         setMatchedComponents(data.matchedComponents || []);
         if (data.hasDeprecationWarnings) {
           setCodeMessage(
-            '⚠️ Some matched components contain deprecation notices. Review the generated code comments carefully and check the migration guide.'
+            ui('deprecationWarningCodegen')
           );
         }
       } else {
-        setCodeMessage(data.message || 'No code generated.');
+        setCodeMessage(data.message || ui('noCodeGenerated'));
       }
     } catch (err: any) {
-      setCodeError(err.message || 'Something went wrong');
+      setCodeError(err.message || ui('somethingWentWrong'));
     } finally {
       setCodeLoading(false);
     }
@@ -1109,7 +1367,7 @@ export default function AiAssistant() {
         getDownloadFileName(framework)
       );
     } catch (err: any) {
-      setCodeError(err?.message || 'Could not download generated content.');
+      setCodeError(err?.message || ui('couldNotDownloadGenerated'));
     }
   };
 
@@ -1227,7 +1485,7 @@ export default function AiAssistant() {
   const handleRefine = async () => {
     if (!refineInput.trim() || refineLoading || !generatedCode) return;
     if (!hasCodegenPremium) {
-      setCodeMessage('🔑 Code refinement requires an API key — add one in ⚙️ Settings.');
+      setCodeMessage(ui('refinementNeedsKey'));
       return;
     }
     setRefineLoading(true);
@@ -1238,7 +1496,7 @@ export default function AiAssistant() {
       const res = await fetch(REFINE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: generatedCode, instruction, framework, apiKey: codegenActiveKey, provider: codegenProvider, model: effectiveCodegenModel }),
+        body: JSON.stringify({ code: generatedCode, instruction, framework, apiKey: codegenActiveKey, lang, provider: codegenProvider, model: effectiveCodegenModel }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -1247,7 +1505,7 @@ export default function AiAssistant() {
       const data = await res.json();
       if (data.code) setGeneratedCode(data.code);
     } catch (err: any) {
-      setCodeError(err.message || 'Refinement failed');
+      setCodeError(err.message || ui('refinementFailed'));
     } finally {
       setRefineLoading(false);
     }
@@ -1296,7 +1554,7 @@ export default function AiAssistant() {
   const handleMigrate = async () => {
     if (!migrateInput.trim() || migrateLoading) return;
     if (!hasCodegenPremium) {
-      setMigrateError('🔑 Migration analysis requires an API key — add one in ⚙️ Settings.');
+      setMigrateError(ui('migrationNeedsKey'));
       return;
     }
     setMigrateLoading(true);
@@ -1307,7 +1565,7 @@ export default function AiAssistant() {
       const res = await fetch(MIGRATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: migrateInput, apiKey: codegenActiveKey, provider: codegenProvider, model: effectiveCodegenModel }),
+        body: JSON.stringify({ code: migrateInput, apiKey: codegenActiveKey, lang, provider: codegenProvider, model: effectiveCodegenModel }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -1317,7 +1575,7 @@ export default function AiAssistant() {
       setMigrateOutput(data.migratedCode || '');
       setMigrateSummary(data.summary || '');
     } catch (err: any) {
-      setMigrateError(err.message || 'Migration analysis failed');
+      setMigrateError(err.message || ui('migrationFailed'));
     } finally {
       setMigrateLoading(false);
     }
@@ -1364,8 +1622,8 @@ export default function AiAssistant() {
       <button
         className={styles.fab}
         onClick={() => setIsOpen((prev) => !prev)}
-        aria-label={isOpen ? 'Close AI Assistant' : 'Open AI Assistant'}
-        title="iX AI Assistant"
+        aria-label={isOpen ? ui('closeAssistant') : ui('openAssistant')}
+        title={ui('assistantTitle')}
       >
         {isOpen ? '✕' : '🤖'}
       </button>
@@ -1395,10 +1653,10 @@ export default function AiAssistant() {
           {(() => {
             // All overflow items with their labels
             const MORE_ITEMS: { id: Mode; label: string }[] = [
-              { id: 'migrate',   label: '🔀 Migrate'   },
-              { id: 'analytics', label: '📊 Analytics' },
-              { id: 'settings',  label: '⚙️ Settings'  },
-              { id: 'help',      label: '❓ Help'      },
+              { id: 'migrate',   label: `🔀 ${ui('migrate')}`   },
+              { id: 'analytics', label: `📊 ${ui('analyticsTitle').replace('📊 ', '')}` },
+              { id: 'settings',  label: `⚙️ ${ui('settings')}`  },
+              { id: 'help',      label: `❓ ${ui('help')}`      },
             ];
             // If the active mode is an overflow item, float it up as a visible tab.
             const promotedItem = MORE_ITEMS.find((m) => m.id === mode) ?? null;
@@ -1419,14 +1677,14 @@ export default function AiAssistant() {
                     onClick={() => switchMode('chat')}
                   >
                     <span className={styles.tabIcon}>💬</span>
-                    <span className={styles.tabLabel}>Chat</span>
+                    <span className={styles.tabLabel}>{ui('chat')}</span>
                   </button>
                   <button
                     className={`${styles.tab} ${mode === 'codegen' ? styles.tabActive : ''}`}
                     onClick={() => switchMode('codegen')}
                   >
                     <span className={styles.tabIcon}>&lt;/&gt;</span>
-                    <span className={styles.tabLabel}>Code Gen</span>
+                    <span className={styles.tabLabel}>{ui('codeGen')}</span>
                   </button>
 
                   {/* Promoted "more" tab — shown when an overflow mode is active */}
@@ -1445,10 +1703,10 @@ export default function AiAssistant() {
                     <button
                       className={`${styles.tab} ${styles.moreBtn} ${showMoreMenu ? styles.moreBtnOpen : ''}`}
                       onClick={() => setShowMoreMenu((v) => !v)}
-                      title="More options"
+                      title={ui('moreOptions')}
                     >
                       <span className={styles.tabIcon}>···</span>
-                      <span className={styles.tabLabel}>More</span>
+                      <span className={styles.tabLabel}>{ui('more')}</span>
                     </button>
                     {showMoreMenu && (
                       <div className={styles.moreMenu}>
@@ -1481,7 +1739,7 @@ export default function AiAssistant() {
                   <button
                     className={styles.clearBtn}
                     onClick={mode === 'chat' ? clearChat : clearCodeGen}
-                    title="Clear"
+                    title={ui('clear')}
                   >
                     🗑
                   </button>
@@ -1514,8 +1772,8 @@ export default function AiAssistant() {
                         <button
                           className={styles.tierBannerModelBtn}
                           onClick={() => setShowTierModelMenu((v) => !v)}
-                          title="Change provider and model"
-                          aria-label="Change provider and model"
+                          title={ui('changeProviderModel')}
+                          aria-label={ui('changeProviderModel')}
                         >
                           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                             <path d="M3 4h10M3 8h10M3 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -1527,7 +1785,7 @@ export default function AiAssistant() {
                         {showTierModelMenu && (
                           <div className={styles.tierBannerModelMenu}>
                             <div className={styles.tierBannerModelField}>
-                              <label className={styles.modelSelectorLabel} htmlFor="tier-provider-select">Provider</label>
+                              <label className={styles.modelSelectorLabel} htmlFor="tier-provider-select">{ui('provider')}</label>
                               <select
                                 id="tier-provider-select"
                                 className={styles.selectorSelect}
@@ -1539,15 +1797,15 @@ export default function AiAssistant() {
                                 }}
                               >
                                 <option value="siemens" disabled={!hasSiemensKey}>
-                                  Siemens{!hasSiemensKey ? ' (add key in Settings)' : ''}
+                                  Siemens{!hasSiemensKey ? ui('addKeyInSettingsSuffix') : ''}
                                 </option>
                                 <option value="groq" disabled={!hasGroqKey}>
-                                  Groq{!hasGroqKey ? ' (add key in Settings)' : ''}
+                                  Groq{!hasGroqKey ? ui('addKeyInSettingsSuffix') : ''}
                                 </option>
                               </select>
                             </div>
                             <div className={styles.tierBannerModelField}>
-                              <label className={styles.modelSelectorLabel} htmlFor="tier-model-select">Model</label>
+                              <label className={styles.modelSelectorLabel} htmlFor="tier-model-select">{ui('model')}</label>
                               <select
                                 id="tier-model-select"
                                 className={styles.selectorSelect}
@@ -1577,11 +1835,11 @@ export default function AiAssistant() {
                 })()
               ) : (
                 <>
-                  🆓 <strong>Free tier</strong> —{' '}
+                  🆓 <strong>{ui('freeTier')}</strong> —{' '}
                   <button className={styles.tierLink} onClick={() => setMode('settings')}>
-                    Add API key
+                    {ui('addApiKey')}
                   </button>{' '}
-                  for AI responses.
+                  {ui('forAiResponses')}
                 </>
               )}
             </div>
@@ -1594,7 +1852,7 @@ export default function AiAssistant() {
               {showChatHistory && (
                 <div className={styles.historyDrawer}>
                   <div className={styles.historyHeader}>
-                    <span className={styles.historyTitle}>💬 Chat History</span>
+                    <span className={styles.historyTitle}>💬 {ui('chatHistory')}</span>
                     <button
                       className={styles.historyClose}
                       onClick={() => setShowChatHistory(false)}
@@ -1604,7 +1862,7 @@ export default function AiAssistant() {
                   </div>
                   {chatHistory.length === 0 ? (
                     <div className={styles.historyEmpty}>
-                      No saved sessions yet. Chat sessions are saved when you clear or start a new conversation.
+                      {ui('noSavedChatSessions')}
                     </div>
                   ) : (
                     <div className={styles.historyList}>
@@ -1613,7 +1871,7 @@ export default function AiAssistant() {
                           <button
                             className={styles.historyItemBtn}
                             onClick={() => restoreChatSession(session)}
-                            title={`Restore: ${session.title}`}
+                            title={`${ui('restore')}: ${session.title}`}
                           >
                             <span className={styles.historyItemTitle}>{session.title}</span>
                             <span className={styles.historyItemMeta}>
@@ -1623,7 +1881,7 @@ export default function AiAssistant() {
                           <button
                             className={styles.historyDeleteBtn}
                             onClick={() => deleteChatSession(session.id)}
-                            title="Delete"
+                            title={ui('delete')}
                           >
                             ✕
                           </button>
@@ -1644,21 +1902,21 @@ export default function AiAssistant() {
                   >
                     <span className={styles.bubbleLabel}>
                       {msg.role === 'user'
-                        ? 'You'
+                        ? ui('you')
                         : msg.tier === 'premium'
-                        ? 'iX Bot ✨'
-                        : 'iX Bot'}
+                        ? ui('ixBotPremium')
+                        : ui('ixBot')}
                     </span>
                     <p className={styles.bubbleText}>{msg.text}</p>
                     {/* Deprecation warning banner */}
                     {msg.role === 'bot' && msg.hasDeprecationWarnings && (
                       <div className={styles.deprecationBanner}>
-                        ⚠️ This response mentions deprecated APIs or breaking changes. Check migration docs.
+                        {ui('responseHasDeprecationWarning')}
                       </div>
                     )}
                     {msg.sources && msg.sources.length > 0 && (
                       <div className={styles.sourcesRow}>
-                        <span className={styles.sourcesLabel}>📖 Sources:</span>
+                        <span className={styles.sourcesLabel}>📖 {ui('sourcesLabel')}</span>
                         {msg.sources.map((src, si) => (
                           <a
                             key={si}
@@ -1678,8 +1936,8 @@ export default function AiAssistant() {
 
                 {chatLoading && (
                   <div className={`${styles.bubble} ${styles.bubbleBot}`}>
-                    <span className={styles.bubbleLabel}>iX Bot ✨</span>
-                    <span className={styles.typing}>Thinking…</span>
+                    <span className={styles.bubbleLabel}>{ui('ixBotPremium')}</span>
+                    <span className={styles.typing}>{ui('thinking')}</span>
                   </div>
                 )}
                 <div ref={bottomRef} />
@@ -1703,8 +1961,8 @@ export default function AiAssistant() {
                 <button
                   className={`${styles.micBtn} ${isListening ? styles.micBtnActive : ''}`}
                   onClick={toggleVoice}
-                  title={isListening ? 'Stop listening' : 'Voice input'}
-                  aria-label={isListening ? 'Stop voice input' : 'Start voice input'}
+                  title={isListening ? ui('stopListening') : ui('voiceInput')}
+                  aria-label={isListening ? ui('stopVoiceInput') : ui('startVoiceInput')}
                 >
                   {isListening ? (
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -1722,7 +1980,7 @@ export default function AiAssistant() {
                   ref={chatInputRef}
                   className={styles.input}
                   type="text"
-                  placeholder={isListening ? 'Listening…' : 'Ask about Siemens iX...'}
+                  placeholder={isListening ? ui('listening') : ui('askPlaceholder')}
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   onKeyDown={handleChatKeyDown}
@@ -1733,7 +1991,7 @@ export default function AiAssistant() {
                   onClick={sendMessage}
                   disabled={chatLoading || !question.trim()}
                 >
-                  Send
+                  {ui('send')}
                 </button>
               </div>
             </div>
@@ -1746,7 +2004,7 @@ export default function AiAssistant() {
               {showCodeGenHistory && (
                 <div className={styles.historyDrawer}>
                   <div className={styles.historyHeader}>
-                    <span className={styles.historyTitle}>&lt;/&gt; Code Gen History</span>
+                    <span className={styles.historyTitle}>&lt;/&gt; {ui('codeGenHistory')}</span>
                     <button
                       className={styles.historyClose}
                       onClick={() => setShowCodeGenHistory(false)}
@@ -1756,7 +2014,7 @@ export default function AiAssistant() {
                   </div>
                   {codeGenHistory.length === 0 ? (
                     <div className={styles.historyEmpty}>
-                      No saved generations yet. Code sessions are saved when you clear or start a new generation.
+                      {ui('noSavedCodegenSessions')}
                     </div>
                   ) : (
                     <div className={styles.historyList}>
@@ -1765,7 +2023,7 @@ export default function AiAssistant() {
                           <button
                             className={styles.historyItemBtn}
                             onClick={() => restoreCodeGenSession(session)}
-                            title={`Restore: ${session.title}`}
+                            title={`${ui('restore')}: ${session.title}`}
                           >
                             <span className={styles.historyItemTitle}>{session.title}</span>
                             <span className={styles.historyItemMeta}>
@@ -1775,7 +2033,7 @@ export default function AiAssistant() {
                           <button
                             className={styles.historyDeleteBtn}
                             onClick={() => deleteCodeGenSession(session.id)}
-                            title="Delete"
+                            title={ui('delete')}
                           >
                             ✕
                           </button>
@@ -1866,24 +2124,24 @@ export default function AiAssistant() {
 
               {/* Description input */}
               <div className={styles.section}>
-                <label className={styles.label}>Describe your UI</label>
+                <label className={styles.label}>{ui('describeYourUi')}</label>
                 <textarea
                   ref={textareaRef}
                   className={styles.textarea}
-                  placeholder="e.g. Create a login page with username, password, and login button"
+                  placeholder={ui('describeUiPlaceholder')}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   onKeyDown={handleCodeKeyDown}
                   rows={3}
                   disabled={codeLoading}
                 />
-                <span className={styles.hint}>Press Ctrl+Enter to generate</span>
+                <span className={styles.hint}>{ui('pressCtrlEnter')}</span>
               </div>
 
               {/* Example prompts */}
               {!generatedCode && !codeLoading && (
                 <div className={styles.section}>
-                  <label className={styles.label}>Try an example</label>
+                  <label className={styles.label}>{ui('tryExample')}</label>
                   <div className={styles.examples}>
                     {EXAMPLE_PROMPTS.map((prompt, i) => (
                       <button
@@ -1901,12 +2159,12 @@ export default function AiAssistant() {
               {/* ── Feature 3: Visual Component Picker ──────────────────────── */}
               <div className={styles.section}>
                 <div className={styles.compPickerHeader}>
-                  <label className={styles.label}>📦 Component Picker</label>
+                  <label className={styles.label}>📦 {ui('componentPicker')}</label>
                   <button
                     className={styles.compPickerToggle}
                     onClick={() => { setShowCompPicker(v => !v); setCompSearch(''); }}
                   >
-                    {showCompPicker ? 'Hide' : 'Browse & add ▾'}
+                    {showCompPicker ? ui('hide') : ui('browseAndAdd')}
                   </button>
                 </div>
                 {showCompPicker && (
@@ -1914,7 +2172,7 @@ export default function AiAssistant() {
                     <input
                       className={styles.compPickerSearch}
                       type="text"
-                      placeholder="Search components… (e.g. button, modal, input)"
+                      placeholder={ui('searchComponentsPlaceholder')}
                       value={compSearch}
                       onChange={(e) => setCompSearch(e.target.value)}
                       autoFocus
@@ -1932,7 +2190,7 @@ export default function AiAssistant() {
                               );
                               textareaRef.current?.focus();
                             }}
-                            title={`Add ${comp} to prompt`}
+                            title={ui('addComponentToPrompt', { component: comp })}
                           >
                             {comp.replace('ix-', '')}
                           </button>
@@ -1945,7 +2203,7 @@ export default function AiAssistant() {
 
               {/* Framework selector */}
               <div className={styles.section}>
-                <label className={styles.label}>Framework</label>
+                <label className={styles.label}>{ui('framework')}</label>
                 <div className={styles.frameworkRow}>
                   {(Object.entries(FRAMEWORK_LABELS) as [Framework, string][]).map(
                     ([key, label]) => (
@@ -1971,7 +2229,7 @@ export default function AiAssistant() {
                 disabled={codeLoading || !description.trim()}
               >
                 {codeLoading ? <span className={styles.spinner} /> : '⚡'}{' '}
-                {codeLoading ? 'Generating…' : 'Generate Code'}
+                {codeLoading ? ui('generating') : ui('generateCode')}
               </button>
 
               {/* Error */}
@@ -1994,7 +2252,7 @@ export default function AiAssistant() {
                         className={styles.settingsLinkBtn}
                         onClick={() => setMode('settings')}
                       >
-                        ⚙️ Go to Settings →
+                        {ui('settingsArrow')}
                       </button>
                     </div>
                   )}
@@ -2005,7 +2263,7 @@ export default function AiAssistant() {
               {matchedComponents.length > 0 && (
                 <div className={styles.section}>
                   <label className={styles.label}>
-                    📚 Components used ({matchedComponents.length})
+                    📚 {ui('componentsUsed', { count: matchedComponents.length })}
                   </label>
                   <div className={styles.chips}>
                     {matchedComponents.map((comp, i) => (
@@ -2027,13 +2285,13 @@ export default function AiAssistant() {
               {generatedCode && (
                 <div className={styles.section}>
                   <div className={styles.codeHeader}>
-                    <label className={styles.label}>Generated Code</label>
+                    <label className={styles.label}>{ui('generatedCode')}</label>
                     <div className={styles.codeActions}>
                       <button
                         className={styles.stackblitzBtn}
                         onClick={openInStackBlitz}
                         disabled={codeLoading}
-                        title="Open in StackBlitz live sandbox"
+                        title={ui('openInStackblitz')}
                       >
                         <svg width="13" height="13" viewBox="0 0 28 28" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
                           <path d="M12 2L2 14h9l-3 12 17-14h-9l3-10z" fill="currentColor"/>
@@ -2044,33 +2302,33 @@ export default function AiAssistant() {
                         className={styles.regenerateBtn}
                         onClick={handleGenerate}
                         disabled={codeLoading}
-                        title="Regenerate code"
+                        title={ui('regenerateCode')}
                       >
                         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
                           <path d="M13.65 2.35A8 8 0 1 0 15 8h-2a6 6 0 1 1-1.05-3.39L9.5 7H15V1.5l-1.35.85z" fill="currentColor"/>
                         </svg>
-                        Regenerate
+                        {ui('regenerate')}
                       </button>
                       <button
                         className={styles.downloadBtn}
                         onClick={handleDownload}
                         disabled={codeLoading}
-                        title="Download code"
+                        title={ui('downloadCode')}
                       >
                         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
                           <path d="M8 2v7" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
                           <path d="M5.25 6.75L8 9.5l2.75-2.75" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
                           <path d="M3 12.5h10" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
                         </svg>
-                        Download
+                        {ui('download')}
                       </button>
-                      <button className={styles.copyBtn} onClick={handleCopy} title={copied ? 'Copied!' : 'Copy code'}>
+                      <button className={styles.copyBtn} onClick={handleCopy} title={copied ? ui('copied') : ui('copyCode')}>
                         {copied ? (
                           <>
                             <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
                               <path d="M2 8l4 4 8-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                             </svg>
-                            Copied!
+                            {ui('copied')}
                           </>
                         ) : (
                           <>
@@ -2078,7 +2336,7 @@ export default function AiAssistant() {
                               <rect x="5" y="1" width="9" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/>
                               <rect x="2" y="4" width="9" height="11" rx="2" fill="var(--theme-color-primary,#00bde3)" stroke="currentColor" strokeWidth="1.5"/>
                             </svg>
-                            Copy
+                            {ui('copy')}
                           </>
                         )}
                       </button>
@@ -2098,7 +2356,7 @@ export default function AiAssistant() {
                   <input
                     className={styles.refineInput}
                     type="text"
-                    placeholder='Refine: e.g. “make the button secondary” or “add a loading state”…'
+                    placeholder={ui('refinePlaceholder')}
                     value={refineInput}
                     onChange={(e) => setRefineInput(e.target.value)}
                     onKeyDown={handleRefineKeyDown}
@@ -2108,9 +2366,9 @@ export default function AiAssistant() {
                     className={styles.refineBtn}
                     onClick={handleRefine}
                     disabled={refineLoading || !refineInput.trim()}
-                    title="Refine the generated code with a natural language instruction"
+                    title={ui('refineTitle')}
                   >
-                    {refineLoading ? <span className={styles.spinner} /> : '\u2728'} Refine
+                    {refineLoading ? <span className={styles.spinner} /> : '\u2728'} {ui('refine')}
                   </button>
                 </div>
               )}
@@ -2122,11 +2380,11 @@ export default function AiAssistant() {
             <div className={styles.settingsBody}>
               {/* ─── API Key for selected provider ─── */}
               <div className={styles.settingsSection}>
-                <h3 className={styles.settingsTitle}>🔑 API Key</h3>
+                <h3 className={styles.settingsTitle}>{ui('settingsApiKey')}</h3>
 
                 <div className={styles.selectorGroup} style={{ maxWidth: 320 }}>
                   <label className={styles.modelSelectorLabel} htmlFor="settings-api-provider">
-                    Provider key to manage
+                    {ui('providerKeyToManage')}
                   </label>
                   <select
                     id="settings-api-provider"
@@ -2142,21 +2400,20 @@ export default function AiAssistant() {
                 {settingsKeyProvider === 'siemens' ? (
                   <>
                     <p className={styles.settingsDescription}>
-                      Available to every Siemens employee — no credit card needed.
-                      Generate your key on <strong>my.siemens.com → My Keys → Create</strong>, scope: <code>llm</code>.
+                      {ui('siemensKeyDescription')}
                     </p>
                     <a href="https://my.siemens.com" target="_blank" rel="noopener noreferrer" className={styles.settingsLink}>
-                      ↗ Get your Siemens LLM API key (my.siemens.com → My Keys → Create, scope: llm)
+                      {ui('siemensKeyLink')}
                     </a>
                     <div style={{ marginTop: 12 }}>
                       <label className={styles.label}>
-                        {keyLoading ? 'Loading…' : apiKey ? '✅ Siemens API key (saved &amp; encrypted)' : 'Enter your Siemens API key'}
+                        {keyLoading ? ui('keyLoadingLabel') : apiKey ? ui('siemensKeySavedEncrypted') : ui('enterSiemensApiKey')}
                       </label>
-                      {keyLoading && <div className={styles.keyLoading}><span className={styles.spinner} /> Decrypting…</div>}
+                      {keyLoading && <div className={styles.keyLoading}><span className={styles.spinner} /> {ui('keyDecrypting')}</div>}
                       {!keyLoading && apiKey && (
                         <div className={styles.keyStatus}>
                           <div className={styles.keyMasked}>{apiKey.slice(0, 6)}{'•'.repeat(20)}{apiKey.slice(-4)}</div>
-                          <button className={styles.clearKeyBtn} onClick={clearApiKey}>Remove key</button>
+                          <button className={styles.clearKeyBtn} onClick={clearApiKey}>{ui('removeKey')}</button>
                         </div>
                       )}
                       {!keyLoading && !apiKey && (
@@ -2172,31 +2429,30 @@ export default function AiAssistant() {
                             spellCheck={false}
                           />
                           <button className={styles.saveKeyBtn} onClick={saveApiKey} disabled={!apiKeyInput.trim()}>
-                            Save Key
+                            {ui('saveKey')}
                           </button>
                         </>
                       )}
-                      {apiKeySaved && <div className={styles.savedBadge}>✓ Siemens key saved! AI features unlocked.</div>}
+                      {apiKeySaved && <div className={styles.savedBadge}>{ui('siemensSavedBadge')}</div>}
                     </div>
                   </>
                 ) : (
                   <>
                     <p className={styles.settingsDescription}>
-                      Get your free Groq API key at <strong>console.groq.com</strong>.
-                      Groq provides ultra-fast inference for open-weight models.
+                      {ui('groqKeyDescription')}
                     </p>
                     <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className={styles.settingsLink}>
-                      ↗ Get your Groq API key (console.groq.com → API Keys)
+                      {ui('groqKeyLink')}
                     </a>
                     <div style={{ marginTop: 12 }}>
                       <label className={styles.label}>
-                        {groqKeyLoading ? 'Loading…' : groqApiKey ? '✅ Groq API key (saved &amp; encrypted)' : 'Enter your Groq API key'}
+                        {groqKeyLoading ? ui('keyLoadingLabel') : groqApiKey ? ui('groqKeySavedEncrypted') : ui('enterGroqApiKey')}
                       </label>
-                      {groqKeyLoading && <div className={styles.keyLoading}><span className={styles.spinner} /> Decrypting…</div>}
+                      {groqKeyLoading && <div className={styles.keyLoading}><span className={styles.spinner} /> {ui('keyDecrypting')}</div>}
                       {!groqKeyLoading && groqApiKey && (
                         <div className={styles.keyStatus}>
                           <div className={styles.keyMasked}>{groqApiKey.slice(0, 6)}{'•'.repeat(20)}{groqApiKey.slice(-4)}</div>
-                          <button className={styles.clearKeyBtn} onClick={clearGroqKey}>Remove key</button>
+                          <button className={styles.clearKeyBtn} onClick={clearGroqKey}>{ui('removeKey')}</button>
                         </div>
                       )}
                       {!groqKeyLoading && !groqApiKey && (
@@ -2212,11 +2468,11 @@ export default function AiAssistant() {
                             spellCheck={false}
                           />
                           <button className={styles.saveKeyBtn} onClick={saveGroqKey} disabled={!groqKeyInput.trim()}>
-                            Save Key
+                            {ui('saveKey')}
                           </button>
                         </>
                       )}
-                      {groqKeySaved && <div className={styles.savedBadge}>✓ Groq key saved! AI features unlocked.</div>}
+                      {groqKeySaved && <div className={styles.savedBadge}>{ui('groqSavedBadge')}</div>}
                     </div>
                   </>
                 )}
@@ -2224,15 +2480,15 @@ export default function AiAssistant() {
 
               {/* ─── Provider + model selectors ─── */}
               <div className={styles.settingsSection}>
-                <h3 className={styles.settingsTitle}>🤖 AI Provider & Model</h3>
+                <h3 className={styles.settingsTitle}>{ui('providerModelTitle')}</h3>
                 <p className={styles.settingsDescription}>
-                  Configure Chat and Code Gen independently. Each can use a different provider and model.
+                  {ui('providerModelDescription')}
                 </p>
 
                 <div className={styles.settingsConfigGrid}>
                   <div className={styles.settingsConfigCard}>
                     <div className={styles.settingsConfigHeader}>
-                      <span>💬 Chat</span>
+                      <span>💬 {ui('chat')}</span>
                       <span className={styles.settingsModelHint}>
                         {PROVIDER_LABELS[chatProvider]} · {PROVIDER_MODELS[chatProvider].find((m) => m.id === effectiveChatModel)?.label || effectiveChatModel}
                       </span>
@@ -2241,7 +2497,7 @@ export default function AiAssistant() {
                     <div className={styles.settingsConfigSelectRow}>
                       <div className={styles.selectorGroup}>
                         <label className={styles.modelSelectorLabel} htmlFor="settings-chat-provider">
-                          Provider
+                          {ui('provider')}
                         </label>
                         <select
                           id="settings-chat-provider"
@@ -2250,17 +2506,17 @@ export default function AiAssistant() {
                           onChange={(e) => switchChatProvider(e.target.value as Provider)}
                         >
                           <option value="siemens" disabled={!hasSiemensKey}>
-                            Siemens{hasSiemensKey ? ' ✓ key saved' : ' (add key first)'}
+                            Siemens{hasSiemensKey ? ui('keySavedSuffix') : ui('addKeyFirstSuffix')}
                           </option>
                           <option value="groq" disabled={!hasGroqKey}>
-                            Groq{hasGroqKey ? ' ✓ key saved' : ' (add key first)'}
+                            Groq{hasGroqKey ? ui('keySavedSuffix') : ui('addKeyFirstSuffix')}
                           </option>
                         </select>
                       </div>
 
                       <div className={styles.selectorGroup}>
                         <label className={styles.modelSelectorLabel} htmlFor="settings-chat-model">
-                          Model
+                          {ui('model')}
                         </label>
                         <select
                           id="settings-chat-model"
@@ -2293,7 +2549,7 @@ export default function AiAssistant() {
 
                   <div className={styles.settingsConfigCard}>
                     <div className={styles.settingsConfigHeader}>
-                      <span>⚡ Code Gen</span>
+                      <span>⚡ {ui('codeGen')}</span>
                       <span className={styles.settingsModelHint}>
                         {PROVIDER_LABELS[codegenProvider]} · {PROVIDER_MODELS[codegenProvider].find((m) => m.id === effectiveCodegenModel)?.label || effectiveCodegenModel}
                       </span>
@@ -2302,7 +2558,7 @@ export default function AiAssistant() {
                     <div className={styles.settingsConfigSelectRow}>
                       <div className={styles.selectorGroup}>
                         <label className={styles.modelSelectorLabel} htmlFor="settings-codegen-provider">
-                          Provider
+                          {ui('provider')}
                         </label>
                         <select
                           id="settings-codegen-provider"
@@ -2311,17 +2567,17 @@ export default function AiAssistant() {
                           onChange={(e) => switchCodegenProvider(e.target.value as Provider)}
                         >
                           <option value="siemens" disabled={!hasSiemensKey}>
-                            Siemens{hasSiemensKey ? ' ✓ key saved' : ' (add key first)'}
+                            Siemens{hasSiemensKey ? ui('keySavedSuffix') : ui('addKeyFirstSuffix')}
                           </option>
                           <option value="groq" disabled={!hasGroqKey}>
-                            Groq{hasGroqKey ? ' ✓ key saved' : ' (add key first)'}
+                            Groq{hasGroqKey ? ui('keySavedSuffix') : ui('addKeyFirstSuffix')}
                           </option>
                         </select>
                       </div>
 
                       <div className={styles.selectorGroup}>
                         <label className={styles.modelSelectorLabel} htmlFor="settings-codegen-model">
-                          Model
+                          {ui('model')}
                         </label>
                         <select
                           id="settings-codegen-model"
@@ -2356,9 +2612,9 @@ export default function AiAssistant() {
 
               {/* ─── Language selector ─── */}
               <div className={styles.settingsSection}>
-                <h3 className={styles.settingsTitle}>🌍 Response Language</h3>
+                <h3 className={styles.settingsTitle}>{ui('responseLanguageTitle')}</h3>
                 <p className={styles.settingsDescription}>
-                  The AI will respond in the selected language. Code examples always remain in their original language.
+                  {ui('responseLanguageDescription')}
                 </p>
                 <div className={styles.langRow}>
                   {(Object.entries(LANGUAGE_LABELS) as [Language, string][]).map(([code, label]) => (
@@ -2374,27 +2630,25 @@ export default function AiAssistant() {
               </div>
 
               <div className={styles.settingsSection}>
-                <h3 className={styles.settingsTitle}>🆓 Free vs AI Assistant</h3>
+                <h3 className={styles.settingsTitle}>{ui('freeVsAi')}</h3>
                 <table className={styles.tierTable}>
                   <thead>
                     <tr>
-                      <th>Feature</th>
-                      <th>Free</th>
-                      <th>With Key</th>
+                      <th>{ui('feature')}</th>
+                      <th>{ui('free')}</th>
+                      <th>{ui('withKey')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr><td>iX FAQ answers</td><td>✅</td><td>✅</td></tr>
-                    <tr><td>Component lookup</td><td>✅</td><td>✅</td></tr>
-                    <tr><td>Chat answers</td><td>Docs-only</td><td>AI (LLM)</td></tr>
-                    <tr><td>Code generation</td><td>—</td><td>✅</td></tr>
-                    <tr><td>Model selection</td><td>—</td><td>✅</td></tr>
+                    <tr><td>{ui('ixFaqAnswers')}</td><td>✅</td><td>✅</td></tr>
+                    <tr><td>{ui('componentLookup')}</td><td>✅</td><td>✅</td></tr>
+                    <tr><td>{ui('chatAnswers')}</td><td>{ui('docsOnly')}</td><td>{ui('aiLlm')}</td></tr>
+                    <tr><td>{ui('codeGeneration')}</td><td>—</td><td>✅</td></tr>
+                    <tr><td>{ui('modelSelection')}</td><td>—</td><td>✅</td></tr>
                   </tbody>
                 </table>
                 <p className={styles.settingsNote}>
-                  🔒 Your keys are <strong>AES-256-GCM encrypted</strong> before being saved to
-                  localStorage — never stored as plain text. Keys are only sent to the chosen
-                  provider's API endpoint.
+                  {ui('keysEncryptedPrefix')} <strong>{ui('keysEncryptedCore')}</strong> {ui('keysEncryptedSuffix')}
                 </p>
               </div>
 
@@ -2405,7 +2659,7 @@ export default function AiAssistant() {
           {mode === 'help' && (
             <div className={styles.settingsBody}>
               <div className={styles.settingsSection}>
-                <h3 className={styles.settingsTitle}>Help</h3>
+                <h3 className={styles.settingsTitle}>{ui('help')}</h3>
                 <div className={styles.helpLinks}>
                   <a
                     href="https://ix.siemens.io/docs/"
@@ -2419,7 +2673,7 @@ export default function AiAssistant() {
                       <line x1="5.5" y1="8" x2="10.5" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
                       <line x1="5.5" y1="10.5" x2="8.5" y2="10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
                     </svg>
-                    Go to docs
+                    {ui('docs')}
                   </a>
                   <a
                     href="https://ix.siemens.io/blog"
@@ -2433,7 +2687,7 @@ export default function AiAssistant() {
                       <line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
                       <line x1="5" y1="10.5" x2="9" y2="10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
                     </svg>
-                    Blog
+                    {ui('blog')}
                   </a>
                   <a
                     href="https://ix.siemens.io/docs/home/support/contact-us"
@@ -2446,7 +2700,7 @@ export default function AiAssistant() {
                       <path d="M6.5 6.5C6.5 5.67 7.17 5 8 5s1.5.67 1.5 1.5c0 1-1.5 1.5-1.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                       <circle cx="8" cy="11.5" r="0.75" fill="currentColor"/>
                     </svg>
-                    Support
+                    {ui('support')}
                   </a>
                   <a
                     href="https://ix.siemens.io/docs/home/getting-started/starter-app"
@@ -2458,7 +2712,7 @@ export default function AiAssistant() {
                       <path d="M3 2.5A1.5 1.5 0 014.5 1h7A1.5 1.5 0 0113 2.5v11a1.5 1.5 0 01-1.5 1.5h-7A1.5 1.5 0 013 13.5v-11z" stroke="currentColor" strokeWidth="1.5"/>
                       <path d="M7 5l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    Starter app
+                    {ui('starterApp')}
                   </a>
                 </div>
               </div>
@@ -2467,25 +2721,24 @@ export default function AiAssistant() {
 
           {/* ─────── Analytics View ─────── */}
           {mode === 'analytics' && (
-            <AnalyticsView />
+            <AnalyticsView lang={lang} />
           )}
 
           {/* ─────── Migration Wizard View ─────── */}
           {mode === 'migrate' && (
             <div className={styles.migrateBody}>
               <div className={styles.settingsSection}>
-                <h3 className={styles.settingsTitle}>🔀 Deprecation Migration Wizard</h3>
+                <h3 className={styles.settingsTitle}>{ui('migrationTitle')}</h3>
                 <p className={styles.settingsDescription}>
-                  Paste code that uses deprecated iX APIs. The wizard analyzes it and outputs
-                  upgraded code with a line-by-line diff and a plain-language migration summary.
+                  {ui('migrationDescription')}
                 </p>
               </div>
 
               <div className={styles.section}>
-                <label className={styles.label}>Your existing code</label>
+                <label className={styles.label}>{ui('yourExistingCode')}</label>
                 <textarea
                   className={styles.textarea}
-                  placeholder="Paste code that uses deprecated iX components or APIs…"
+                  placeholder={ui('migrationPlaceholder')}
                   value={migrateInput}
                   onChange={(e) => setMigrateInput(e.target.value)}
                   rows={7}
@@ -2499,14 +2752,14 @@ export default function AiAssistant() {
                 disabled={migrateLoading || !migrateInput.trim()}
               >
                 {migrateLoading ? <span className={styles.spinner} /> : '🔍'}{' '}
-                {migrateLoading ? 'Analyzing…' : 'Analyze & Migrate'}
+                {migrateLoading ? ui('analyzing') : ui('analyzeAndMigrate')}
               </button>
 
               {!hasPremium && !migrateLoading && !migrateOutput && (
                 <div className={styles.info}>
-                  🔑 Migration requires an API key. Add one in
+                  {ui('migrationRequiresApiKey')}
                   <button className={styles.settingsLinkBtn} onClick={() => setMode('settings')} style={{ marginLeft: 6 }}>
-                    ⚙️ Settings →
+                    {ui('settingsArrow')}
                   </button>
                 </div>
               )}
@@ -2520,14 +2773,14 @@ export default function AiAssistant() {
 
               {migrateSummary && (
                 <div className={styles.migrateSummary}>
-                  <strong>📋 Summary:</strong> {migrateSummary}
+                  <strong>📋 {ui('summary')}</strong> {migrateSummary}
                 </div>
               )}
 
               {migrateOutput && (
                 <>
                   <div className={styles.section}>
-                    <label className={styles.label}>🔄 Diff (old → new)</label>
+                    <label className={styles.label}>{ui('diff')}</label>
                     <div className={styles.diffBlock}>
                       {computeDiff(migrateInput, migrateOutput).map((line, i) => (
                         <div
@@ -2550,17 +2803,17 @@ export default function AiAssistant() {
                   </div>
                   <div className={styles.section}>
                     <div className={styles.codeHeader}>
-                      <label className={styles.label}>Migrated Code</label>
+                      <label className={styles.label}>{ui('migratedCode')}</label>
                       <button
                         className={styles.copyBtn}
                         onClick={() => handleMigrateCopy(migrateOutput.replace(/^```[\w-]*\n?/gm, '').replace(/```$/gm, '').trim())}
-                        title="Copy migrated code"
+                        title={ui('copy')}
                       >
                         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
                           <rect x="5" y="1" width="9" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/>
                           <rect x="2" y="4" width="9" height="11" rx="2" fill="var(--theme-color-primary,#00bde3)" stroke="currentColor" strokeWidth="1.5"/>
                         </svg>
-                        Copy
+                        {ui('copy')}
                       </button>
                     </div>
                     <pre className={styles.codeBlock}>
