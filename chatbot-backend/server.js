@@ -786,7 +786,8 @@ async function askAI(context, question, userApiKey, lang = "en", provider = "sie
         "Answer only from the provided documentation. " +
         "If any component, property, or API in the question has been deprecated or removed, " +
         "always highlight this clearly with a ⚠️ warning, state which version introduced the change, " +
-        `and provide the recommended replacement or migration path.${langInstruction(lang)}`,
+        "and provide the recommended replacement or migration path. " +
+        `Always keep ALL code examples, code blocks, component names, and technical identifiers in their original programming language — never translate code content.${langInstruction(lang)}`,
     },
     {
       role: "user",
@@ -918,7 +919,8 @@ app.post("/chat", rateLimiter, async (req, res) => {
         "Be concise but thorough. If the docs contain code examples, include them formatted in markdown code blocks. " +
         "When referencing information, cite the source number in brackets like [1], [2] etc. " +
         "If the answer is not covered by the provided docs, say so honestly and suggest checking https://ix.siemens.io/. " +
-        "Format your response using markdown for readability (headings, lists, code blocks)." +
+        "Format your response using markdown for readability (headings, lists, code blocks). " +
+        "Always keep ALL code examples, code blocks, component names, and technical identifiers in their original programming language — never translate code content." +
         langInstruction(resolvedLang),
     },
   ];
