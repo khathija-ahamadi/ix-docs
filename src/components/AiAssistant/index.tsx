@@ -225,11 +225,18 @@ const EXAMPLE_PROMPTS = [
   'Build a notification center using messagebar with dismiss and action buttons',
 ];
 
-const DEFAULT_WIDTH = 560;
-const DEFAULT_HEIGHT_VH = 70; // percent of viewport height
+const DEFAULT_WIDTH = 640;
+const DEFAULT_HEIGHT_VH = 80; // percent of viewport height
 const PANEL_BOTTOM_PX = 92; // must match CSS .panel { bottom }
 const PANEL_RIGHT_PX = 24; // must match CSS .panel { right }
 const VIEWPORT_PADDING = 8; // breathing room from edges
+const PANEL_TOP_RESERVED_PX = 70; // keep header area free
+
+function getPanelMaxHeightPx(): number {
+  if (typeof window === 'undefined') return 600;
+  const vpH = document.documentElement.clientHeight;
+  return Math.max(200, vpH - PANEL_BOTTOM_PX - PANEL_TOP_RESERVED_PX);
+}
 
 // ── History helpers ─────────────────────────────────────────────────
 function loadChatHistory(): ChatSession[] {
@@ -387,7 +394,10 @@ export default function AiAssistant() {
   if (initialHeightRef.current === null) {
     initialHeightRef.current =
       typeof window !== 'undefined'
-        ? Math.round(window.innerHeight * (DEFAULT_HEIGHT_VH / 100))
+        ? Math.min(
+            Math.round(window.innerHeight * (DEFAULT_HEIGHT_VH / 100)),
+            getPanelMaxHeightPx()
+          )
         : 600;
   }
   const [panelHeight, setPanelHeight] = useState(initialHeightRef.current);
@@ -596,6 +606,8 @@ export default function AiAssistant() {
 
   // ── Settings model target selector ──
   const [settingsModelTarget, setSettingsModelTarget] = useState<'chat' | 'codegen'>('chat');
+  const [chatModelCardsExpanded, setChatModelCardsExpanded] = useState(false);
+  const [codegenModelCardsExpanded, setCodegenModelCardsExpanded] = useState(false);
 
   // ── Voice input state ──
   const [isListening, setIsListening] = useState(false);
@@ -606,6 +618,7 @@ export default function AiAssistant() {
 
   // ── More-menu (overflow tabs) state ──
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showTierModelMenu, setShowTierModelMenu] = useState(false);
 
   // ── Persist language preference ──
   useEffect(() => {
@@ -705,9 +718,8 @@ export default function AiAssistant() {
 
       // Use clientWidth/clientHeight (excludes scrollbars) for accurate bounds
       const vpW = document.documentElement.clientWidth;
-      const vpH = document.documentElement.clientHeight;
       const maxW = vpW - PANEL_RIGHT_PX - VIEWPORT_PADDING;
-      const maxH = vpH - PANEL_BOTTOM_PX - VIEWPORT_PADDING;
+      const maxH = getPanelMaxHeightPx();
 
       if (r.edge === 'corner' || r.edge === 'left') {
         // Panel is right-anchored, so dragging left increases width
@@ -738,6 +750,19 @@ export default function AiAssistant() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const clampPanelHeight = () => {
+      const maxH = getPanelMaxHeightPx();
+      setPanelHeight((prev) => Math.min(prev, maxH));
+    };
+
+    clampPanelHeight();
+    window.addEventListener('resize', clampPanelHeight);
+    return () => window.removeEventListener('resize', clampPanelHeight);
+  }, [isOpen]);
+
   const startResize = (
     e: React.PointerEvent,
     edge: 'corner' | 'top' | 'left'
@@ -760,13 +785,14 @@ export default function AiAssistant() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (showMoreMenu) { setShowMoreMenu(false); }
+        if (showTierModelMenu) { setShowTierModelMenu(false); }
+        else if (showMoreMenu) { setShowMoreMenu(false); }
         else if (isOpen) setIsOpen(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, showMoreMenu]);
+  }, [isOpen, showMoreMenu, showTierModelMenu]);
 
   // ── Click-outside closes more menu ──
   useEffect(() => {
@@ -778,6 +804,16 @@ export default function AiAssistant() {
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [showMoreMenu]);
+
+  useEffect(() => {
+    if (!showTierModelMenu) return;
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as Element;
+      if (!target.closest('[data-tier-model-menu]')) setShowTierModelMenu(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [showTierModelMenu]);
 
   // ── Auto-scroll chat ──
   useEffect(() => {
@@ -1272,6 +1308,10 @@ export default function AiAssistant() {
   //  RENDER
   // ════════════════════════════════════════════════════════════
 
+  const panelMaxHeight =
+    typeof window !== 'undefined' ? getPanelMaxHeightPx() : panelHeight;
+  const panelHeightClamped = Math.min(panelHeight, panelMaxHeight);
+
   return (
     <>
       {/* ── Single floating action button ── */}
@@ -1289,7 +1329,7 @@ export default function AiAssistant() {
         <div
           ref={panelRef}
           className={styles.panel}
-          style={{ width: panelWidth, height: panelHeight, maxHeight: panelHeight }}
+          style={{ width: panelWidth, height: panelHeightClamped, maxHeight: panelMaxHeight }}
         >
           {/* ── Resize handles ── */}
           <div
@@ -1323,6 +1363,7 @@ export default function AiAssistant() {
               setShowChatHistory(false);
               setShowCodeGenHistory(false);
               setShowMoreMenu(false);
+              setShowTierModelMenu(false);
             };
             return (
               <div className={styles.header}>
@@ -1405,15 +1446,80 @@ export default function AiAssistant() {
           {mode !== 'settings' && mode !== 'migrate' && mode !== 'help' && mode !== 'analytics' && !keyLoading && !groqKeyLoading && (
             <div className={(mode === 'chat' ? hasChatPremium : hasCodegenPremium) ? styles.tierBannerPremium : styles.tierBannerFree}>
               {(mode === 'chat' ? hasChatPremium : hasCodegenPremium) ? (
-                <>
-                  🔑 <strong>{mode === 'codegen' ? PROVIDER_LABELS[codegenProvider] : PROVIDER_LABELS[chatProvider]}</strong>
-                  {' · '}
-                  <span className={styles.tierModelBadge}>
-                    {mode === 'codegen'
-                      ? (PROVIDER_MODELS[codegenProvider].find(m => m.id === effectiveCodegenModel)?.label ?? effectiveCodegenModel)
-                      : (PROVIDER_MODELS[chatProvider].find(m => m.id === effectiveChatModel)?.label ?? effectiveChatModel)}
-                  </span>
-                </>
+                (() => {
+                  const isCodegenMode = mode === 'codegen';
+                  const activeProvider = isCodegenMode ? codegenProvider : chatProvider;
+                  const activeModel = isCodegenMode ? effectiveCodegenModel : effectiveChatModel;
+
+                  return (
+                    <>
+                      <div className={styles.tierBannerPremiumInfo}>
+                        🔑 <strong>{PROVIDER_LABELS[activeProvider]}</strong>
+                        {' · '}
+                        <span className={styles.tierModelBadge}>
+                          {PROVIDER_MODELS[activeProvider].find(m => m.id === activeModel)?.label ?? activeModel}
+                        </span>
+                      </div>
+                      <div className={styles.tierBannerModelWrap} data-tier-model-menu>
+                        <button
+                          className={styles.tierBannerModelBtn}
+                          onClick={() => setShowTierModelMenu((v) => !v)}
+                          title="Change provider and model"
+                          aria-label="Change provider and model"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="M3 4h10M3 8h10M3 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                            <circle cx="6" cy="4" r="1.6" fill="var(--theme-color-primary,#00bde3)" stroke="currentColor" strokeWidth="1" />
+                            <circle cx="10" cy="8" r="1.6" fill="var(--theme-color-primary,#00bde3)" stroke="currentColor" strokeWidth="1" />
+                            <circle cx="7.5" cy="12" r="1.6" fill="var(--theme-color-primary,#00bde3)" stroke="currentColor" strokeWidth="1" />
+                          </svg>
+                        </button>
+                        {showTierModelMenu && (
+                          <div className={styles.tierBannerModelMenu}>
+                            <div className={styles.tierBannerModelField}>
+                              <label className={styles.modelSelectorLabel} htmlFor="tier-provider-select">Provider</label>
+                              <select
+                                id="tier-provider-select"
+                                className={styles.selectorSelect}
+                                value={activeProvider}
+                                onChange={(e) => {
+                                  const nextProvider = e.target.value as Provider;
+                                  if (isCodegenMode) switchCodegenProvider(nextProvider);
+                                  else switchChatProvider(nextProvider);
+                                }}
+                              >
+                                <option value="siemens">Siemens</option>
+                                <option value="groq">Groq</option>
+                              </select>
+                            </div>
+                            <div className={styles.tierBannerModelField}>
+                              <label className={styles.modelSelectorLabel} htmlFor="tier-model-select">Model</label>
+                              <select
+                                id="tier-model-select"
+                                className={styles.selectorSelect}
+                                value={activeModel}
+                                onChange={(e) => {
+                                  const nextModel = e.target.value;
+                                  if (isCodegenMode) {
+                                    setCodegenModel(resolveModelForProvider(codegenProvider, nextModel, 'codegen'));
+                                  } else {
+                                    setChatModel(resolveModelForProvider(chatProvider, nextModel, 'chat'));
+                                  }
+                                }}
+                              >
+                                {PROVIDER_MODELS[activeProvider].map((m) => (
+                                  <option key={m.id} value={m.id}>
+                                    {m.label}{m.recommended ? ' ★' : ''}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()
               ) : (
                 <>
                   🆓 <strong>Free tier</strong> —{' '}
@@ -1429,41 +1535,6 @@ export default function AiAssistant() {
           {/* ─────── Chat View ─────── */}
           {mode === 'chat' && (
             <div className={styles.chatBody}>
-              {/* ── Model selector bar ── */}
-              {hasChatPremium && (
-                <div className={styles.modelSelectorBar}>
-                  <div className={styles.selectorGroup}>
-                    <label className={styles.modelSelectorLabel} htmlFor="chat-provider-select">Provider</label>
-                    <select
-                      id="chat-provider-select"
-                      className={styles.selectorSelect}
-                      value={chatProvider}
-                      onChange={(e) => switchChatProvider(e.target.value as Provider)}
-                    >
-                      <option value="siemens">Siemens</option>
-                      <option value="groq">Groq</option>
-                    </select>
-                  </div>
-                  <div className={styles.selectorGroup}>
-                    <label className={styles.modelSelectorLabel} htmlFor="chat-model-select">Model</label>
-                    <select
-                      id="chat-model-select"
-                      className={styles.selectorSelect}
-                      value={chatModel}
-                      onChange={(e) => setChatModel(resolveModelForProvider(chatProvider, e.target.value, 'chat'))}
-                    >
-                      {PROVIDER_MODELS[chatProvider].map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.label}{m.recommended ? ' ★' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button className={styles.modelSelectorSettings} onClick={() => setMode('settings')} title="Provider settings">
-                    ⚙
-                  </button>
-                </div>
-              )}
               {/* Chat History Drawer (overlay) */}
               {showChatHistory && (
                 <div className={styles.historyDrawer}>
@@ -1616,41 +1687,6 @@ export default function AiAssistant() {
           {/* ─────── Code Generator View ─────── */}
           {mode === 'codegen' && (
             <div className={styles.codeBody}>
-              {/* ── Model selector bar ── */}
-              {hasCodegenPremium && (
-                <div className={styles.modelSelectorBar}>
-                  <div className={styles.selectorGroup}>
-                    <label className={styles.modelSelectorLabel} htmlFor="codegen-provider-select">Provider</label>
-                    <select
-                      id="codegen-provider-select"
-                      className={styles.selectorSelect}
-                      value={codegenProvider}
-                      onChange={(e) => switchCodegenProvider(e.target.value as Provider)}
-                    >
-                      <option value="siemens">Siemens</option>
-                      <option value="groq">Groq</option>
-                    </select>
-                  </div>
-                  <div className={styles.selectorGroup}>
-                    <label className={styles.modelSelectorLabel} htmlFor="codegen-model-select">Model</label>
-                    <select
-                      id="codegen-model-select"
-                      className={styles.selectorSelect}
-                      value={codegenModel}
-                      onChange={(e) => setCodegenModel(resolveModelForProvider(codegenProvider, e.target.value, 'codegen'))}
-                    >
-                      {PROVIDER_MODELS[codegenProvider].map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.label}{m.recommended ? ' ★' : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button className={styles.modelSelectorSettings} onClick={() => setMode('settings')} title="Provider settings">
-                    ⚙
-                  </button>
-                </div>
-              )}
               {/* Code Gen History Drawer (overlay) */}
               {showCodeGenHistory && (
                 <div className={styles.historyDrawer}>
@@ -1696,6 +1732,7 @@ export default function AiAssistant() {
               )}
 
               {/* ── Upload tools: Screenshot → Code + Code File ─────────── */}
+              {false && (
               <div className={styles.uploadGrid}>
                 {/* Screenshot slot */}
                 <div className={styles.uploadSlot}>
@@ -1770,6 +1807,7 @@ export default function AiAssistant() {
                   )}
                 </div>
               </div>
+              )}
 
               {/* Description input */}
               <div className={styles.section}>
@@ -2027,6 +2065,16 @@ export default function AiAssistant() {
                   settingsModelTarget === 'chat'
                     ? setChatModel(resolveModelForProvider(targetProvider, nextModel, 'chat'))
                     : setCodegenModel(resolveModelForProvider(targetProvider, nextModel, 'codegen'));
+                const isCodegenCardsView = settingsModelTarget === 'codegen';
+                const cardsExpanded = isCodegenCardsView ? codegenModelCardsExpanded : chatModelCardsExpanded;
+                const toggleCardsExpanded = () => {
+                  if (isCodegenCardsView) setCodegenModelCardsExpanded((v) => !v);
+                  else setChatModelCardsExpanded((v) => !v);
+                };
+                const visibleModelCards =
+                  !cardsExpanded
+                    ? PROVIDER_MODELS[targetProvider].filter((m) => m.id === targetModel)
+                    : PROVIDER_MODELS[targetProvider];
 
                 return (
                   <>
@@ -2080,11 +2128,28 @@ export default function AiAssistant() {
                   </div>
 
                   <div>
-                    <label className={styles.modelSelectorLabel}>
-                      {settingsModelTarget === 'chat' ? 'Chat model cards' : 'Code Gen model cards'}
-                    </label>
+                    <div className={styles.settingsModelHeader}>
+                      <label className={styles.modelSelectorLabel}>
+                        Choose Model
+                      </label>
+                      <button
+                        type="button"
+                        className={styles.settingsModelToggleBtn}
+                        onClick={toggleCardsExpanded}
+                        title={cardsExpanded ? 'Collapse model cards' : 'Expand model cards'}
+                        aria-label={cardsExpanded ? 'Collapse model cards' : 'Expand model cards'}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true" className={styles.settingsModelToggleIcon}>
+                          {cardsExpanded ? (
+                            <path d="M4 10l4-4 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          ) : (
+                            <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          )}
+                        </svg>
+                      </button>
+                    </div>
                     <div className={`${styles.modelGrid} ${styles.settingsModelGrid}`}>
-                      {PROVIDER_MODELS[targetProvider].map((m) => {
+                      {visibleModelCards.map((m) => {
                         const isActive = targetModel === m.id;
                         return (
                           <button

@@ -8,13 +8,13 @@
   bottom: 24px;
   right: 24px;
   z-index: 9999;
-  width: 56px;
-  height: 56px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
   background: var(--theme-color-primary, #00bde3);
   color: var(--theme-color-contrast-text, #fff);
-  font-size: 24px;
+  font-size: 18px;
   cursor: pointer;
   box-shadow: 0 4px 14px var(--theme-color-shadow-1, rgba(0, 0, 0, 0.6));
   display: flex;
@@ -708,6 +708,63 @@
   color: var(--theme-color-primary, #00bde3);
   border-bottom: 1px solid rgba(0, 189, 227, 0.2);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tierBannerPremiumInfo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tierBannerModelWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.tierBannerModelBtn {
+  min-width: 24px;
+  height: 22px;
+  border: 1px solid rgba(0, 189, 227, 0.3);
+  background: rgba(0, 189, 227, 0.1);
+  color: var(--theme-color-primary, #00bde3);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 6px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.tierBannerModelBtn:hover {
+  background: rgba(0, 189, 227, 0.18);
+  border-color: rgba(0, 189, 227, 0.45);
+}
+
+.tierBannerModelMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 220px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--theme-color-soft-bdr, rgba(229,247,255,0.18));
+  background: var(--theme-color-2, #283236);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 220;
+}
+
+.tierBannerModelField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .tierLink {
@@ -1871,6 +1928,40 @@
   font-size: 11px;
   line-height: 1.35;
   color: var(--theme-color-soft-text, rgba(229,247,255,0.55));
+}
+
+.settingsModelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.settingsModelToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.25));
+  background: var(--theme-color-ghost--hover, rgba(140, 161, 171, 0.12));
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.72));
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.settingsModelToggleBtn:hover {
+  background: var(--theme-color-ghost--hover, rgba(140, 161, 171, 0.22));
+  color: var(--theme-color-std-text, rgba(245, 252, 255, 0.9));
+  border-color: var(--theme-color-primary, #00bde3);
+}
+
+.settingsModelToggleIcon {
+  flex-shrink: 0;
 }
 
 .modelSelectorSettings {
