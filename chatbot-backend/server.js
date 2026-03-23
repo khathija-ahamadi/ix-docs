@@ -700,6 +700,61 @@ app.post("/generate", rateLimiter, async (req, res) => {
 });
 
 /**
+ * POST /migrate — code migration / deprecation assistant
+ * Body: { code: string, apiKey?: string, lang?: string }
+ * Returns: { migratedCode: string, summary: string }
+ */
+app.post("/migrate", rateLimiter, async (req, res) => {
+  const { code, apiKey: userApiKey, lang } = req.body || {};
+  if (!code || !code.toString().trim()) {
+    return res.status(400).json({ error: "code is required" });
+  }
+
+  const key = userApiKey || process.env.LLM_API_KEY;
+  if (!key) {
+    return res.status(400).json({ error: "No API key available. Please add your AI API key in the ⚙️ Settings tab." });
+  }
+
+  // Track analytics
+  trackAnalytics(code.toString().slice(0, 200), "migrate", lang || "en");
+
+  try {
+    // Retrieve relevant docs to give the LLM context about iX components
+    const matchedDocs = searchDocs(code.toString(), 12);
+    const topDocs = matchedDocs.slice(0, 12);
+
+    // Ask the code-generator to produce migrated code. Use the original file content
+    // so the generator can refactor/replace deprecated components where applicable.
+    const migratedCode = await generateCode(
+      topDocs,
+      `Migrate the following code to use the Siemens iX design system. Replace deprecated components with their recommended replacements and keep behavior identical. Return complete, copy-paste-ready code.`,
+      "react",
+      userApiKey,
+      code.toString(),
+      "uploaded-file"
+    );
+
+    // Ask for a brief summary of the migration steps performed
+    const docsContext = topDocs
+      .map((d, i) => `### ${i + 1} ${d.title}\n${d.content}`)
+      .join("\n\n---\n\n");
+
+    const summaryQuestion =
+      "Provide a short (2-6 sentence) summary of the migration performed: list deprecated components replaced, notable API changes, and any manual follow-ups the developer should verify.";
+
+    const summary = await askAI(docsContext, `${summaryQuestion}\n\nOriginal code:\n${code.toString().slice(0, 4000)}`, userApiKey, lang || "en");
+
+    res.json({ migratedCode, summary });
+  } catch (err) {
+    const status = err.response?.status || 500;
+    const message = err.response?.data?.error?.message || err.message || "Migration failed";
+    console.error("Migration error:", status, message);
+    res.status(status).json({ error: message });
+  }
+});
+
+
+/**
  * GET /suggest?q=<partial-query>
  * Lightweight type-ahead — returns top-5 matching doc titles + URLs.
  * No LLM call, no API key required. Used for search autocomplete in the UI.
