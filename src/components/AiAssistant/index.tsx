@@ -2233,7 +2233,7 @@ export default function AiAssistant() {
                       </div>
                     </div>
 
-                    <div className={styles.settingsConfigKeyRow}>
+                    {/* <div className={styles.settingsConfigKeyRow}>
                       <span className={styles.settingsConfigKeyStatus}>
                         {chatProvider === 'siemens' ? (apiKey ? '✅ API key saved' : '⚠️ API key not added') : (groqApiKey ? '✅ API key saved' : '⚠️ API key not added')}
                       </span>
@@ -2243,7 +2243,7 @@ export default function AiAssistant() {
                       >
                         {chatProvider === 'siemens' ? (apiKey ? 'Manage key' : 'Add API key') : (groqApiKey ? 'Manage key' : 'Add API key')}
                       </button>
-                    </div>
+                    </div> */}
                   </div>
 
                   <div className={styles.settingsConfigCard}>
@@ -2294,7 +2294,7 @@ export default function AiAssistant() {
                       </div>
                     </div>
 
-                    <div className={styles.settingsConfigKeyRow}>
+                    {/* <div className={styles.settingsConfigKeyRow}>
                       <span className={styles.settingsConfigKeyStatus}>
                         {codegenProvider === 'siemens' ? (apiKey ? '✅ API key saved' : '⚠️ API key not added') : (groqApiKey ? '✅ API key saved' : '⚠️ API key not added')}
                       </span>
@@ -2304,7 +2304,7 @@ export default function AiAssistant() {
                       >
                         {codegenProvider === 'siemens' ? (apiKey ? 'Manage key' : 'Add API key') : (groqApiKey ? 'Manage key' : 'Add API key')}
                       </button>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </div>
