@@ -637,13 +637,28 @@ function uniqueByUrl(results, max = 10) {
   const out = [];
   const seen = new Set();
   for (const r of results) {
-    const url = r?.url || "";
-    if (!url || seen.has(url)) continue;
-    seen.add(url);
+    const key = r?.url || `source:${r?.source || r?.title || "unknown"}`;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
     out.push(r);
     if (out.length >= max) break;
   }
   return out;
+}
+
+function buildDocsContextForPrompt(items = [], { includeUrls = true } = {}) {
+  return items
+    .map((d, i) => {
+      const lines = [
+        `### [${i + 1}] ${d.title}`,
+        `Source: ${d.source || "unknown"}`,
+      ];
+      if (includeUrls) lines.push(`URL: ${d.url || "n/a"}`);
+      if (d.deprecated) lines.push("Deprecated signal: yes");
+      lines.push("", d.content || "");
+      return lines.join("\n");
+    })
+    .join("\n\n---\n\n");
 }
 
 function buildFreeTierAnswer(question, docsForAnswer = [], lang = "en") {
@@ -783,10 +798,12 @@ async function askAI(context, question, userApiKey, lang = "en", provider = "sie
       role: "system",
       content:
         "You are a helpful assistant for the Siemens Industrial Experience (iX) design system. " +
-        "Answer only from the provided documentation. " +
+        "Answer only from the provided Siemens iX documentation excerpts. " +
+        "Do not invent APIs, properties, version numbers, or migration paths not present in the excerpts. " +
         "If any component, property, or API in the question has been deprecated or removed, " +
         "always highlight this clearly with a ⚠️ warning, state which version introduced the change, " +
         "and provide the recommended replacement or migration path. " +
+        "When making factual statements, reference excerpt IDs like [1], [2]. " +
         `Always keep ALL code examples, code blocks, component names, and technical identifiers in their original programming language — never translate code content.${langInstruction(lang)}`,
     },
     {
@@ -817,15 +834,13 @@ async function generateCode(componentDocs, description, framework, userApiKey, f
     webcomponents: `Use Web Components (vanilla JS/HTML) with @siemens/ix and @siemens/ix-icons. Use kebab-case tags (e.g. <ix-button>, <ix-input>). Set properties as attributes. Use addEventListener for events. Import loaders: import { defineCustomElements } from '@siemens/ix/loader';`,
   };
 
-  const docsContext = componentDocs
-    .map((d) => `### ${d.title}\n${d.content}`)
-    .join("\n\n---\n\n");
+  const docsContext = buildDocsContextForPrompt(componentDocs, { includeUrls: true });
 
   const systemPrompt = `You are an expert code generator for the Siemens Industrial Experience (iX) design system.
 Your job is to generate COMPLETE, WORKING, PRODUCTION-READY code using iX components.
 
 RULES:
-1. ONLY use components documented below — do NOT invent component names or props.
+1. ONLY use components and APIs documented in the provided Siemens iX excerpts below — do NOT invent component names, props, events, or imports.
 2. Generate code for the "${framework}" framework.
 3. ${frameworkGuide[framework] || frameworkGuide.react}
 4. Include ALL necessary imports, setup code, and styles.
@@ -835,7 +850,9 @@ RULES:
 8. Add brief inline comments explaining key sections.
 9. Make the code copy-paste ready — a developer should be able to use it immediately.
 10. If any component in the documentation is marked deprecated, do NOT use it — use the recommended replacement instead and add a MIGRATION comment explaining the change.
-11. Keep code syntax, identifiers, and imports in their original programming language conventions.${langInstruction(lang)}`;
+11. If the request asks for behavior that is not covered by the provided iX excerpts, choose the closest documented approach and add a TODO comment noting the limitation.
+12. Add a short source comment near the top: "Sources: [n], [m]" based on the excerpt IDs you used.
+13. Keep code syntax, identifiers, and imports in their original programming language conventions.${langInstruction(lang)}`;
 
   const fileSection = fileContent
     ? `\n---\n\n## Existing Code File ("${fileName || 'uploaded file'}")
@@ -888,9 +905,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
 
   // Build context with source references
   const topDocs = matchedDocs.slice(0, 8);
-  const docsContext = topDocs
-    .map((d, i) => `### [${i + 1}] ${d.title}\n${d.content}`)
-    .join("\n\n---\n\n");
+  const docsContext = buildDocsContextForPrompt(topDocs, { includeUrls: true });
 
   // Collect unique source URLs for citation
   const sources = [...new Map(
@@ -916,6 +931,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
       content:
         "You are a helpful, knowledgeable assistant for the Siemens Industrial Experience (iX) design system. " +
         "Answer the user's question strictly using the provided iX documentation excerpts below. " +
+        "Do not invent details that are not present in the excerpts. " +
         "Be concise but thorough. If the docs contain code examples, include them formatted in markdown code blocks. " +
         "When referencing information, cite the source number in brackets like [1], [2] etc. " +
         "If the answer is not covered by the provided docs, say so honestly and suggest checking https://ix.siemens.io/. " +
@@ -1052,7 +1068,8 @@ app.post("/migrate", rateLimiter, async (req, res) => {
 
   try {
     // Retrieve relevant docs to give the LLM context about iX components
-    const matchedDocs = searchDocs(code.toString(), 12);
+    const migrationQuery = `${code.toString()} migrate migration deprecated removed replacement Siemens iX`;
+    const matchedDocs = searchDocs(migrationQuery, 12);
     const topDocs = matchedDocs.slice(0, 12);
 
     // Ask the code-generator to produce migrated code. Use the original file content
@@ -1070,9 +1087,7 @@ app.post("/migrate", rateLimiter, async (req, res) => {
     );
 
     // Ask for a brief summary of the migration steps performed
-    const docsContext = topDocs
-      .map((d, i) => `### ${i + 1} ${d.title}\n${d.content}`)
-      .join("\n\n---\n\n");
+    const docsContext = buildDocsContextForPrompt(topDocs, { includeUrls: true });
 
     const summaryQuestion =
       "Provide a short (2-6 sentence) summary of the migration performed: list deprecated components replaced, notable API changes, and any manual follow-ups the developer should verify.";
