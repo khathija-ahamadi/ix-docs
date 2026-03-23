@@ -885,6 +885,11 @@ export default function AiAssistant() {
   const [migrateError, setMigrateError] = useState('');
   const [migrateSummary, setMigrateSummary] = useState('');
 
+  // ── AbortController refs for in-flight requests ──
+  const chatAbortRef = useRef<AbortController | null>(null);
+  const codegenAbortRef = useRef<AbortController | null>(null);
+  const migrateAbortRef = useRef<AbortController | null>(null);
+
   // ── Language state ──
   const [lang, setLang] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
@@ -1184,6 +1189,8 @@ export default function AiAssistant() {
     // New user message means any restored session is now modified — give it a fresh id on next save
     activeChatSessionIdRef.current = null;
     setChatLoading(true);
+    chatAbortRef.current?.abort();
+    chatAbortRef.current = new AbortController();
     try {
       // Send conversation history for multi-turn context
       const recentHistory = chatMessages.slice(-6).map((m) => ({
@@ -1194,6 +1201,7 @@ export default function AiAssistant() {
       const res = await fetch(CHAT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: chatAbortRef.current.signal,
         body: JSON.stringify({
           question: userMsg,
           apiKey: chatRequestApiKey,
@@ -1219,6 +1227,7 @@ export default function AiAssistant() {
         },
       ]);
     } catch (err: any) {
+      if (err.name === 'AbortError') return;
       setChatError(err.message || 'Something went wrong');
     } finally {
       setChatLoading(false);
@@ -1252,6 +1261,9 @@ export default function AiAssistant() {
   };
 
   const clearChat = () => {
+    chatAbortRef.current?.abort();
+    chatAbortRef.current = null;
+    setChatLoading(false);
     saveChatSession();
     activeChatSessionIdRef.current = null; // next session gets a fresh id
     setChatMessages([
@@ -1294,6 +1306,8 @@ export default function AiAssistant() {
     setMatchedComponents([]);
     setCodeMessage('');
     setCodeLoading(true);
+    codegenAbortRef.current?.abort();
+    codegenAbortRef.current = new AbortController();
 
     // Auto-save previous generation before starting a new one, then reset so
     // the new generation gets a fresh history id (prevents duplicates)
@@ -1304,6 +1318,7 @@ export default function AiAssistant() {
       const res = await fetch(GENERATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: codegenAbortRef.current.signal,
         body: JSON.stringify({
           description: description.trim(),
           framework,
@@ -1332,6 +1347,7 @@ export default function AiAssistant() {
         setCodeMessage(data.message || ui('noCodeGenerated'));
       }
     } catch (err: any) {
+      if (err.name === 'AbortError') return;
       setCodeError(err.message || ui('somethingWentWrong'));
     } finally {
       setCodeLoading(false);
@@ -1402,6 +1418,10 @@ export default function AiAssistant() {
   };
 
   const clearCodeGen = () => {
+    codegenAbortRef.current?.abort();
+    codegenAbortRef.current = null;
+    setCodeLoading(false);
+    setRefineLoading(false);
     saveCodeGenSession();
     activeCodeGenSessionIdRef.current = null; // next session gets a fresh id
     setDescription('');
@@ -1409,6 +1429,7 @@ export default function AiAssistant() {
     setMatchedComponents([]);
     setCodeError('');
     setCodeMessage('');
+    setRefineInput('');
     setCodeFileContent(null);
     setCodeFileName('');
     textareaRef.current?.focus();
@@ -1492,10 +1513,13 @@ export default function AiAssistant() {
     setCodeError('');
     const instruction = refineInput.trim();
     setRefineInput('');
+    codegenAbortRef.current?.abort();
+    codegenAbortRef.current = new AbortController();
     try {
       const res = await fetch(REFINE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: codegenAbortRef.current.signal,
         body: JSON.stringify({ code: generatedCode, instruction, framework, apiKey: codegenActiveKey, lang, provider: codegenProvider, model: effectiveCodegenModel }),
       });
       if (!res.ok) {
@@ -1505,6 +1529,7 @@ export default function AiAssistant() {
       const data = await res.json();
       if (data.code) setGeneratedCode(data.code);
     } catch (err: any) {
+      if (err.name === 'AbortError') return;
       setCodeError(err.message || ui('refinementFailed'));
     } finally {
       setRefineLoading(false);
@@ -1561,10 +1586,13 @@ export default function AiAssistant() {
     setMigrateError('');
     setMigrateOutput('');
     setMigrateSummary('');
+    migrateAbortRef.current?.abort();
+    migrateAbortRef.current = new AbortController();
     try {
       const res = await fetch(MIGRATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: migrateAbortRef.current.signal,
         body: JSON.stringify({ code: migrateInput, apiKey: codegenActiveKey, lang, provider: codegenProvider, model: effectiveCodegenModel }),
       });
       if (!res.ok) {
@@ -1575,14 +1603,40 @@ export default function AiAssistant() {
       setMigrateOutput(data.migratedCode || '');
       setMigrateSummary(data.summary || '');
     } catch (err: any) {
+      if (err.name === 'AbortError') return;
       setMigrateError(err.message || ui('migrationFailed'));
     } finally {
       setMigrateLoading(false);
     }
   };
 
+  const clearMigrate = () => {
+    migrateAbortRef.current?.abort();
+    migrateAbortRef.current = null;
+    setMigrateLoading(false);
+    setMigrateInput('');
+    setMigrateOutput('');
+    setMigrateError('');
+    setMigrateSummary('');
+  };
+
   const handleMigrateCopy = async (text: string) => {
     try { await navigator.clipboard.writeText(text); } catch {}
+  };
+
+  const handleMigrateDownload = () => {
+    if (!migrateOutput.trim()) return;
+
+    setMigrateError('');
+
+    try {
+      downloadBlob(
+        new Blob([stripCodeFence(migrateOutput)], { type: 'text/plain;charset=utf-8' }),
+        'ix-migrated-code.txt'
+      );
+    } catch (err: any) {
+      setMigrateError(err?.message || ui('somethingWentWrong'));
+    }
   };
 
   /** Simple line-level diff renderer between old and migrated code */
@@ -1724,21 +1778,29 @@ export default function AiAssistant() {
                   </div>
                 </div>
             <div className={styles.headerActions}>
-              {mode !== 'settings' && mode !== 'migrate' && mode !== 'help' && mode !== 'analytics' && (
+              {mode !== 'settings' && mode !== 'help' && mode !== 'analytics' && (
                 <>
-                  <button
-                    className={styles.historyBtn}
-                    onClick={() => {
-                      if (mode === 'chat') setShowChatHistory((v) => !v);
-                      else setShowCodeGenHistory((v) => !v);
-                    }}
-                    title="History"
-                  >
-                    🕘
-                  </button>
+                  {mode !== 'migrate' && (
+                    <button
+                      className={styles.historyBtn}
+                      onClick={() => {
+                        if (mode === 'chat') setShowChatHistory((v) => !v);
+                        else setShowCodeGenHistory((v) => !v);
+                      }}
+                      title="History"
+                    >
+                      🕘
+                    </button>
+                  )}
                   <button
                     className={styles.clearBtn}
-                    onClick={mode === 'chat' ? clearChat : clearCodeGen}
+                    onClick={
+                      mode === 'chat'
+                        ? clearChat
+                        : mode === 'migrate'
+                        ? clearMigrate
+                        : clearCodeGen
+                    }
                     title={ui('clear')}
                   >
                     🗑
@@ -2351,7 +2413,7 @@ export default function AiAssistant() {
               )}
 
               {/* ── Feature 1: Conversational Code Refinement ───────────────── */}
-              {generatedCode && (
+              {false && generatedCode && (
                 <div className={styles.refineRow}>
                   <input
                     className={styles.refineInput}
@@ -2804,20 +2866,34 @@ export default function AiAssistant() {
                   <div className={styles.section}>
                     <div className={styles.codeHeader}>
                       <label className={styles.label}>{ui('migratedCode')}</label>
-                      <button
-                        className={styles.copyBtn}
-                        onClick={() => handleMigrateCopy(migrateOutput.replace(/^```[\w-]*\n?/gm, '').replace(/```$/gm, '').trim())}
-                        title={ui('copy')}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
-                          <rect x="5" y="1" width="9" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-                          <rect x="2" y="4" width="9" height="11" rx="2" fill="var(--theme-color-primary,#00bde3)" stroke="currentColor" strokeWidth="1.5"/>
-                        </svg>
-                        {ui('copy')}
-                      </button>
+                      <div className={styles.codeActions}>
+                        <button
+                          className={styles.downloadBtn}
+                          onClick={handleMigrateDownload}
+                          title={ui('download')}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                            <path d="M8 2v7" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+                            <path d="M5.25 6.75L8 9.5l2.75-2.75" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M3 12.5h10" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+                          </svg>
+                          {ui('download')}
+                        </button>
+                        <button
+                          className={styles.copyBtn}
+                          onClick={() => handleMigrateCopy(stripCodeFence(migrateOutput))}
+                          title={ui('copy')}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                            <rect x="5" y="1" width="9" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                            <rect x="2" y="4" width="9" height="11" rx="2" fill="var(--theme-color-primary,#00bde3)" stroke="currentColor" strokeWidth="1.5"/>
+                          </svg>
+                          {ui('copy')}
+                        </button>
+                      </div>
                     </div>
                     <pre className={styles.codeBlock}>
-                      <code>{migrateOutput.replace(/^```[\w-]*\n?/gm, '').replace(/```$/gm, '').trim()}</code>
+                      <code>{stripCodeFence(migrateOutput)}</code>
                     </pre>
                   </div>
                 </>
