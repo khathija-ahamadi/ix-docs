@@ -11,6 +11,11 @@ const REFINE_URL = 'http://localhost:5000/refine';
 const MIGRATE_URL = 'http://localhost:5000/migrate';
 const DEPRECATION_CHECK_URL = 'http://localhost:5000/deprecation-check';
 const FEEDBACK_URL = 'http://localhost:5000/feedback';
+const FEEDBACK_FALLBACK_URLS = Array.from(new Set([
+  FEEDBACK_URL,
+  FEEDBACK_URL.replace(/\/feedback$/, '/api/feedback'),
+  FEEDBACK_URL.replace(/\/feedback$/, '/user-feedback'),
+]));
 const LANG_STORAGE = 'ix-assistant-lang';
 const CHAT_PROVIDER_STORAGE = 'ix-assistant-chat-provider';
 const CODEGEN_PROVIDER_STORAGE = 'ix-assistant-codegen-provider';
@@ -2461,23 +2466,45 @@ export default function AiAssistant() {
     onError: (message: string) => void;
   }) => {
     try {
-      const res = await fetch(FEEDBACK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scope,
-          rating,
-          correction,
-          userInput,
-          aiOutput,
-          lang,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Server error (${res.status})`);
+      const payload = {
+        scope,
+        rating,
+        correction,
+        userInput,
+        aiOutput,
+        lang,
+      };
+
+      let lastError: Error | null = null;
+
+      for (const endpoint of FEEDBACK_FALLBACK_URLS) {
+        try {
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          if (res.ok) {
+            onSuccess();
+            return;
+          }
+
+          const data = await res.json().catch(() => ({}));
+          const error = new Error(data.error || `Server error (${res.status})`);
+
+          if (res.status === 404) {
+            lastError = error;
+            continue;
+          }
+
+          throw error;
+        } catch (endpointErr: any) {
+          lastError = endpointErr instanceof Error ? endpointErr : new Error(String(endpointErr || ui('feedbackSubmitFailed')));
+        }
       }
-      onSuccess();
+
+      throw lastError || new Error(ui('feedbackSubmitFailed'));
     } catch (err: any) {
       onError(err?.message || ui('feedbackSubmitFailed'));
     }

@@ -1590,7 +1590,7 @@ app.post("/deprecation-check", (req, res) => {
  * 1) prompt improvement issue buckets
  * 2) search-alias candidate suggestions
  */
-app.post("/feedback", rateLimiter, (req, res) => {
+const handleFeedback = (req, res) => {
   const { scope, rating, correction, userInput, aiOutput, lang } = req.body || {};
   const resolvedLang = normalizeLang(lang);
 
@@ -1630,7 +1630,11 @@ app.post("/feedback", rateLimiter, (req, res) => {
     triage,
     message: localize(resolvedLang, "settingsSaved"),
   });
-});
+};
+
+app.post("/feedback", rateLimiter, handleFeedback);
+app.post("/api/feedback", rateLimiter, handleFeedback);
+app.post("/user-feedback", rateLimiter, handleFeedback);
 
 /**
  * GET /analytics
