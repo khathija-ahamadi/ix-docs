@@ -417,6 +417,39 @@ function uniqueByUrl(results, max = 10) {
   return out;
 }
 
+function buildFreeTierAnswer(question, docsForAnswer = []) {
+  if (!Array.isArray(docsForAnswer) || docsForAnswer.length === 0) {
+    return (
+      "I couldn't find relevant information in the iX documentation for that question. " +
+      "Try rephrasing or ask about a specific component, installation, theming, or guidelines."
+    );
+  }
+
+  const preview = docsForAnswer
+    .slice(0, 3)
+    .map((d, idx) => {
+      const raw = (d.content || "")
+        .replace(/```[\s\S]*?```/g, " ")
+        .replace(/#+\s+/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const snippet = raw.slice(0, 260);
+      return `- [${idx + 1}] **${d.title}**: ${snippet}${raw.length > 260 ? "…" : ""}`;
+    })
+    .join("\n");
+
+  return [
+    "Free-tier documentation answer (no AI key configured):",
+    "",
+    `Question: ${question.trim()}`,
+    "",
+    "Relevant iX docs:",
+    preview,
+    "",
+    "Add an API key in Settings to enable full AI chat responses and deeper synthesis.",
+  ].join("\n");
+}
+
 // Build hybrid search index at startup
 const searchIndex = buildSearchIndex(docs);
 console.log(`Hybrid search index (BM25 + cosine TF-IDF) built over ${docs.length} document chunks`);
@@ -599,9 +632,6 @@ app.post("/chat", rateLimiter, async (req, res) => {
   }
 
   const key = userApiKey || process.env.LLM_API_KEY;
-  if (!key) {
-    return res.status(400).json({ error: "No API key available. Please add your AI API key in the ⚙️ Settings tab." });
-  }
 
   // Track analytics
   trackAnalytics(question, "chat", lang || "en");
@@ -614,6 +644,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
       answer:
         "I couldn't find relevant information in the iX documentation for that question. " +
         "Try rephrasing or ask about a specific component, installation, theming, or guidelines.",
+      tier: "free",
       sources: [],
     });
   }
@@ -630,6 +661,16 @@ app.post("/chat", rateLimiter, async (req, res) => {
       .filter((d) => d.url)
       .map((d) => [d.url, { title: d.title, url: d.url, deprecated: d.deprecated || false }])
   ).values()].slice(0, 5);
+
+  // Free-tier fallback: no key available -> return extractive docs answer without LLM
+  if (!key) {
+    return res.json({
+      answer: buildFreeTierAnswer(question, topDocs),
+      tier: "free",
+      sources,
+      hasDeprecationWarnings: topDocs.some((d) => d.deprecated),
+    });
+  }
 
   // Build conversation messages (multi-turn)
   const messages = [

@@ -892,6 +892,11 @@
 }
 
 .saveKeyBtn {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
   padding: 9px 18px;
   background: var(--theme-color-primary, #00bde3);
   color: var(--theme-color-inv-std-text, rgba(0, 10, 20, 0.9));
@@ -1928,6 +1933,64 @@
   font-size: 11px;
   line-height: 1.35;
   color: var(--theme-color-soft-text, rgba(229,247,255,0.55));
+}
+
+.settingsConfigGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.settingsConfigCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--theme-color-component-1, rgba(229,247,255,0.04));
+  border: 1px solid var(--theme-color-soft-bdr, rgba(229,247,255,0.12));
+  border-radius: 8px;
+}
+
+.settingsConfigHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--theme-color-std-text, rgba(245,252,255,0.9));
+}
+
+.settingsConfigSelectRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.settingsConfigKeyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--theme-color-soft-bdr, rgba(229,247,255,0.12));
+  padding-top: 8px;
+}
+
+.settingsConfigKeyStatus {
+  font-size: 11px;
+  color: var(--theme-color-soft-text, rgba(229,247,255,0.65));
+}
+
+@media (max-width: 520px) {
+  .settingsConfigSelectRow {
+    grid-template-columns: 1fr;
+  }
+
+  .settingsConfigKeyRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 .settingsModelHeader {

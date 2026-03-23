@@ -467,12 +467,19 @@ export default function AiAssistant() {
       : fallback;
   };
 
+  const hasSiemensKey = apiKey.trim().length > 0;
+  const hasGroqKey = groqApiKey.trim().length > 0;
+  const providerHasKey = (provider: Provider) =>
+    provider === 'siemens' ? hasSiemensKey : hasGroqKey;
+
   const switchChatProvider = (nextProvider: Provider) => {
+    if (!providerHasKey(nextProvider)) return;
     setChatProvider(nextProvider);
     setChatModel((prev) => resolveModelForProvider(nextProvider, prev, 'chat'));
   };
 
   const switchCodegenProvider = (nextProvider: Provider) => {
+    if (!providerHasKey(nextProvider)) return;
     setCodegenProvider(nextProvider);
     setCodegenModel((prev) => resolveModelForProvider(nextProvider, prev, 'codegen'));
   };
@@ -494,9 +501,12 @@ export default function AiAssistant() {
   // Active keys by mode/provider
   const chatActiveKey = chatProvider === 'siemens' ? apiKey : groqApiKey;
   const codegenActiveKey = codegenProvider === 'siemens' ? apiKey : groqApiKey;
-  const hasChatPremium = chatActiveKey.trim().length > 0;
-  const hasCodegenPremium = codegenActiveKey.trim().length > 0;
+  const hasChatPremium = providerHasKey(chatProvider);
+  const hasCodegenPremium = providerHasKey(codegenProvider);
   const hasPremium = hasChatPremium || hasCodegenPremium;
+  const chatRequestProvider = hasChatPremium ? chatProvider : undefined;
+  const chatRequestModel = hasChatPremium ? effectiveChatModel : undefined;
+  const chatRequestApiKey = hasChatPremium ? chatActiveKey : '';
 
   // ── History state ──
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
@@ -604,10 +614,8 @@ export default function AiAssistant() {
     return 'en';
   });
 
-  // ── Settings model target selector ──
-  const [settingsModelTarget, setSettingsModelTarget] = useState<'chat' | 'codegen'>('chat');
-  const [chatModelCardsExpanded, setChatModelCardsExpanded] = useState(false);
-  const [codegenModelCardsExpanded, setCodegenModelCardsExpanded] = useState(false);
+  // ── Settings API key target selector ──
+  const [settingsKeyProvider, setSettingsKeyProvider] = useState<Provider>('siemens');
 
   // ── Voice input state ──
   const [isListening, setIsListening] = useState(false);
@@ -906,7 +914,14 @@ export default function AiAssistant() {
       const res = await fetch(CHAT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: userMsg, apiKey: chatActiveKey, history: recentHistory, lang, provider: chatProvider, model: effectiveChatModel }),
+        body: JSON.stringify({
+          question: userMsg,
+          apiKey: chatRequestApiKey,
+          history: recentHistory,
+          lang,
+          ...(chatRequestProvider ? { provider: chatRequestProvider } : {}),
+          ...(chatRequestModel ? { model: chatRequestModel } : {}),
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -918,7 +933,7 @@ export default function AiAssistant() {
         {
           role: 'bot',
           text: data.answer,
-          tier: 'premium',
+          tier: data.tier === 'premium' ? 'premium' : 'free',
           sources: data.sources || [],
           hasDeprecationWarnings: data.hasDeprecationWarnings || false,
         },
@@ -1488,8 +1503,12 @@ export default function AiAssistant() {
                                   else switchChatProvider(nextProvider);
                                 }}
                               >
-                                <option value="siemens">Siemens</option>
-                                <option value="groq">Groq</option>
+                                <option value="siemens" disabled={!hasSiemensKey}>
+                                  Siemens{!hasSiemensKey ? ' (add key in Settings)' : ''}
+                                </option>
+                                <option value="groq" disabled={!hasGroqKey}>
+                                  Groq{!hasGroqKey ? ' (add key in Settings)' : ''}
+                                </option>
                               </select>
                             </div>
                             <div className={styles.tierBannerModelField}>
@@ -1498,6 +1517,7 @@ export default function AiAssistant() {
                                 id="tier-model-select"
                                 className={styles.selectorSelect}
                                 value={activeModel}
+                                disabled={!providerHasKey(activeProvider)}
                                 onChange={(e) => {
                                   const nextModel = e.target.value;
                                   if (isCodegenMode) {
@@ -2055,123 +2075,26 @@ export default function AiAssistant() {
           {/* ─────── Settings View ─────── */}
           {mode === 'settings' && (
             <div className={styles.settingsBody}>
-
-              {(() => {
-                const targetProvider = settingsModelTarget === 'chat' ? chatProvider : codegenProvider;
-                const targetModel = settingsModelTarget === 'chat' ? effectiveChatModel : effectiveCodegenModel;
-                const setTargetProvider = (nextProvider: Provider) =>
-                  settingsModelTarget === 'chat' ? switchChatProvider(nextProvider) : switchCodegenProvider(nextProvider);
-                const setTargetModel = (nextModel: string) =>
-                  settingsModelTarget === 'chat'
-                    ? setChatModel(resolveModelForProvider(targetProvider, nextModel, 'chat'))
-                    : setCodegenModel(resolveModelForProvider(targetProvider, nextModel, 'codegen'));
-                const isCodegenCardsView = settingsModelTarget === 'codegen';
-                const cardsExpanded = isCodegenCardsView ? codegenModelCardsExpanded : chatModelCardsExpanded;
-                const toggleCardsExpanded = () => {
-                  if (isCodegenCardsView) setCodegenModelCardsExpanded((v) => !v);
-                  else setChatModelCardsExpanded((v) => !v);
-                };
-                const visibleModelCards =
-                  !cardsExpanded
-                    ? PROVIDER_MODELS[targetProvider].filter((m) => m.id === targetModel)
-                    : PROVIDER_MODELS[targetProvider];
-
-                return (
-                  <>
-
-              {/* ─── Provider selector ─── */}
-              <div className={styles.settingsSection}>
-                <div className={styles.selectorGroup} style={{ marginTop: 10, maxWidth: 320 }}>
-                  <label className={styles.modelSelectorLabel} htmlFor="settings-target-provider-select">
-                    {settingsModelTarget === 'chat' ? 'Chat provider' : 'Code Gen provider'}
-                  </label>
-                  <select
-                    id="settings-target-provider-select"
-                    className={styles.selectorSelect}
-                    value={targetProvider}
-                    onChange={(e) => setTargetProvider(e.target.value as Provider)}
-                  >
-                    <option value="siemens">Siemens{apiKey ? ' ✓ api key saved' : ''}</option>
-                    <option value="groq">Groq{groqApiKey ? ' ✓ api key saved' : ''}</option>
-                  </select>
-                </div>
-                <p className={styles.settingsNote} style={{ marginTop: 8 }}>
-                  Chat: <strong>{PROVIDER_LABELS[chatProvider]}</strong> · Code Gen: <strong>{PROVIDER_LABELS[codegenProvider]}</strong>
-                </p>
-              </div>
-
-              {/* ─── Model selector ─── */}
-              <div className={styles.settingsSection}>
-                <div className={styles.settingsModelRow}>
-                  <div className={styles.selectorGroup}>
-                    <label className={styles.modelSelectorLabel} htmlFor="settings-model-target">Model target</label>
-                    <select
-                      id="settings-model-target"
-                      className={styles.selectorSelect}
-                      value={settingsModelTarget}
-                      onChange={(e) => setSettingsModelTarget(e.target.value as 'chat' | 'codegen')}
-                    >
-                      <option value="chat">Chat</option>
-                      <option value="codegen">Code Gen</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <div className={styles.settingsModelHeader}>
-                      <label className={styles.modelSelectorLabel}>
-                        Choose Model
-                      </label>
-                      <button
-                        type="button"
-                        className={styles.settingsModelToggleBtn}
-                        onClick={toggleCardsExpanded}
-                        title={cardsExpanded ? 'Collapse model cards' : 'Expand model cards'}
-                        aria-label={cardsExpanded ? 'Collapse model cards' : 'Expand model cards'}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true" className={styles.settingsModelToggleIcon}>
-                          {cardsExpanded ? (
-                            <path d="M4 10l4-4 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                          ) : (
-                            <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                          )}
-                        </svg>
-                      </button>
-                    </div>
-                    <div className={`${styles.modelGrid} ${styles.settingsModelGrid}`}>
-                      {visibleModelCards.map((m) => {
-                        const isActive = targetModel === m.id;
-                        return (
-                          <button
-                            key={`${settingsModelTarget}-${m.id}`}
-                            className={`${styles.modelCard} ${isActive ? styles.modelCardActive : ''}`}
-                            onClick={() => setTargetModel(m.id)}
-                          >
-                            <div className={styles.modelCardHeader}>
-                              <span className={styles.modelCardLabel}>{m.label}</span>
-                              {m.recommended && <span className={styles.modelCardBadge}>recommended</span>}
-                            </div>
-                            <span className={styles.modelCardDesc}>{m.description}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <span className={styles.settingsModelHint}>
-                      Selected for Chat: {PROVIDER_MODELS[chatProvider].find((m) => m.id === effectiveChatModel)?.label || effectiveChatModel}
-                      {' · '}
-                      Selected for Code Gen: {PROVIDER_MODELS[codegenProvider].find((m) => m.id === effectiveCodegenModel)?.label || effectiveCodegenModel}
-                    </span>
-                  </div>
-                </div>
-                <p className={styles.settingsNote} style={{ marginTop: 8 }}>
-                  Chat and Code Gen can use different models. You can still override quickly in each tab.
-                </p>
-              </div>
-
-              {/* ─── API Key for active provider ─── */}
+              {/* ─── API Key for selected provider ─── */}
               <div className={styles.settingsSection}>
                 <h3 className={styles.settingsTitle}>🔑 API Key</h3>
 
-                {targetProvider === 'siemens' ? (
+                <div className={styles.selectorGroup} style={{ maxWidth: 320 }}>
+                  <label className={styles.modelSelectorLabel} htmlFor="settings-api-provider">
+                    Provider key to manage
+                  </label>
+                  <select
+                    id="settings-api-provider"
+                    className={styles.selectorSelect}
+                    value={settingsKeyProvider}
+                    onChange={(e) => setSettingsKeyProvider(e.target.value as Provider)}
+                  >
+                    <option value="siemens">Siemens</option>
+                    <option value="groq">Groq</option>
+                  </select>
+                </div>
+
+                {settingsKeyProvider === 'siemens' ? (
                   <>
                     <p className={styles.settingsDescription}>
                       Available to every Siemens employee — no credit card needed.
@@ -2254,9 +2177,137 @@ export default function AiAssistant() {
                 )}
               </div>
 
-                  </>
-                );
-              })()}
+              {/* ─── Provider + model selectors ─── */}
+              <div className={styles.settingsSection}>
+                <h3 className={styles.settingsTitle}>🤖 AI Provider & Model</h3>
+                <p className={styles.settingsDescription}>
+                  Configure Chat and Code Gen independently. Each can use a different provider and model.
+                </p>
+
+                <div className={styles.settingsConfigGrid}>
+                  <div className={styles.settingsConfigCard}>
+                    <div className={styles.settingsConfigHeader}>
+                      <span>💬 Chat</span>
+                      <span className={styles.settingsModelHint}>
+                        {PROVIDER_LABELS[chatProvider]} · {PROVIDER_MODELS[chatProvider].find((m) => m.id === effectiveChatModel)?.label || effectiveChatModel}
+                      </span>
+                    </div>
+
+                    <div className={styles.settingsConfigSelectRow}>
+                      <div className={styles.selectorGroup}>
+                        <label className={styles.modelSelectorLabel} htmlFor="settings-chat-provider">
+                          Provider
+                        </label>
+                        <select
+                          id="settings-chat-provider"
+                          className={styles.selectorSelect}
+                          value={chatProvider}
+                          onChange={(e) => switchChatProvider(e.target.value as Provider)}
+                        >
+                          <option value="siemens" disabled={!hasSiemensKey}>
+                            Siemens{hasSiemensKey ? ' ✓ key saved' : ' (add key first)'}
+                          </option>
+                          <option value="groq" disabled={!hasGroqKey}>
+                            Groq{hasGroqKey ? ' ✓ key saved' : ' (add key first)'}
+                          </option>
+                        </select>
+                      </div>
+
+                      <div className={styles.selectorGroup}>
+                        <label className={styles.modelSelectorLabel} htmlFor="settings-chat-model">
+                          Model
+                        </label>
+                        <select
+                          id="settings-chat-model"
+                          className={styles.selectorSelect}
+                          value={effectiveChatModel}
+                          disabled={!providerHasKey(chatProvider)}
+                          onChange={(e) => setChatModel(resolveModelForProvider(chatProvider, e.target.value, 'chat'))}
+                        >
+                          {PROVIDER_MODELS[chatProvider].map((m) => (
+                            <option key={`chat-${m.id}`} value={m.id}>
+                              {m.label}{m.recommended ? ' ★' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className={styles.settingsConfigKeyRow}>
+                      <span className={styles.settingsConfigKeyStatus}>
+                        {chatProvider === 'siemens' ? (apiKey ? '✅ API key saved' : '⚠️ API key not added') : (groqApiKey ? '✅ API key saved' : '⚠️ API key not added')}
+                      </span>
+                      <button
+                        className={styles.settingsLinkBtn}
+                        onClick={() => setSettingsKeyProvider(chatProvider)}
+                      >
+                        {chatProvider === 'siemens' ? (apiKey ? 'Manage key' : 'Add API key') : (groqApiKey ? 'Manage key' : 'Add API key')}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={styles.settingsConfigCard}>
+                    <div className={styles.settingsConfigHeader}>
+                      <span>⚡ Code Gen</span>
+                      <span className={styles.settingsModelHint}>
+                        {PROVIDER_LABELS[codegenProvider]} · {PROVIDER_MODELS[codegenProvider].find((m) => m.id === effectiveCodegenModel)?.label || effectiveCodegenModel}
+                      </span>
+                    </div>
+
+                    <div className={styles.settingsConfigSelectRow}>
+                      <div className={styles.selectorGroup}>
+                        <label className={styles.modelSelectorLabel} htmlFor="settings-codegen-provider">
+                          Provider
+                        </label>
+                        <select
+                          id="settings-codegen-provider"
+                          className={styles.selectorSelect}
+                          value={codegenProvider}
+                          onChange={(e) => switchCodegenProvider(e.target.value as Provider)}
+                        >
+                          <option value="siemens" disabled={!hasSiemensKey}>
+                            Siemens{hasSiemensKey ? ' ✓ key saved' : ' (add key first)'}
+                          </option>
+                          <option value="groq" disabled={!hasGroqKey}>
+                            Groq{hasGroqKey ? ' ✓ key saved' : ' (add key first)'}
+                          </option>
+                        </select>
+                      </div>
+
+                      <div className={styles.selectorGroup}>
+                        <label className={styles.modelSelectorLabel} htmlFor="settings-codegen-model">
+                          Model
+                        </label>
+                        <select
+                          id="settings-codegen-model"
+                          className={styles.selectorSelect}
+                          value={effectiveCodegenModel}
+                          disabled={!providerHasKey(codegenProvider)}
+                          onChange={(e) => setCodegenModel(resolveModelForProvider(codegenProvider, e.target.value, 'codegen'))}
+                        >
+                          {PROVIDER_MODELS[codegenProvider].map((m) => (
+                            <option key={`codegen-${m.id}`} value={m.id}>
+                              {m.label}{m.recommended ? ' ★' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className={styles.settingsConfigKeyRow}>
+                      <span className={styles.settingsConfigKeyStatus}>
+                        {codegenProvider === 'siemens' ? (apiKey ? '✅ API key saved' : '⚠️ API key not added') : (groqApiKey ? '✅ API key saved' : '⚠️ API key not added')}
+                      </span>
+                      <button
+                        className={styles.settingsLinkBtn}
+                        onClick={() => setSettingsKeyProvider(codegenProvider)}
+                      >
+                        {codegenProvider === 'siemens' ? (apiKey ? 'Manage key' : 'Add API key') : (groqApiKey ? 'Manage key' : 'Add API key')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {/* ─── Language selector ─── */}
               <div className={styles.settingsSection}>
@@ -2290,7 +2341,7 @@ export default function AiAssistant() {
                   <tbody>
                     <tr><td>iX FAQ answers</td><td>✅</td><td>✅</td></tr>
                     <tr><td>Component lookup</td><td>✅</td><td>✅</td></tr>
-                    <tr><td>AI chat (LLM)</td><td>—</td><td>✅</td></tr>
+                    <tr><td>Chat answers</td><td>Docs-only</td><td>AI (LLM)</td></tr>
                     <tr><td>Code generation</td><td>—</td><td>✅</td></tr>
                     <tr><td>Model selection</td><td>—</td><td>✅</td></tr>
                   </tbody>
