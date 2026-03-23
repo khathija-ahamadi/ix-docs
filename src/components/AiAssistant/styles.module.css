@@ -1734,10 +1734,6 @@
   gap: 14px;
 }
 
-.migrateBodyNoScroll {
-  overflow-y: hidden;
-}
-
 .migrateSummary {
   padding: 10px 14px;
   background: rgba(0, 189, 227, 0.07);
@@ -2289,4 +2285,104 @@
   font-size: 11px;
   color: var(--theme-color-soft-text, rgba(229,247,255,0.5));
   line-height: 1.35;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Feedback loop (👍/👎 + correction)
+   ══════════════════════════════════════════════════════════ */
+
+.feedbackBox {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.2));
+}
+
+.feedbackRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.feedbackTitle {
+  font-size: 11px;
+  color: var(--theme-color-std-text, rgba(245, 252, 255, 0.82));
+  margin-right: 4px;
+}
+
+.feedbackBtn {
+  border: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.25));
+  background: transparent;
+  color: var(--theme-color-std-text, rgba(245, 252, 255, 0.92));
+  border-radius: 8px;
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.feedbackBtn:hover:not(:disabled) {
+  border-color: var(--theme-color-primary, #00bde3);
+}
+
+.feedbackBtnActive {
+  border-color: var(--theme-color-primary, #00bde3);
+  color: var(--theme-color-primary, #00bde3);
+}
+
+.feedbackBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.feedbackCorrectionRow {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.feedbackInput {
+  flex: 1;
+  min-width: 0;
+  background: var(--theme-color-soft-bkg, rgba(17, 27, 31, 0.75));
+  border: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.25));
+  border-radius: 8px;
+  color: var(--theme-color-std-text, rgba(245, 252, 255, 0.92));
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.feedbackInput:focus {
+  outline: none;
+  border-color: var(--theme-color-primary, #00bde3);
+}
+
+.feedbackSubmitBtn {
+  border: 1px solid var(--theme-color-primary, #00bde3);
+  background: rgba(0, 189, 227, 0.12);
+  color: var(--theme-color-primary, #00bde3);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.feedbackSubmitBtn:hover:not(:disabled) {
+  background: rgba(0, 189, 227, 0.2);
+}
+
+.feedbackSubmitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.feedbackThanks {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--theme-color-success, #00c853);
+}
+
+.feedbackError {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--theme-color-warning, #ffbb00);
 }

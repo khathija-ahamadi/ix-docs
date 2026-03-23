@@ -10,6 +10,7 @@ const MAX_HISTORY = 10;
 const REFINE_URL = 'http://localhost:5000/refine';
 const MIGRATE_URL = 'http://localhost:5000/migrate';
 const DEPRECATION_CHECK_URL = 'http://localhost:5000/deprecation-check';
+const FEEDBACK_URL = 'http://localhost:5000/feedback';
 const LANG_STORAGE = 'ix-assistant-lang';
 const CHAT_PROVIDER_STORAGE = 'ix-assistant-chat-provider';
 const CODEGEN_PROVIDER_STORAGE = 'ix-assistant-codegen-provider';
@@ -255,6 +256,14 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     codeGenSessions: 'Code Generations',
     questionsAsked: 'Questions Asked',
     codeGenerated: 'Code Generated',
+    feedbackTitle: 'Was this helpful?',
+    thumbsUp: '👍',
+    thumbsDown: '👎',
+    feedbackCorrectionPlaceholder: 'Tell us what should be improved (optional)',
+    submitFeedback: 'Submit feedback',
+    feedbackThanks: 'Thanks for your feedback!',
+    feedbackSubmitFailed: 'Could not submit feedback',
+    sendingFeedback: 'Sending…',
   },
   de: {
     analyticsTitle: 'Nutzungsanalyse',
@@ -1547,12 +1556,34 @@ interface Source {
   deprecated?: boolean;
 }
 
+type FeedbackRating = 'up' | 'down';
+type FeedbackScope = 'chat' | 'codegen' | 'migrate';
+
+interface FeedbackState {
+  rating: FeedbackRating | null;
+  correction: string;
+  submitted: boolean;
+  submitting: boolean;
+  error: string;
+  showCorrection: boolean;
+}
+
+const createFeedbackState = (): FeedbackState => ({
+  rating: null,
+  correction: '',
+  submitted: false,
+  submitting: false,
+  error: '',
+  showCorrection: false,
+});
+
 interface ChatMessage {
   role: 'user' | 'bot';
   text: string;
   tier?: 'free' | 'premium';
   sources?: Source[];
   hasDeprecationWarnings?: boolean;
+  feedback?: FeedbackState;
 }
 
 interface MatchedComponent {
@@ -2023,6 +2054,7 @@ export default function AiAssistant() {
   // ── Conversational Refine state ──
   const [refineInput, setRefineInput] = useState('');
   const [refineLoading, setRefineLoading] = useState(false);
+  const [codegenFeedback, setCodegenFeedback] = useState<FeedbackState>(createFeedbackState());
 
   // ── Image-to-Code state ──
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -2044,6 +2076,7 @@ export default function AiAssistant() {
   const [migrateLoading, setMigrateLoading] = useState(false);
   const [migrateError, setMigrateError] = useState('');
   const [migrateSummary, setMigrateSummary] = useState('');
+  const [migrateFeedback, setMigrateFeedback] = useState<FeedbackState>(createFeedbackState());
   const [migrationFlow, setMigrationFlow] = useState<MigrationFlow>('api');
   const [upgradeFromVersion, setUpgradeFromVersion] = useState('V3.0.0');
   const [upgradeToVersion, setUpgradeToVersion] = useState('V4.0.0');
@@ -2395,6 +2428,7 @@ export default function AiAssistant() {
           tier: data.tier === 'premium' ? 'premium' : 'free',
           sources: data.sources || [],
           hasDeprecationWarnings: data.hasDeprecationWarnings || false,
+          feedback: createFeedbackState(),
         },
       ]);
     } catch (err: any) {
@@ -2407,6 +2441,108 @@ export default function AiAssistant() {
 
   const handleChatKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') sendMessage();
+  };
+
+  const submitFeedback = async ({
+    scope,
+    rating,
+    correction,
+    userInput,
+    aiOutput,
+    onSuccess,
+    onError,
+  }: {
+    scope: FeedbackScope;
+    rating: FeedbackRating;
+    correction?: string;
+    userInput?: string;
+    aiOutput?: string;
+    onSuccess: () => void;
+    onError: (message: string) => void;
+  }) => {
+    try {
+      const res = await fetch(FEEDBACK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scope,
+          rating,
+          correction,
+          userInput,
+          aiOutput,
+          lang,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Server error (${res.status})`);
+      }
+      onSuccess();
+    } catch (err: any) {
+      onError(err?.message || ui('feedbackSubmitFailed'));
+    }
+  };
+
+  const updateChatFeedback = (index: number, patch: Partial<FeedbackState>) => {
+    setChatMessages((prev) =>
+      prev.map((msg, i) =>
+        i === index
+          ? { ...msg, feedback: { ...createFeedbackState(), ...(msg.feedback || {}), ...patch } }
+          : msg
+      )
+    );
+  };
+
+  const handleChatRating = (index: number, rating: FeedbackRating) => {
+    const message = chatMessages[index];
+    if (!message || message.role !== 'bot') return;
+    if (message.feedback?.submitted || message.feedback?.submitting) return;
+
+    if (rating === 'up') {
+      updateChatFeedback(index, { submitting: true, error: '', rating: 'up', showCorrection: false });
+      const userInput = [...chatMessages.slice(0, index)].reverse().find((m) => m.role === 'user')?.text || '';
+      submitFeedback({
+        scope: 'chat',
+        rating: 'up',
+        userInput,
+        aiOutput: message.text,
+        onSuccess: () => {
+          updateChatFeedback(index, { submitting: false, submitted: true, showCorrection: false });
+        },
+        onError: (message) => {
+          updateChatFeedback(index, { submitting: false, error: message });
+        },
+      });
+      return;
+    }
+
+    updateChatFeedback(index, {
+      rating: 'down',
+      showCorrection: true,
+      error: '',
+    });
+  };
+
+  const submitChatCorrection = (index: number) => {
+    const msg = chatMessages[index];
+    if (!msg || msg.role !== 'bot') return;
+    if (msg.feedback?.submitted || msg.feedback?.submitting) return;
+
+    updateChatFeedback(index, { submitting: true, error: '' });
+    const userInput = [...chatMessages.slice(0, index)].reverse().find((m) => m.role === 'user')?.text || '';
+    submitFeedback({
+      scope: 'chat',
+      rating: 'down',
+      correction: msg.feedback?.correction || '',
+      userInput,
+      aiOutput: msg.text,
+      onSuccess: () => {
+        updateChatFeedback(index, { submitting: false, submitted: true, showCorrection: false });
+      },
+      onError: (message) => {
+        updateChatFeedback(index, { submitting: false, error: message });
+      },
+    });
   };
 
   // ── Save current chat session to history ──
@@ -2477,6 +2613,7 @@ export default function AiAssistant() {
     setMatchedComponents([]);
     setCodeMessage('');
     setCodeLoading(true);
+    setCodegenFeedback(createFeedbackState());
     codegenAbortRef.current?.abort();
     codegenAbortRef.current = new AbortController();
 
@@ -2600,6 +2737,7 @@ export default function AiAssistant() {
     setMatchedComponents([]);
     setCodeError('');
     setCodeMessage('');
+    setCodegenFeedback(createFeedbackState());
     setRefineInput('');
     setCodeFileContent(null);
     setCodeFileName('');
@@ -2803,6 +2941,7 @@ export default function AiAssistant() {
     setMigrateError('');
     setMigrateOutput('');
     setMigrateSummary('');
+    setMigrateFeedback(createFeedbackState());
     migrateAbortRef.current?.abort();
     migrateAbortRef.current = new AbortController();
     try {
@@ -2844,6 +2983,73 @@ export default function AiAssistant() {
     setMigrateOutput('');
     setMigrateError('');
     setMigrateSummary('');
+    setMigrateFeedback(createFeedbackState());
+  };
+
+  const submitCodegenRating = (rating: FeedbackRating) => {
+    if (!generatedCode || codegenFeedback.submitted || codegenFeedback.submitting) return;
+
+    if (rating === 'down') {
+      setCodegenFeedback((prev) => ({ ...prev, rating, showCorrection: true, error: '' }));
+      return;
+    }
+
+    setCodegenFeedback((prev) => ({ ...prev, rating, submitting: true, error: '', showCorrection: false }));
+    submitFeedback({
+      scope: 'codegen',
+      rating: 'up',
+      userInput: description,
+      aiOutput: stripCodeFence(generatedCode),
+      onSuccess: () => setCodegenFeedback((prev) => ({ ...prev, submitting: false, submitted: true })),
+      onError: (message) => setCodegenFeedback((prev) => ({ ...prev, submitting: false, error: message })),
+    });
+  };
+
+  const submitCodegenCorrection = () => {
+    if (!generatedCode || codegenFeedback.submitted || codegenFeedback.submitting) return;
+    setCodegenFeedback((prev) => ({ ...prev, submitting: true, error: '' }));
+    submitFeedback({
+      scope: 'codegen',
+      rating: 'down',
+      correction: codegenFeedback.correction,
+      userInput: description,
+      aiOutput: stripCodeFence(generatedCode),
+      onSuccess: () => setCodegenFeedback((prev) => ({ ...prev, submitting: false, submitted: true, showCorrection: false })),
+      onError: (message) => setCodegenFeedback((prev) => ({ ...prev, submitting: false, error: message })),
+    });
+  };
+
+  const submitMigrateRating = (rating: FeedbackRating) => {
+    if (!migrateOutput || migrateFeedback.submitted || migrateFeedback.submitting) return;
+
+    if (rating === 'down') {
+      setMigrateFeedback((prev) => ({ ...prev, rating, showCorrection: true, error: '' }));
+      return;
+    }
+
+    setMigrateFeedback((prev) => ({ ...prev, rating, submitting: true, error: '', showCorrection: false }));
+    submitFeedback({
+      scope: 'migrate',
+      rating: 'up',
+      userInput: migrateInput,
+      aiOutput: `${migrateSummary}\n\n${stripCodeFence(migrateOutput)}`,
+      onSuccess: () => setMigrateFeedback((prev) => ({ ...prev, submitting: false, submitted: true })),
+      onError: (message) => setMigrateFeedback((prev) => ({ ...prev, submitting: false, error: message })),
+    });
+  };
+
+  const submitMigrateCorrection = () => {
+    if (!migrateOutput || migrateFeedback.submitted || migrateFeedback.submitting) return;
+    setMigrateFeedback((prev) => ({ ...prev, submitting: true, error: '' }));
+    submitFeedback({
+      scope: 'migrate',
+      rating: 'down',
+      correction: migrateFeedback.correction,
+      userInput: migrateInput,
+      aiOutput: `${migrateSummary}\n\n${stripCodeFence(migrateOutput)}`,
+      onSuccess: () => setMigrateFeedback((prev) => ({ ...prev, submitting: false, submitted: true, showCorrection: false })),
+      onError: (message) => setMigrateFeedback((prev) => ({ ...prev, submitting: false, error: message })),
+    });
   };
 
   const handleMigrateCopy = async (text: string) => {
@@ -3224,6 +3430,54 @@ export default function AiAssistant() {
                             {src.deprecated ? '⚠️ ' : ''}{src.title.length > 30 ? src.title.slice(0, 30) + '…' : src.title}
                           </a>
                         ))}
+                      </div>
+                    )}
+                    {msg.role === 'bot' && (
+                      <div className={styles.feedbackBox}>
+                        <div className={styles.feedbackRow}>
+                          <span className={styles.feedbackTitle}>{ui('feedbackTitle')}</span>
+                          <button
+                            className={`${styles.feedbackBtn} ${msg.feedback?.rating === 'up' ? styles.feedbackBtnActive : ''}`}
+                            onClick={() => handleChatRating(i, 'up')}
+                            disabled={msg.feedback?.submitted || msg.feedback?.submitting}
+                            title={ui('thumbsUp')}
+                          >
+                            {ui('thumbsUp')}
+                          </button>
+                          <button
+                            className={`${styles.feedbackBtn} ${msg.feedback?.rating === 'down' ? styles.feedbackBtnActive : ''}`}
+                            onClick={() => handleChatRating(i, 'down')}
+                            disabled={msg.feedback?.submitted || msg.feedback?.submitting}
+                            title={ui('thumbsDown')}
+                          >
+                            {ui('thumbsDown')}
+                          </button>
+                        </div>
+                        {msg.feedback?.showCorrection && !msg.feedback?.submitted && (
+                          <div className={styles.feedbackCorrectionRow}>
+                            <input
+                              className={styles.feedbackInput}
+                              type="text"
+                              value={msg.feedback?.correction || ''}
+                              placeholder={ui('feedbackCorrectionPlaceholder')}
+                              onChange={(e) => updateChatFeedback(i, { correction: e.target.value })}
+                              disabled={msg.feedback?.submitting}
+                            />
+                            <button
+                              className={styles.feedbackSubmitBtn}
+                              onClick={() => submitChatCorrection(i)}
+                              disabled={msg.feedback?.submitting}
+                            >
+                              {msg.feedback?.submitting ? ui('sendingFeedback') : ui('submitFeedback')}
+                            </button>
+                          </div>
+                        )}
+                        {msg.feedback?.submitted && (
+                          <div className={styles.feedbackThanks}>{ui('feedbackThanks')}</div>
+                        )}
+                        {msg.feedback?.error && (
+                          <div className={styles.feedbackError}>⚠️ {msg.feedback.error}</div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -3642,6 +3896,48 @@ export default function AiAssistant() {
                       {stripCodeFence(generatedCode)}
                     </code>
                   </pre>
+                  <div className={styles.feedbackBox}>
+                    <div className={styles.feedbackRow}>
+                      <span className={styles.feedbackTitle}>{ui('feedbackTitle')}</span>
+                      <button
+                        className={`${styles.feedbackBtn} ${codegenFeedback.rating === 'up' ? styles.feedbackBtnActive : ''}`}
+                        onClick={() => submitCodegenRating('up')}
+                        disabled={codegenFeedback.submitted || codegenFeedback.submitting}
+                        title={ui('thumbsUp')}
+                      >
+                        {ui('thumbsUp')}
+                      </button>
+                      <button
+                        className={`${styles.feedbackBtn} ${codegenFeedback.rating === 'down' ? styles.feedbackBtnActive : ''}`}
+                        onClick={() => submitCodegenRating('down')}
+                        disabled={codegenFeedback.submitted || codegenFeedback.submitting}
+                        title={ui('thumbsDown')}
+                      >
+                        {ui('thumbsDown')}
+                      </button>
+                    </div>
+                    {codegenFeedback.showCorrection && !codegenFeedback.submitted && (
+                      <div className={styles.feedbackCorrectionRow}>
+                        <input
+                          className={styles.feedbackInput}
+                          type="text"
+                          value={codegenFeedback.correction}
+                          placeholder={ui('feedbackCorrectionPlaceholder')}
+                          onChange={(e) => setCodegenFeedback((prev) => ({ ...prev, correction: e.target.value }))}
+                          disabled={codegenFeedback.submitting}
+                        />
+                        <button
+                          className={styles.feedbackSubmitBtn}
+                          onClick={submitCodegenCorrection}
+                          disabled={codegenFeedback.submitting}
+                        >
+                          {codegenFeedback.submitting ? ui('sendingFeedback') : ui('submitFeedback')}
+                        </button>
+                      </div>
+                    )}
+                    {codegenFeedback.submitted && <div className={styles.feedbackThanks}>{ui('feedbackThanks')}</div>}
+                    {codegenFeedback.error && <div className={styles.feedbackError}>⚠️ {codegenFeedback.error}</div>}
+                  </div>
                 </div>
               )}
 
@@ -4146,7 +4442,7 @@ export default function AiAssistant() {
 
           {/* ─────── Migration Wizard View ─────── */}
           {mode === 'migrate' && (
-            <div className={`${styles.migrateBody} ${migrationFlow === 'upgrade' ? styles.migrateBodyNoScroll : ''}`}>
+            <div className={styles.migrateBody}>
               <div className={styles.settingsSection}>
                 <h3 className={styles.settingsTitle}>{ui('migrationTitle')}</h3>
                 <p className={styles.settingsDescription}>
@@ -4353,6 +4649,48 @@ export default function AiAssistant() {
                     <pre className={styles.codeBlock}>
                       <code>{stripCodeFence(migrateOutput)}</code>
                     </pre>
+                    <div className={styles.feedbackBox}>
+                      <div className={styles.feedbackRow}>
+                        <span className={styles.feedbackTitle}>{ui('feedbackTitle')}</span>
+                        <button
+                          className={`${styles.feedbackBtn} ${migrateFeedback.rating === 'up' ? styles.feedbackBtnActive : ''}`}
+                          onClick={() => submitMigrateRating('up')}
+                          disabled={migrateFeedback.submitted || migrateFeedback.submitting}
+                          title={ui('thumbsUp')}
+                        >
+                          {ui('thumbsUp')}
+                        </button>
+                        <button
+                          className={`${styles.feedbackBtn} ${migrateFeedback.rating === 'down' ? styles.feedbackBtnActive : ''}`}
+                          onClick={() => submitMigrateRating('down')}
+                          disabled={migrateFeedback.submitted || migrateFeedback.submitting}
+                          title={ui('thumbsDown')}
+                        >
+                          {ui('thumbsDown')}
+                        </button>
+                      </div>
+                      {migrateFeedback.showCorrection && !migrateFeedback.submitted && (
+                        <div className={styles.feedbackCorrectionRow}>
+                          <input
+                            className={styles.feedbackInput}
+                            type="text"
+                            value={migrateFeedback.correction}
+                            placeholder={ui('feedbackCorrectionPlaceholder')}
+                            onChange={(e) => setMigrateFeedback((prev) => ({ ...prev, correction: e.target.value }))}
+                            disabled={migrateFeedback.submitting}
+                          />
+                          <button
+                            className={styles.feedbackSubmitBtn}
+                            onClick={submitMigrateCorrection}
+                            disabled={migrateFeedback.submitting}
+                          >
+                            {migrateFeedback.submitting ? ui('sendingFeedback') : ui('submitFeedback')}
+                          </button>
+                        </div>
+                      )}
+                      {migrateFeedback.submitted && <div className={styles.feedbackThanks}>{ui('feedbackThanks')}</div>}
+                      {migrateFeedback.error && <div className={styles.feedbackError}>⚠️ {migrateFeedback.error}</div>}
+                    </div>
                   </div>
                 </>
               )}

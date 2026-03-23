@@ -19,6 +19,15 @@ const analytics = {
   queryCounts: new Map(),           // normalized query text -> count
   recentQueries: [],                // up to 500 most-recent entries
   endpointCounts: { chat: 0, generate: 0, migrate: 0, refine: 0 },
+  feedback: {
+    total: 0,
+    up: 0,
+    down: 0,
+    byScope: { chat: 0, codegen: 0, migrate: 0 },
+    recent: [],
+    promptIssueCounts: new Map(),
+    aliasSuggestionCounts: new Map(),
+  },
 };
 
 function trackAnalytics(text, endpoint = "chat", lang = "en") {
@@ -423,6 +432,122 @@ const QUERY_ALIASES = {
   accessibility: ["a11y", "accessible"],
   a11y: ["accessibility"],
 };
+
+const FEEDBACK_PROMPT_ISSUE_RULES = [
+  {
+    key: "hallucination-risk",
+    test: (text) => /hallucinat|not in docs|made up|fabricated|invented|incorrect source|wrong source/.test(text),
+  },
+  {
+    key: "insufficient-deprecation-focus",
+    test: (text) => /deprecated|deprecation|outdated|removed api|breaking change/.test(text),
+  },
+  {
+    key: "language-or-translation",
+    test: (text) => /translate|translated|wrong language|language|localized code|code translation/.test(text),
+  },
+  {
+    key: "missing-step-by-step",
+    test: (text) => /unclear|not clear|step by step|steps missing|hard to follow/.test(text),
+  },
+  {
+    key: "insufficient-code-quality",
+    test: (text) => /code is wrong|doesn.?t compile|broken code|invalid code|syntax error/.test(text),
+  },
+];
+
+function bumpMapCount(map, key) {
+  if (!key) return;
+  map.set(key, (map.get(key) || 0) + 1);
+}
+
+function normaliseFeedbackText(value) {
+  return String(value || "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function triagePromptIssues({ correction, aiOutput }) {
+  const normalized = `${normaliseFeedbackText(correction)} ${normaliseFeedbackText(aiOutput).slice(0, 800)}`;
+  const issues = FEEDBACK_PROMPT_ISSUE_RULES
+    .filter((rule) => rule.test(normalized))
+    .map((rule) => rule.key);
+  if (issues.length === 0 && normalized) issues.push("general-quality");
+  return issues;
+}
+
+function extractAliasPairsFromCorrection(correctionText) {
+  const text = String(correctionText || "");
+  const pairs = [];
+  const regexes = [
+    /\b([a-z][a-z0-9-]{1,40})\s*(?:->|=>|=)\s*([a-z][a-z0-9-]{1,40})\b/gi,
+    /\b([a-z][a-z0-9-]{1,40})\s+(?:means|is|maps to)\s+([a-z][a-z0-9-]{1,40})\b/gi,
+  ];
+  for (const regex of regexes) {
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      const left = match[1].toLowerCase();
+      const right = match[2].toLowerCase();
+      if (left !== right) pairs.push([left, right]);
+    }
+  }
+  return pairs;
+}
+
+function triageAliasSuggestions({ userInput, correction }) {
+  const suggestions = [];
+  const pairs = extractAliasPairsFromCorrection(correction);
+  for (const [from, to] of pairs) {
+    suggestions.push(`${from}=>${to}`);
+  }
+
+  const input = normaliseFeedbackText(userInput);
+  if (input) {
+    for (const token of input.split(/[^a-z0-9-]+/g)) {
+      if (!token || token.length < 4) continue;
+      if (QUERY_ALIASES[token]) continue;
+      if (Object.values(QUERY_ALIASES).some((arr) => arr.includes(token))) continue;
+      if (token.endsWith("ing") || token.endsWith("tion") || token.includes("-")) {
+        suggestions.push(`${token}=>?`);
+      }
+    }
+  }
+
+  return [...new Set(suggestions)].slice(0, 8);
+}
+
+function trackFeedback({
+  scope,
+  rating,
+  correction,
+  userInput,
+  aiOutput,
+  lang,
+  triage,
+}) {
+  const feedback = analytics.feedback;
+  feedback.total += 1;
+  if (rating === "up") feedback.up += 1;
+  if (rating === "down") feedback.down += 1;
+  feedback.byScope[scope] = (feedback.byScope[scope] || 0) + 1;
+
+  feedback.recent.unshift({
+    scope,
+    rating,
+    correction: (correction || "").slice(0, 500),
+    userInput: (userInput || "").slice(0, 250),
+    lang,
+    promptIssues: triage.promptIssues,
+    aliasSuggestions: triage.aliasSuggestions,
+    timestamp: Date.now(),
+  });
+  if (feedback.recent.length > 500) feedback.recent.pop();
+
+  for (const issue of triage.promptIssues) {
+    bumpMapCount(feedback.promptIssueCounts, issue);
+  }
+  for (const alias of triage.aliasSuggestions) {
+    bumpMapCount(feedback.aliasSuggestionCounts, alias);
+  }
+}
 
 /**
  * Expand a user query with synonyms / aliases.
@@ -1451,6 +1576,63 @@ app.post("/deprecation-check", (req, res) => {
 });
 
 /**
+ * POST /feedback
+ * Body: {
+ *   scope: "chat"|"codegen"|"migrate",
+ *   rating: "up"|"down",
+ *   correction?: string,
+ *   userInput?: string,
+ *   aiOutput?: string,
+ *   lang?: string
+ * }
+ *
+ * Stores user feedback and auto-triages it into:
+ * 1) prompt improvement issue buckets
+ * 2) search-alias candidate suggestions
+ */
+app.post("/feedback", rateLimiter, (req, res) => {
+  const { scope, rating, correction, userInput, aiOutput, lang } = req.body || {};
+  const resolvedLang = normalizeLang(lang);
+
+  const validScopes = ["chat", "codegen", "migrate"];
+  const validRatings = ["up", "down"];
+
+  if (!validScopes.includes(scope)) {
+    return res.status(400).json({ error: "scope is required: chat|codegen|migrate" });
+  }
+  if (!validRatings.includes(rating)) {
+    return res.status(400).json({ error: "rating is required: up|down" });
+  }
+
+  const triage = {
+    promptIssues:
+      rating === "down"
+        ? triagePromptIssues({ correction, aiOutput })
+        : [],
+    aliasSuggestions:
+      rating === "down"
+        ? triageAliasSuggestions({ userInput, correction })
+        : [],
+  };
+
+  trackFeedback({
+    scope,
+    rating,
+    correction,
+    userInput,
+    aiOutput,
+    lang: resolvedLang,
+    triage,
+  });
+
+  res.json({
+    ok: true,
+    triage,
+    message: localize(resolvedLang, "settingsSaved"),
+  });
+});
+
+/**
  * GET /analytics
  * Returns aggregated usage analytics: top queries, endpoint counts, recent queries.
  * Intended for documentation-maintainers to identify gaps and improve guidance.
@@ -1467,6 +1649,21 @@ app.get("/analytics", (req, res) => {
     totalTracked: analytics.recentQueries.length,
     topQueries,
     recentQueries: analytics.recentQueries.slice(0, 20),
+    feedback: {
+      total: analytics.feedback.total,
+      up: analytics.feedback.up,
+      down: analytics.feedback.down,
+      byScope: analytics.feedback.byScope,
+      topPromptIssues: [...analytics.feedback.promptIssueCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 20)
+        .map(([issue, count]) => ({ issue, count })),
+      topAliasSuggestions: [...analytics.feedback.aliasSuggestionCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 20)
+        .map(([alias, count]) => ({ alias, count })),
+      recent: analytics.feedback.recent.slice(0, 20),
+    },
   });
 });
 
@@ -1495,6 +1692,7 @@ app.get("/health", (req, res) => {
       "rate-limiting",
       "section-type-boost",
       "url-dedup",
+      "user-feedback-triage",
     ],
     supportedLanguages: ["en", "de", "zh", "fr", "es", "ja", "pt", "ko"],
   });
@@ -1508,6 +1706,7 @@ app.listen(PORT, () => {
   console.log(`  POST /migrate           — code migration & upgrade assistant (rate-limited)`);
   console.log(`  POST /refine            — code refinement (rate-limited)`);
   console.log(`  POST /deprecation-check — deprecation alert checker`);
+  console.log(`  POST /feedback          — thumbs feedback + auto-triage`);
   console.log(`  GET  /suggest           — type-ahead suggestions`);
   console.log(`  GET  /user/settings     — retrieve user preferences`);
   console.log(`  POST /user/settings     — save user preferences`);
