@@ -1051,6 +1051,7 @@ Refactor or extend the following code to fulfil the user request using iX compon
 app.post("/chat", rateLimiter, async (req, res) => {
   const { question, apiKey: userApiKey, history, lang, provider = "siemens", model } = req.body;
   const resolvedLang = normalizeLang(lang);
+  const hasExplicitUserApiKey = typeof userApiKey === "string" && userApiKey.trim().length > 0;
 
   if (!question || !question.trim()) {
     return res.status(400).json({ error: localize(resolvedLang, "questionRequired") });
@@ -1141,6 +1142,19 @@ app.post("/chat", rateLimiter, async (req, res) => {
     const status = err.response?.status || 500;
     const message = err.response?.data?.error?.message || err.message;
     console.error(`[${provider}] LLM API error:`, status, message);
+
+    // Graceful fallback for free-tier usage: if no explicit user key was supplied,
+    // return extractive docs answer instead of surfacing upstream availability errors.
+    if (!hasExplicitUserApiKey) {
+      return res.json({
+        answer: buildFreeTierAnswer(question, topDocs, resolvedLang),
+        tier: "free",
+        sources,
+        hasDeprecationWarnings: topDocs.some((d) => d.deprecated),
+        fallbackReason: "llm_unavailable",
+      });
+    }
+
     res.status(status).json({ error: message });
   }
 });
