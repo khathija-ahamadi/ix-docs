@@ -1705,12 +1705,12 @@ export default function AiAssistant() {
 
           {/* Header with mode tabs */}
           {(() => {
-            // All overflow items with their labels
-            const MORE_ITEMS: { id: Mode; label: string }[] = [
-              { id: 'migrate',   label: `🔀 ${ui('migrate')}`   },
-              { id: 'analytics', label: `📊 ${ui('analyticsTitle').replace('📊 ', '')}` },
-              { id: 'settings',  label: `⚙️ ${ui('settings')}`  },
-              { id: 'help',      label: `❓ ${ui('help')}`      },
+            // All overflow items with icon + label
+            const MORE_ITEMS: { id: Mode; icon: string; label: string }[] = [
+              { id: 'migrate', icon: '↔', label: ui('migrate') },
+              { id: 'analytics', icon: '◫', label: ui('analyticsTitle').replace('📊 ', '') },
+              { id: 'settings', icon: '⚙', label: ui('settings') },
+              { id: 'help', icon: '?', label: ui('help') },
             ];
             // If the active mode is an overflow item, float it up as a visible tab.
             const promotedItem = MORE_ITEMS.find((m) => m.id === mode) ?? null;
@@ -1747,8 +1747,8 @@ export default function AiAssistant() {
                       className={`${styles.tab} ${styles.tabActive} ${styles.tabPromoted}`}
                       onClick={() => switchMode(promotedItem.id)}
                     >
-                      <span className={styles.tabIcon}>{promotedItem.label.split(' ')[0]}</span>
-                      <span className={styles.tabLabel}>{promotedItem.label.split(' ').slice(1).join(' ')}</span>
+                      <span className={styles.tabIcon}>{promotedItem.icon}</span>
+                      <span className={styles.tabLabel}>{promotedItem.label}</span>
                     </button>
                   )}
 
@@ -1770,7 +1770,7 @@ export default function AiAssistant() {
                             className={styles.moreMenuItem}
                             onClick={() => switchMode(item.id)}
                           >
-                            {item.label}
+                            {item.icon} {item.label}
                           </button>
                         ))}
                       </div>
