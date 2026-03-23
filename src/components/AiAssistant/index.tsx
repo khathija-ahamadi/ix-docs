@@ -1588,8 +1588,12 @@ interface ChatMessage {
   tier?: 'free' | 'premium';
   sources?: Source[];
   hasDeprecationWarnings?: boolean;
+  feedbackEligible?: boolean;
   feedback?: FeedbackState;
 }
+
+const isChatMessageFeedbackEligible = (message: ChatMessage): boolean =>
+  message.role === 'bot' && (message.feedbackEligible === true || (!!message.feedback && message.feedbackEligible !== false));
 
 interface MatchedComponent {
   title: string;
@@ -2037,6 +2041,7 @@ export default function AiAssistant() {
     {
       role: 'bot',
       text: '👋 Hello! Ask me anything about the Siemens iX design system — components, installation, theming, guidelines, migration and more.\n\n⚠️ I can also warn you about deprecated APIs and suggest the correct replacements.',
+      feedbackEligible: false,
     },
   ]);
   const [question, setQuestion] = useState('');
@@ -2433,6 +2438,7 @@ export default function AiAssistant() {
           tier: data.tier === 'premium' ? 'premium' : 'free',
           sources: data.sources || [],
           hasDeprecationWarnings: data.hasDeprecationWarnings || false,
+          feedbackEligible: true,
           feedback: createFeedbackState(),
         },
       ]);
@@ -2513,7 +2519,7 @@ export default function AiAssistant() {
   const updateChatFeedback = (index: number, patch: Partial<FeedbackState>) => {
     setChatMessages((prev) =>
       prev.map((msg, i) =>
-        i === index
+        i === index && isChatMessageFeedbackEligible(msg)
           ? { ...msg, feedback: { ...createFeedbackState(), ...(msg.feedback || {}), ...patch } }
           : msg
       )
@@ -2522,7 +2528,7 @@ export default function AiAssistant() {
 
   const handleChatRating = (index: number, rating: FeedbackRating) => {
     const message = chatMessages[index];
-    if (!message || message.role !== 'bot') return;
+    if (!message || !isChatMessageFeedbackEligible(message)) return;
     if (message.feedback?.submitted || message.feedback?.submitting) return;
 
     if (rating === 'up') {
@@ -2552,7 +2558,7 @@ export default function AiAssistant() {
 
   const submitChatCorrection = (index: number) => {
     const msg = chatMessages[index];
-    if (!msg || msg.role !== 'bot') return;
+    if (!msg || !isChatMessageFeedbackEligible(msg)) return;
     if (msg.feedback?.submitted || msg.feedback?.submitting) return;
 
     updateChatFeedback(index, { submitting: true, error: '' });
@@ -2601,7 +2607,7 @@ export default function AiAssistant() {
     saveChatSession();
     activeChatSessionIdRef.current = null; // next session gets a fresh id
     setChatMessages([
-      { role: 'bot', text: ui('chatCleared') },
+      { role: 'bot', text: ui('chatCleared'), feedbackEligible: false },
     ]);
     setChatError('');
   };
@@ -3459,7 +3465,7 @@ export default function AiAssistant() {
                         ))}
                       </div>
                     )}
-                    {msg.role === 'bot' && (
+                    {isChatMessageFeedbackEligible(msg) && (
                       <div className={styles.feedbackBox}>
                         <div className={styles.feedbackRow}>
                           <span className={styles.feedbackTitle}>{ui('feedbackTitle')}</span>
