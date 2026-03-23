@@ -1792,3 +1792,213 @@
   font-size: 10.5px;
   color: var(--theme-color-soft-text, rgba(229,247,255,0.45));
 }
+
+/* ══════════════════════════════════════════════════════════
+   Provider & Model Selector Styles
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Tier banner model badge ────────────────────────────── */
+.tierModelBadge {
+  display: inline-block;
+  background: rgba(0, 189, 227, 0.15);
+  color: var(--theme-color-primary, #00bde3);
+  border: 1px solid rgba(0, 189, 227, 0.3);
+  border-radius: 4px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ── Model selector bar (in Chat / CodeGen) ─────────────── */
+.modelSelectorBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--theme-color-component-1, rgba(229,247,255,0.04));
+  border-bottom: 1px solid var(--theme-color-soft-bdr, rgba(229,247,255,0.08));
+  flex-shrink: 0;
+}
+
+.selectorGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 120px;
+  flex: 1;
+}
+
+.modelSelectorLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--theme-color-soft-text, rgba(229,247,255,0.5));
+  white-space: nowrap;
+}
+
+.selectorSelect {
+  width: 100%;
+  min-height: 30px;
+  border-radius: 7px;
+  border: 1px solid var(--theme-color-soft-bdr, rgba(229,247,255,0.18));
+  background: var(--theme-color-component-1, rgba(229,247,255,0.04));
+  color: var(--theme-color-std-text, rgba(245,252,255,0.9));
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 4px 8px;
+  color-scheme: dark;
+  outline: none;
+}
+
+.selectorSelect option {
+  background: var(--theme-color-2, #283236);
+  color: var(--theme-color-std-text, rgba(245,252,255,0.9));
+}
+
+.selectorSelect:focus {
+  border-color: var(--theme-color-primary, #00bde3);
+  box-shadow: 0 0 0 2px rgba(0, 189, 227, 0.18);
+}
+
+.settingsModelRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.settingsModelHint {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--theme-color-soft-text, rgba(229,247,255,0.55));
+}
+
+.modelSelectorSettings {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--theme-color-soft-text, rgba(229,247,255,0.4));
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.modelSelectorSettings:hover {
+  color: var(--theme-color-std-text, rgba(245,252,255,0.9));
+}
+
+/* ── Provider selector in Settings ──────────────────────── */
+.providerRow {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.providerBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 12px;
+  background: var(--theme-color-component-1, rgba(229,247,255,0.04));
+  border: 2px solid var(--theme-color-soft-bdr, rgba(229,247,255,0.15));
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  position: relative;
+}
+.providerBtn:hover {
+  background: rgba(0,189,227,0.06);
+  border-color: rgba(0,189,227,0.35);
+}
+.providerBtnActive {
+  background: rgba(0,189,227,0.1);
+  border-color: var(--theme-color-primary, #00bde3);
+}
+
+.providerBtnIcon {
+  font-size: 20px;
+  line-height: 1;
+}
+.providerBtnLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--theme-color-std-text, rgba(245,252,255,0.9));
+}
+.providerKeyBadge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #22c55e;
+  background: rgba(34,197,94,0.12);
+  border: 1px solid rgba(34,197,94,0.3);
+  border-radius: 8px;
+  padding: 1px 5px;
+}
+
+/* ── Model grid in Settings ──────────────────────────────── */
+.modelGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.settingsModelGrid {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 480px) {
+  .modelGrid { grid-template-columns: 1fr; }
+}
+
+.modelCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--theme-color-component-1, rgba(229,247,255,0.04));
+  border: 1px solid var(--theme-color-soft-bdr, rgba(229,247,255,0.12));
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s;
+}
+.modelCard:hover {
+  background: rgba(0,189,227,0.06);
+  border-color: rgba(0,189,227,0.3);
+}
+.modelCardActive {
+  background: rgba(0,189,227,0.1);
+  border-color: var(--theme-color-primary, #00bde3);
+}
+
+.modelCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.modelCardLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--theme-color-std-text, rgba(245,252,255,0.9));
+}
+.modelCardBadge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--theme-color-primary, #00bde3);
+  background: rgba(0,189,227,0.12);
+  border: 1px solid rgba(0,189,227,0.25);
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+.modelCardDesc {
+  font-size: 11px;
+  color: var(--theme-color-soft-text, rgba(229,247,255,0.5));
+  line-height: 1.35;
+}

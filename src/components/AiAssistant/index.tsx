@@ -11,9 +11,58 @@ const REFINE_URL = 'http://localhost:5000/refine';
 const MIGRATE_URL = 'http://localhost:5000/migrate';
 const DEPRECATION_CHECK_URL = 'http://localhost:5000/deprecation-check';
 const LANG_STORAGE = 'ix-assistant-lang';
+const CHAT_PROVIDER_STORAGE = 'ix-assistant-chat-provider';
+const CODEGEN_PROVIDER_STORAGE = 'ix-assistant-codegen-provider';
+const GROQ_KEY_STORAGE = 'ix-assistant-groq-key';
+const CHAT_MODEL_STORAGE = 'ix-assistant-chat-model';
+const CODEGEN_MODEL_STORAGE = 'ix-assistant-codegen-model';
 
 // ── Multi-language support ──────────────────────────────────────────────────
 type Language = 'en' | 'de' | 'zh' | 'fr' | 'es' | 'ja' | 'pt' | 'ko';
+
+// ── AI Provider & Model config ─────────────────────────────────────────────
+type Provider = 'siemens' | 'groq';
+
+interface ModelOption {
+  id: string;
+  label: string;
+  description: string;
+  recommended?: boolean;
+}
+
+const SIEMENS_MODELS: ModelOption[] = [
+  { id: 'glm-5', label: 'glm-5', description: 'Recommended for Chat — state-of-the-art agentic model', recommended: true },
+  { id: 'qwen3-30b-a3b-instruct-2507', label: 'Qwen3-30B', description: 'General purpose, high performance' },
+  { id: 'qwen3-30b-a3b-thinking-2507', label: 'Qwen3-30B Thinking', description: 'Advanced reasoning' },
+  { id: 'deepseek-r1-0528-qwen3-8b', label: 'DeepSeek R1 Qwen3 8B', description: 'Reasoning-focused stable chat model' },
+  { id: 'devstral-small-2505', label: 'Devstral', description: 'Recommended for Code Gen — best for coding & agentic tasks', recommended: true },
+  { id: 'mistral-7b-instruct', label: 'Mistral 7B', description: 'Fast & lightweight' },
+];
+
+const GROQ_MODELS: ModelOption[] = [
+  { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', description: 'Recommended for Chat & Code Gen — best quality on Groq', recommended: true },
+  { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B Instant', description: 'Fastest low-latency alternative' },
+];
+
+const PROVIDER_MODELS: Record<Provider, ModelOption[]> = {
+  siemens: SIEMENS_MODELS,
+  groq: GROQ_MODELS,
+};
+
+const CHAT_PROVIDER_DEFAULT_MODEL: Record<Provider, string> = {
+  siemens: 'glm-5',
+  groq: 'llama-3.3-70b-versatile',
+};
+
+const CODEGEN_PROVIDER_DEFAULT_MODEL: Record<Provider, string> = {
+  siemens: 'devstral-small-2505',
+  groq: 'llama-3.3-70b-versatile',
+};
+
+const PROVIDER_LABELS: Record<Provider, string> = {
+  siemens: 'Siemens',
+  groq: 'Groq',
+};
 
 const LANGUAGE_LABELS: Record<Language, string> = {
   en: '🇬🇧 English',
@@ -176,7 +225,6 @@ const EXAMPLE_PROMPTS = [
   'Build a notification center using messagebar with dismiss and action buttons',
 ];
 
-const MAX_WIDTH_RATIO = 0.95;
 const DEFAULT_WIDTH = 560;
 const DEFAULT_HEIGHT_VH = 70; // percent of viewport height
 const PANEL_BOTTOM_PX = 92; // must match CSS .panel { bottom }
@@ -363,7 +411,82 @@ export default function AiAssistant() {
   const [apiKeySaved, setApiKeySaved] = useState(false);
   const [keyLoading, setKeyLoading] = useState(true); // true while decrypting on mount
 
-  const hasPremium = apiKey.trim().length > 0;
+  // ── Groq API Key state ──
+  const [groqApiKey, setGroqApiKey] = useState<string>('');
+  const [groqKeyInput, setGroqKeyInput] = useState('');
+  const [groqKeySaved, setGroqKeySaved] = useState(false);
+  const [groqKeyLoading, setGroqKeyLoading] = useState(true);
+
+  // ── Provider & model state ──
+  const [chatProvider, setChatProvider] = useState<Provider>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem(CHAT_PROVIDER_STORAGE) as Provider) || 'siemens';
+    }
+    return 'siemens';
+  });
+  const [codegenProvider, setCodegenProvider] = useState<Provider>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem(CODEGEN_PROVIDER_STORAGE) as Provider) || 'siemens';
+    }
+    return 'siemens';
+  });
+  const [chatModel, setChatModel] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(CHAT_MODEL_STORAGE) || CHAT_PROVIDER_DEFAULT_MODEL.siemens;
+    }
+    return CHAT_PROVIDER_DEFAULT_MODEL.siemens;
+  });
+  const [codegenModel, setCodegenModel] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(CODEGEN_MODEL_STORAGE) || CODEGEN_PROVIDER_DEFAULT_MODEL.siemens;
+    }
+    return CODEGEN_PROVIDER_DEFAULT_MODEL.siemens;
+  });
+
+  const resolveModelForProvider = (
+    targetProvider: Provider,
+    model: string,
+    target: 'chat' | 'codegen' = 'chat'
+  ) => {
+    const fallback =
+      target === 'codegen'
+        ? CODEGEN_PROVIDER_DEFAULT_MODEL[targetProvider]
+        : CHAT_PROVIDER_DEFAULT_MODEL[targetProvider];
+    return PROVIDER_MODELS[targetProvider].some((m) => m.id === model)
+      ? model
+      : fallback;
+  };
+
+  const switchChatProvider = (nextProvider: Provider) => {
+    setChatProvider(nextProvider);
+    setChatModel((prev) => resolveModelForProvider(nextProvider, prev, 'chat'));
+  };
+
+  const switchCodegenProvider = (nextProvider: Provider) => {
+    setCodegenProvider(nextProvider);
+    setCodegenModel((prev) => resolveModelForProvider(nextProvider, prev, 'codegen'));
+  };
+
+  // Keep models valid for the currently selected provider (also covers restored localStorage values)
+  useEffect(() => {
+    const resolved = resolveModelForProvider(chatProvider, chatModel, 'chat');
+    if (resolved !== chatModel) setChatModel(resolved);
+  }, [chatProvider, chatModel]);
+
+  useEffect(() => {
+    const resolved = resolveModelForProvider(codegenProvider, codegenModel, 'codegen');
+    if (resolved !== codegenModel) setCodegenModel(resolved);
+  }, [codegenProvider, codegenModel]);
+
+  const effectiveChatModel = resolveModelForProvider(chatProvider, chatModel, 'chat');
+  const effectiveCodegenModel = resolveModelForProvider(codegenProvider, codegenModel, 'codegen');
+
+  // Active keys by mode/provider
+  const chatActiveKey = chatProvider === 'siemens' ? apiKey : groqApiKey;
+  const codegenActiveKey = codegenProvider === 'siemens' ? apiKey : groqApiKey;
+  const hasChatPremium = chatActiveKey.trim().length > 0;
+  const hasCodegenPremium = codegenActiveKey.trim().length > 0;
+  const hasPremium = hasChatPremium || hasCodegenPremium;
 
   // ── History state ──
   const [chatHistory, setChatHistory] = useState<ChatSession[]>([]);
@@ -381,7 +504,7 @@ export default function AiAssistant() {
     setCodeGenHistory(loadCodeGenHistory());
   }, []);
 
-  // ── Decrypt stored key on mount ──
+  // ── Decrypt stored keys on mount ──
   useEffect(() => {
     (async () => {
       try {
@@ -391,10 +514,25 @@ export default function AiAssistant() {
           setApiKey(plain);
         }
       } catch {
-        // Stored value is corrupt or from old plain-text version — clear it
         localStorage.removeItem(API_KEY_STORAGE);
       } finally {
         setKeyLoading(false);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = localStorage.getItem(GROQ_KEY_STORAGE);
+        if (stored) {
+          const plain = await decryptApiKey(stored);
+          setGroqApiKey(plain);
+        }
+      } catch {
+        localStorage.removeItem(GROQ_KEY_STORAGE);
+      } finally {
+        setGroqKeyLoading(false);
       }
     })();
   }, []);
@@ -456,6 +594,9 @@ export default function AiAssistant() {
     return 'en';
   });
 
+  // ── Settings model target selector ──
+  const [settingsModelTarget, setSettingsModelTarget] = useState<'chat' | 'codegen'>('chat');
+
   // ── Voice input state ──
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
@@ -472,6 +613,22 @@ export default function AiAssistant() {
       localStorage.setItem(LANG_STORAGE, lang);
     }
   }, [lang]);
+
+  // ── Persist provider preferences ──
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(CHAT_PROVIDER_STORAGE, chatProvider);
+      localStorage.setItem(CODEGEN_PROVIDER_STORAGE, codegenProvider);
+    }
+  }, [chatProvider, codegenProvider]);
+
+  // ── Persist model preferences ──
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(CHAT_MODEL_STORAGE, chatModel);
+      localStorage.setItem(CODEGEN_MODEL_STORAGE, codegenModel);
+    }
+  }, [chatModel, codegenModel]);
 
   // ── Voice input: toggle listening ──
   const toggleVoice = () => {
@@ -668,6 +825,31 @@ export default function AiAssistant() {
     setCodeError('');
   };
 
+  const saveGroqKey = async () => {
+    const trimmed = groqKeyInput.trim();
+    if (!trimmed) return;
+    try {
+      const encrypted = await encryptApiKey(trimmed);
+      localStorage.setItem(GROQ_KEY_STORAGE, encrypted);
+    } catch {}
+    setGroqApiKey(trimmed);
+    setGroqKeyInput('');
+    setGroqKeySaved(true);
+    setTimeout(() => setGroqKeySaved(false), 2500);
+  };
+
+  const clearGroqKey = () => {
+    try { localStorage.removeItem(GROQ_KEY_STORAGE); } catch {}
+    setGroqApiKey('');
+    setGroqKeyInput('');
+    if (codegenProvider === 'groq') {
+      setGeneratedCode('');
+      setMatchedComponents([]);
+      setCodeMessage('');
+      setCodeError('');
+    }
+  };
+
   const sendMessage = async () => {
     if (!question.trim() || chatLoading) return;
     const userMsg = question.trim();
@@ -688,7 +870,7 @@ export default function AiAssistant() {
       const res = await fetch(CHAT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: userMsg, apiKey, history: recentHistory, lang }),
+        body: JSON.stringify({ question: userMsg, apiKey: chatActiveKey, history: recentHistory, lang, provider: chatProvider, model: effectiveChatModel }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -769,7 +951,7 @@ export default function AiAssistant() {
     if (!description.trim() || codeLoading) return;
 
     // Gate code generation behind API key
-    if (!hasPremium) {
+    if (!hasCodegenPremium) {
       setCodeMessage(
         '🔑 Code generation requires an AI model. Add your AI API key in the ⚙️ Settings tab to unlock this feature.'
       );
@@ -794,8 +976,10 @@ export default function AiAssistant() {
         body: JSON.stringify({
           description: description.trim(),
           framework,
-          apiKey,
+          apiKey: codegenActiveKey,
           lang,
+          provider: codegenProvider,
+          model: effectiveCodegenModel,
           ...(uploadedImage ? { screenshot: uploadedImage } : {}),
           ...(codeFileContent ? { fileContent: codeFileContent, fileName: codeFileName } : {}),
         }),
@@ -960,7 +1144,7 @@ export default function AiAssistant() {
   // ════════════════════════════════════════════════════════════
   const handleRefine = async () => {
     if (!refineInput.trim() || refineLoading || !generatedCode) return;
-    if (!hasPremium) {
+    if (!hasCodegenPremium) {
       setCodeMessage('🔑 Code refinement requires an API key — add one in ⚙️ Settings.');
       return;
     }
@@ -972,7 +1156,7 @@ export default function AiAssistant() {
       const res = await fetch(REFINE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: generatedCode, instruction, framework, apiKey }),
+        body: JSON.stringify({ code: generatedCode, instruction, framework, apiKey: codegenActiveKey, provider: codegenProvider, model: effectiveCodegenModel }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -1029,7 +1213,7 @@ export default function AiAssistant() {
   // ════════════════════════════════════════════════════════════
   const handleMigrate = async () => {
     if (!migrateInput.trim() || migrateLoading) return;
-    if (!hasPremium) {
+    if (!hasCodegenPremium) {
       setMigrateError('🔑 Migration analysis requires an API key — add one in ⚙️ Settings.');
       return;
     }
@@ -1041,7 +1225,7 @@ export default function AiAssistant() {
       const res = await fetch(MIGRATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: migrateInput, apiKey }),
+        body: JSON.stringify({ code: migrateInput, apiKey: codegenActiveKey, provider: codegenProvider, model: effectiveCodegenModel }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -1218,10 +1402,18 @@ export default function AiAssistant() {
           })()}
 
           {/* ─────── Tier banner ─────── */}
-          {mode !== 'settings' && mode !== 'migrate' && mode !== 'help' && mode !== 'analytics' && !keyLoading && (
-            <div className={hasPremium ? styles.tierBannerPremium : styles.tierBannerFree}>
-              {hasPremium ? (
-                <>🔑 <strong>Premium</strong> — AI-powered via your API key</>
+          {mode !== 'settings' && mode !== 'migrate' && mode !== 'help' && mode !== 'analytics' && !keyLoading && !groqKeyLoading && (
+            <div className={(mode === 'chat' ? hasChatPremium : hasCodegenPremium) ? styles.tierBannerPremium : styles.tierBannerFree}>
+              {(mode === 'chat' ? hasChatPremium : hasCodegenPremium) ? (
+                <>
+                  🔑 <strong>{mode === 'codegen' ? PROVIDER_LABELS[codegenProvider] : PROVIDER_LABELS[chatProvider]}</strong>
+                  {' · '}
+                  <span className={styles.tierModelBadge}>
+                    {mode === 'codegen'
+                      ? (PROVIDER_MODELS[codegenProvider].find(m => m.id === effectiveCodegenModel)?.label ?? effectiveCodegenModel)
+                      : (PROVIDER_MODELS[chatProvider].find(m => m.id === effectiveChatModel)?.label ?? effectiveChatModel)}
+                  </span>
+                </>
               ) : (
                 <>
                   🆓 <strong>Free tier</strong> —{' '}
@@ -1237,6 +1429,41 @@ export default function AiAssistant() {
           {/* ─────── Chat View ─────── */}
           {mode === 'chat' && (
             <div className={styles.chatBody}>
+              {/* ── Model selector bar ── */}
+              {hasChatPremium && (
+                <div className={styles.modelSelectorBar}>
+                  <div className={styles.selectorGroup}>
+                    <label className={styles.modelSelectorLabel} htmlFor="chat-provider-select">Provider</label>
+                    <select
+                      id="chat-provider-select"
+                      className={styles.selectorSelect}
+                      value={chatProvider}
+                      onChange={(e) => switchChatProvider(e.target.value as Provider)}
+                    >
+                      <option value="siemens">Siemens</option>
+                      <option value="groq">Groq</option>
+                    </select>
+                  </div>
+                  <div className={styles.selectorGroup}>
+                    <label className={styles.modelSelectorLabel} htmlFor="chat-model-select">Model</label>
+                    <select
+                      id="chat-model-select"
+                      className={styles.selectorSelect}
+                      value={chatModel}
+                      onChange={(e) => setChatModel(resolveModelForProvider(chatProvider, e.target.value, 'chat'))}
+                    >
+                      {PROVIDER_MODELS[chatProvider].map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.label}{m.recommended ? ' ★' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button className={styles.modelSelectorSettings} onClick={() => setMode('settings')} title="Provider settings">
+                    ⚙
+                  </button>
+                </div>
+              )}
               {/* Chat History Drawer (overlay) */}
               {showChatHistory && (
                 <div className={styles.historyDrawer}>
@@ -1389,6 +1616,41 @@ export default function AiAssistant() {
           {/* ─────── Code Generator View ─────── */}
           {mode === 'codegen' && (
             <div className={styles.codeBody}>
+              {/* ── Model selector bar ── */}
+              {hasCodegenPremium && (
+                <div className={styles.modelSelectorBar}>
+                  <div className={styles.selectorGroup}>
+                    <label className={styles.modelSelectorLabel} htmlFor="codegen-provider-select">Provider</label>
+                    <select
+                      id="codegen-provider-select"
+                      className={styles.selectorSelect}
+                      value={codegenProvider}
+                      onChange={(e) => switchCodegenProvider(e.target.value as Provider)}
+                    >
+                      <option value="siemens">Siemens</option>
+                      <option value="groq">Groq</option>
+                    </select>
+                  </div>
+                  <div className={styles.selectorGroup}>
+                    <label className={styles.modelSelectorLabel} htmlFor="codegen-model-select">Model</label>
+                    <select
+                      id="codegen-model-select"
+                      className={styles.selectorSelect}
+                      value={codegenModel}
+                      onChange={(e) => setCodegenModel(resolveModelForProvider(codegenProvider, e.target.value, 'codegen'))}
+                    >
+                      {PROVIDER_MODELS[codegenProvider].map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.label}{m.recommended ? ' ★' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button className={styles.modelSelectorSettings} onClick={() => setMode('settings')} title="Provider settings">
+                    ⚙
+                  </button>
+                </div>
+              )}
               {/* Code Gen History Drawer (overlay) */}
               {showCodeGenHistory && (
                 <div className={styles.historyDrawer}>
@@ -1755,6 +2017,193 @@ export default function AiAssistant() {
           {/* ─────── Settings View ─────── */}
           {mode === 'settings' && (
             <div className={styles.settingsBody}>
+
+              {(() => {
+                const targetProvider = settingsModelTarget === 'chat' ? chatProvider : codegenProvider;
+                const targetModel = settingsModelTarget === 'chat' ? effectiveChatModel : effectiveCodegenModel;
+                const setTargetProvider = (nextProvider: Provider) =>
+                  settingsModelTarget === 'chat' ? switchChatProvider(nextProvider) : switchCodegenProvider(nextProvider);
+                const setTargetModel = (nextModel: string) =>
+                  settingsModelTarget === 'chat'
+                    ? setChatModel(resolveModelForProvider(targetProvider, nextModel, 'chat'))
+                    : setCodegenModel(resolveModelForProvider(targetProvider, nextModel, 'codegen'));
+
+                return (
+                  <>
+
+              {/* ─── Provider selector ─── */}
+              <div className={styles.settingsSection}>
+                <h3 className={styles.settingsTitle}>🤖 AI Provider &amp; Model</h3>
+                <p className={styles.settingsDescription}>
+                  Choose provider and model per target (Chat or Code Gen). Model list updates based on provider.
+                </p>
+                <div className={styles.selectorGroup} style={{ marginTop: 10, maxWidth: 320 }}>
+                  <label className={styles.modelSelectorLabel} htmlFor="settings-target-provider-select">
+                    {settingsModelTarget === 'chat' ? 'Chat provider' : 'Code Gen provider'}
+                  </label>
+                  <select
+                    id="settings-target-provider-select"
+                    className={styles.selectorSelect}
+                    value={targetProvider}
+                    onChange={(e) => setTargetProvider(e.target.value as Provider)}
+                  >
+                    <option value="siemens">🏭 Siemens{apiKey ? ' ✓ key saved' : ''}</option>
+                    <option value="groq">⚡ Groq{groqApiKey ? ' ✓ key saved' : ''}</option>
+                  </select>
+                </div>
+                <p className={styles.settingsNote} style={{ marginTop: 8 }}>
+                  Chat: <strong>{PROVIDER_LABELS[chatProvider]}</strong> · Code Gen: <strong>{PROVIDER_LABELS[codegenProvider]}</strong>
+                </p>
+              </div>
+
+              {/* ─── Model selector ─── */}
+              <div className={styles.settingsSection}>
+                <h3 className={styles.settingsTitle}>🧠 Model</h3>
+                <p className={styles.settingsDescription}>
+                  {targetProvider === 'siemens'
+                    ? 'Stable Siemens-hosted models. Recommended: glm-5 for Chat and devstral-small-2505 for Code Gen.'
+                    : 'Groq-hosted open-weight models with ultra-fast inference.'}
+                </p>
+
+                <div className={styles.settingsModelRow}>
+                  <div className={styles.selectorGroup}>
+                    <label className={styles.modelSelectorLabel} htmlFor="settings-model-target">Model target</label>
+                    <select
+                      id="settings-model-target"
+                      className={styles.selectorSelect}
+                      value={settingsModelTarget}
+                      onChange={(e) => setSettingsModelTarget(e.target.value as 'chat' | 'codegen')}
+                    >
+                      <option value="chat">Chat</option>
+                      <option value="codegen">Code Gen</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={styles.modelSelectorLabel}>
+                      {settingsModelTarget === 'chat' ? 'Chat model cards' : 'Code Gen model cards'}
+                    </label>
+                    <div className={`${styles.modelGrid} ${styles.settingsModelGrid}`}>
+                      {PROVIDER_MODELS[targetProvider].map((m) => {
+                        const isActive = targetModel === m.id;
+                        return (
+                          <button
+                            key={`${settingsModelTarget}-${m.id}`}
+                            className={`${styles.modelCard} ${isActive ? styles.modelCardActive : ''}`}
+                            onClick={() => setTargetModel(m.id)}
+                          >
+                            <div className={styles.modelCardHeader}>
+                              <span className={styles.modelCardLabel}>{m.label}</span>
+                              {m.recommended && <span className={styles.modelCardBadge}>recommended</span>}
+                            </div>
+                            <span className={styles.modelCardDesc}>{m.description}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <span className={styles.settingsModelHint}>
+                      Selected for Chat: {PROVIDER_MODELS[chatProvider].find((m) => m.id === effectiveChatModel)?.label || effectiveChatModel}
+                      {' · '}
+                      Selected for Code Gen: {PROVIDER_MODELS[codegenProvider].find((m) => m.id === effectiveCodegenModel)?.label || effectiveCodegenModel}
+                    </span>
+                  </div>
+                </div>
+                <p className={styles.settingsNote} style={{ marginTop: 8 }}>
+                  Chat and Code Gen can use different models. You can still override quickly in each tab.
+                </p>
+              </div>
+
+              {/* ─── API Key for active provider ─── */}
+              <div className={styles.settingsSection}>
+                <h3 className={styles.settingsTitle}>🔑 API Key</h3>
+
+                {targetProvider === 'siemens' ? (
+                  <>
+                    <p className={styles.settingsDescription}>
+                      Available to every Siemens employee — no credit card needed.
+                      Generate your key on <strong>my.siemens.com → My Keys → Create</strong>, scope: <code>llm</code>.
+                    </p>
+                    <a href="https://my.siemens.com" target="_blank" rel="noopener noreferrer" className={styles.settingsLink}>
+                      ↗ Get your Siemens LLM API key (my.siemens.com → My Keys → Create, scope: llm)
+                    </a>
+                    <div style={{ marginTop: 12 }}>
+                      <label className={styles.label}>
+                        {keyLoading ? 'Loading…' : apiKey ? '✅ Siemens API key (saved &amp; encrypted)' : 'Enter your Siemens API key'}
+                      </label>
+                      {keyLoading && <div className={styles.keyLoading}><span className={styles.spinner} /> Decrypting…</div>}
+                      {!keyLoading && apiKey && (
+                        <div className={styles.keyStatus}>
+                          <div className={styles.keyMasked}>{apiKey.slice(0, 6)}{'•'.repeat(20)}{apiKey.slice(-4)}</div>
+                          <button className={styles.clearKeyBtn} onClick={clearApiKey}>Remove key</button>
+                        </div>
+                      )}
+                      {!keyLoading && !apiKey && (
+                        <>
+                          <input
+                            className={styles.keyInput}
+                            type="password"
+                            placeholder="SIAK-••••••••••••••••••••••••••••••••••"
+                            value={apiKeyInput}
+                            onChange={(e) => setApiKeyInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') saveApiKey(); }}
+                            autoComplete="off"
+                            spellCheck={false}
+                          />
+                          <button className={styles.saveKeyBtn} onClick={saveApiKey} disabled={!apiKeyInput.trim()}>
+                            Save Key
+                          </button>
+                        </>
+                      )}
+                      {apiKeySaved && <div className={styles.savedBadge}>✓ Siemens key saved! AI features unlocked.</div>}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className={styles.settingsDescription}>
+                      Get your free Groq API key at <strong>console.groq.com</strong>.
+                      Groq provides ultra-fast inference for open-weight models.
+                    </p>
+                    <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className={styles.settingsLink}>
+                      ↗ Get your Groq API key (console.groq.com → API Keys)
+                    </a>
+                    <div style={{ marginTop: 12 }}>
+                      <label className={styles.label}>
+                        {groqKeyLoading ? 'Loading…' : groqApiKey ? '✅ Groq API key (saved &amp; encrypted)' : 'Enter your Groq API key'}
+                      </label>
+                      {groqKeyLoading && <div className={styles.keyLoading}><span className={styles.spinner} /> Decrypting…</div>}
+                      {!groqKeyLoading && groqApiKey && (
+                        <div className={styles.keyStatus}>
+                          <div className={styles.keyMasked}>{groqApiKey.slice(0, 6)}{'•'.repeat(20)}{groqApiKey.slice(-4)}</div>
+                          <button className={styles.clearKeyBtn} onClick={clearGroqKey}>Remove key</button>
+                        </div>
+                      )}
+                      {!groqKeyLoading && !groqApiKey && (
+                        <>
+                          <input
+                            className={styles.keyInput}
+                            type="password"
+                            placeholder="gsk_••••••••••••••••••••••••••••••••••"
+                            value={groqKeyInput}
+                            onChange={(e) => setGroqKeyInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') saveGroqKey(); }}
+                            autoComplete="off"
+                            spellCheck={false}
+                          />
+                          <button className={styles.saveKeyBtn} onClick={saveGroqKey} disabled={!groqKeyInput.trim()}>
+                            Save Key
+                          </button>
+                        </>
+                      )}
+                      {groqKeySaved && <div className={styles.savedBadge}>✓ Groq key saved! AI features unlocked.</div>}
+                    </div>
+                  </>
+                )}
+              </div>
+
+                  </>
+                );
+              })()}
+
               {/* ─── Language selector ─── */}
               <div className={styles.settingsSection}>
                 <h3 className={styles.settingsTitle}>🌍 Response Language</h3>
@@ -1775,77 +2224,7 @@ export default function AiAssistant() {
               </div>
 
               <div className={styles.settingsSection}>
-                <h3 className={styles.settingsTitle}>🔑 API Key</h3>
-                <p className={styles.settingsDescription}>
-                  iX AI Assistant uses the <strong>Siemens LLM API</strong> (code.siemens.com).
-                  Generate your personal API key on <strong>my.siemens.com</strong> — available
-                  to every Siemens employee, no credit card needed.
-                </p>
-                <a
-                  href="https://my.siemens.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.settingsLink}
-                >
-                  ↗ Get your Siemens LLM API key (my.siemens.com → My Keys → Create, scope: llm)
-                </a>
-              </div>
-
-              <div className={styles.settingsSection}>
-                <label className={styles.label}>
-                  {keyLoading
-                    ? 'Loading…'
-                    : hasPremium
-                    ? '✅ AI API Key (saved & encrypted)'
-                    : 'Enter your AI API key'}
-                </label>
-
-                {keyLoading && (
-                  <div className={styles.keyLoading}>
-                    <span className={styles.spinner} /> Decrypting stored key…
-                  </div>
-                )}
-
-                {!keyLoading && hasPremium && (
-                  <div className={styles.keyStatus}>
-                    <div className={styles.keyMasked}>
-                      {apiKey.slice(0, 6)}{'•'.repeat(20)}{apiKey.slice(-4)}
-                    </div>
-                    <button className={styles.clearKeyBtn} onClick={clearApiKey}>
-                      Remove key
-                    </button>
-                  </div>
-                )}
-
-                {!keyLoading && !hasPremium && (
-                  <>
-                    <input
-                      className={styles.keyInput}
-                      type="password"
-                      placeholder="SIAK-••••••••••••••••••••••••••••••••••"
-                      value={apiKeyInput}
-                      onChange={(e) => setApiKeyInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') saveApiKey(); }}
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
-                    <button
-                      className={styles.saveKeyBtn}
-                      onClick={saveApiKey}
-                      disabled={!apiKeyInput.trim()}
-                    >
-                      Save Key
-                    </button>
-                  </>
-                )}
-
-                {apiKeySaved && (
-                  <div className={styles.savedBadge}>✓ Key saved! AI features are now unlocked.</div>
-                )}
-              </div>
-
-              <div className={styles.settingsSection}>
-                <h3 className={styles.settingsTitle}>🆓 Free vs Premium</h3>
+                <h3 className={styles.settingsTitle}>🆓 Free vs AI Assistant</h3>
                 <table className={styles.tierTable}>
                   <thead>
                     <tr>
@@ -1859,12 +2238,13 @@ export default function AiAssistant() {
                     <tr><td>Component lookup</td><td>✅</td><td>✅</td></tr>
                     <tr><td>AI chat (LLM)</td><td>—</td><td>✅</td></tr>
                     <tr><td>Code generation</td><td>—</td><td>✅</td></tr>
+                    <tr><td>Model selection</td><td>—</td><td>✅</td></tr>
                   </tbody>
                 </table>
                 <p className={styles.settingsNote}>
-                  🔒 Your key is <strong>AES-256-GCM encrypted</strong> before being saved to
-                  localStorage — it is never stored as plain text. The key is only sent to
-                  the AI provider's API, never to any other server.
+                  🔒 Your keys are <strong>AES-256-GCM encrypted</strong> before being saved to
+                  localStorage — never stored as plain text. Keys are only sent to the chosen
+                  provider's API endpoint.
                 </p>
               </div>
 

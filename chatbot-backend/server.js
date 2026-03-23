@@ -4,8 +4,11 @@ const cors = require("cors");
 const axios = require("axios");
 const docs = require("./docs.json");
 
-// Disable TLS certificate verification (corporate proxy compatibility)
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// Optional TLS bypass for corporate proxy compatibility (off by default)
+const ALLOW_INSECURE_SSL = String(process.env.ALLOW_INSECURE_SSL || "false").toLowerCase() === "true";
+if (ALLOW_INSECURE_SSL) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
 
 // ─── Usage Analytics ────────────────────────────────────────────────
 /**
@@ -420,45 +423,121 @@ console.log(`Hybrid search index (BM25 + cosine TF-IDF) built over ${docs.length
 
 // ─── LLM helpers ────────────────────────────────────────────────────
 
-async function askAI(context, question, userApiKey, lang = "en") {
+// Default models per provider
+const PROVIDER_DEFAULTS = {
+  siemens: {
+    chat: "glm-5",
+    codegen: "devstral-small-2505",
+  },
+  groq: {
+    chat: "llama-3.3-70b-versatile",
+    codegen: "llama-3.3-70b-versatile",
+  },
+};
+
+const PROVIDER_MODELS = {
+  siemens: new Set([
+    "glm-5",
+    "qwen3-30b-a3b-instruct-2507",
+    "qwen3-30b-a3b-thinking-2507",
+    "deepseek-r1-0528-qwen3-8b",
+    "devstral-small-2505",
+    "mistral-7b-instruct",
+  ]),
+  groq: new Set([
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+  ]),
+};
+
+function resolveProvider(provider) {
+  return provider === "groq" ? "groq" : "siemens";
+}
+
+function resolveModel(provider, model, task = "chat") {
+  const resolvedProvider = resolveProvider(provider);
+  const defaultsByTask = PROVIDER_DEFAULTS[resolvedProvider] || PROVIDER_DEFAULTS.siemens;
+  const fallback = task === "codegen" ? defaultsByTask.codegen : defaultsByTask.chat;
+  if (!model || typeof model !== "string") return fallback;
+  return PROVIDER_MODELS[resolvedProvider]?.has(model) ? model : fallback;
+}
+
+/**
+ * Unified LLM call helper supporting Siemens and Groq.
+ * Groq uses the same OpenAI-compatible interface but a different base URL
+ * and does NOT require the TLS bypass agent used for the Siemens corporate proxy.
+ */
+async function callLLM({ messages, apiKey, provider = "siemens", model, task = "chat", temperature = 0.3, maxTokens = 2048 }) {
+  const resolvedProvider = resolveProvider(provider);
+  const resolvedModel = resolveModel(resolvedProvider, model, task);
+
+  if (resolvedProvider === "groq") {
+    // Groq — public API, no custom httpsAgent
+    const response = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        model: resolvedModel,
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return response.data.choices[0].message.content;
+  } else {
+    // Siemens LLM API (corporate proxy — global TLS bypass already set)
+    const response = await axios.post(
+      "https://api.siemens.com/llm/v1/chat/completions",
+      {
+        model: resolvedModel,
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    return response.data.choices[0].message.content;
+  }
+}
+
+async function askAI(context, question, userApiKey, lang = "en", provider = "siemens", model = null) {
   const key = userApiKey || process.env.LLM_API_KEY;
   if (!key) throw new Error('No API key available. Please add your AI API key in the ⚙️ Settings tab.');
-  const response = await axios.post(
-    "https://api.siemens.com/llm/v1/chat/completions",
+
+  const messages = [
     {
-      model: "qwen3-30b-a3b-instruct-2507",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a helpful assistant for the Siemens Industrial Experience (iX) design system. " +
-            "Answer only from the provided documentation. " +
-            "If any component, property, or API in the question has been deprecated or removed, " +
-            "always highlight this clearly with a ⚠️ warning, state which version introduced the change, " +
-            `and provide the recommended replacement or migration path.${langInstruction(lang)}`,
-        },
-        {
-          role: "user",
-          content: `Documentation: ${context}\n\nQuestion: ${question}`,
-        },
-      ],
+      role: "system",
+      content:
+        "You are a helpful assistant for the Siemens Industrial Experience (iX) design system. " +
+        "Answer only from the provided documentation. " +
+        "If any component, property, or API in the question has been deprecated or removed, " +
+        "always highlight this clearly with a ⚠️ warning, state which version introduced the change, " +
+        `and provide the recommended replacement or migration path.${langInstruction(lang)}`,
     },
     {
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
+      role: "user",
+      content: `Documentation: ${context}\n\nQuestion: ${question}`,
+    },
+  ];
 
-  return response.data.choices[0].message.content;
+  return callLLM({ messages, apiKey: key, provider, model, task: "chat", temperature: 0.3, maxTokens: 2048 });
 }
 
 /**
  * Code-generation-specific LLM call.
  * Receives multiple component docs + the user description + target framework.
  */
-async function generateCode(componentDocs, description, framework, userApiKey, fileContent, fileName) {
+async function generateCode(componentDocs, description, framework, userApiKey, fileContent, fileName, provider = "siemens", model = null) {
   const key = userApiKey || process.env.LLM_API_KEY;
   if (!key) throw new Error('No API key available. Please add your AI API key in the ⚙️ Settings tab.');
   const frameworkGuide = {
@@ -496,26 +575,12 @@ Refactor or extend the following code to fulfil the user request using iX compon
 
   const userPrompt = `## Component Documentation (retrieved from iX docs)\n\n${docsContext}\n\n---\n\n## User Request\n\n"${description}"${fileSection}\n\nGenerate the complete ${framework} code for this UI.`;
 
-  const response = await axios.post(
-    "https://api.siemens.com/llm/v1/chat/completions",
-    {
-      model: "qwen3-30b-a3b-instruct-2507",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.2,
-      max_tokens: 4096,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const messages = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt },
+  ];
 
-  return response.data.choices[0].message.content;
+  return callLLM({ messages, apiKey: key, provider, model, task: "codegen", temperature: 0.2, maxTokens: 4096 });
 }
 
 // ─── Routes ─────────────────────────────────────────────────────────
@@ -527,7 +592,7 @@ Refactor or extend the following code to fulfil the user request using iX compon
  * Body: { question: string, apiKey?: string, history?: Array<{role,text}> }
  */
 app.post("/chat", rateLimiter, async (req, res) => {
-  const { question, apiKey: userApiKey, history, lang } = req.body;
+  const { question, apiKey: userApiKey, history, lang, provider = "siemens", model } = req.body;
 
   if (!question || !question.trim()) {
     return res.status(400).json({ error: "question is required" });
@@ -600,23 +665,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
   });
 
   try {
-    const response = await axios.post(
-      "https://api.siemens.com/llm/v1/chat/completions",
-      {
-        model: "qwen3-30b-a3b-instruct-2507",
-        messages,
-        temperature: 0.3,
-        max_tokens: 2048,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${key}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    const answer = response.data.choices[0].message.content;
+    const answer = await callLLM({ messages, apiKey: key, provider, model, task: "chat", temperature: 0.3, maxTokens: 2048 });
     res.json({
       answer,
       tier: "premium",
@@ -626,7 +675,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
   } catch (err) {
     const status = err.response?.status || 500;
     const message = err.response?.data?.error?.message || err.message;
-    console.error("Siemens LLM API error:", status, message);
+    console.error(`[${provider}] LLM API error:`, status, message);
     res.status(status).json({ error: message });
   }
 });
@@ -642,7 +691,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
  *   4. Response includes generated code + matched components list
  */
 app.post("/generate", rateLimiter, async (req, res) => {
-  const { description, framework = "react", apiKey: userApiKey, fileContent, fileName, lang } = req.body;
+  const { description, framework = "react", apiKey: userApiKey, fileContent, fileName, lang, provider = "siemens", model } = req.body;
 
   if (!description || !description.trim()) {
     return res.status(400).json({ error: "description is required" });
@@ -675,7 +724,7 @@ app.post("/generate", rateLimiter, async (req, res) => {
 
   try {
     // Step 2 — LLM: generate code using retrieved docs
-    const code = await generateCode(topDocs, description, framework, userApiKey, fileContent, fileName);
+    const code = await generateCode(topDocs, description, framework, userApiKey, fileContent, fileName, provider, model);
 
     res.json({
       code,
@@ -705,7 +754,7 @@ app.post("/generate", rateLimiter, async (req, res) => {
  * Returns: { migratedCode: string, summary: string }
  */
 app.post("/migrate", rateLimiter, async (req, res) => {
-  const { code, apiKey: userApiKey, lang } = req.body || {};
+  const { code, apiKey: userApiKey, lang, provider = "siemens", model } = req.body || {};
   if (!code || !code.toString().trim()) {
     return res.status(400).json({ error: "code is required" });
   }
@@ -731,7 +780,9 @@ app.post("/migrate", rateLimiter, async (req, res) => {
       "react",
       userApiKey,
       code.toString(),
-      "uploaded-file"
+      "uploaded-file",
+      provider,
+      model
     );
 
     // Ask for a brief summary of the migration steps performed
@@ -742,13 +793,56 @@ app.post("/migrate", rateLimiter, async (req, res) => {
     const summaryQuestion =
       "Provide a short (2-6 sentence) summary of the migration performed: list deprecated components replaced, notable API changes, and any manual follow-ups the developer should verify.";
 
-    const summary = await askAI(docsContext, `${summaryQuestion}\n\nOriginal code:\n${code.toString().slice(0, 4000)}`, userApiKey, lang || "en");
+    const summary = await askAI(docsContext, `${summaryQuestion}\n\nOriginal code:\n${code.toString().slice(0, 4000)}`, userApiKey, lang || "en", provider, model);
 
     res.json({ migratedCode, summary });
   } catch (err) {
     const status = err.response?.status || 500;
     const message = err.response?.data?.error?.message || err.message || "Migration failed";
     console.error("Migration error:", status, message);
+    res.status(status).json({ error: message });
+  }
+});
+
+/**
+ * POST /refine — conversational code refinement
+ * Body: { code: string, instruction: string, framework: string, apiKey?: string, provider?: string, model?: string }
+ * Returns: { code: string }
+ */
+app.post("/refine", rateLimiter, async (req, res) => {
+  const { code, instruction, framework = "react", apiKey: userApiKey, provider = "siemens", model } = req.body || {};
+  if (!code || !instruction) {
+    return res.status(400).json({ error: "code and instruction are required" });
+  }
+  const key = userApiKey || process.env.LLM_API_KEY;
+  if (!key) {
+    return res.status(400).json({ error: "No API key available. Please add your API key in ⚙️ Settings." });
+  }
+
+  const systemPrompt = `You are an expert code editor for the Siemens Industrial Experience (iX) design system. 
+Modify the provided code ONLY according to the user's instruction and return the complete updated code in a single fenced code block.
+Do not explain — only return the full updated code.`;
+
+  const userPrompt = `Framework: ${framework}\n\nExisting code:\n\`\`\`\n${code}\n\`\`\`\n\nInstruction: ${instruction}\n\nReturn the complete updated code.`;
+
+  try {
+    const refined = await callLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      apiKey: key,
+      provider,
+      model,
+      task: "codegen",
+      temperature: 0.2,
+      maxTokens: 4096,
+    });
+    res.json({ code: refined });
+  } catch (err) {
+    const status = err.response?.status || 500;
+    const message = err.response?.data?.error?.message || err.message;
+    console.error(`[${provider}] Refine error:`, status, message);
     res.status(status).json({ error: message });
   }
 });
