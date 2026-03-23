@@ -1734,6 +1734,10 @@
   gap: 14px;
 }
 
+.migrateBodyNoScroll {
+  overflow-y: hidden;
+}
+
 .migrateSummary {
   padding: 10px 14px;
   background: rgba(0, 189, 227, 0.07);
@@ -1786,7 +1790,17 @@
 
 .migrationVersionTableWrap {
   border-radius: 8px;
-  overflow: auto;
+  overflow: visible;
+}
+
+.migrationVersionTableWrap .tierTable {
+  table-layout: fixed;
+}
+
+.migrationVersionTableWrap .tierTable th,
+.migrationVersionTableWrap .tierTable td {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .diffBlock {

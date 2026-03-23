@@ -4146,7 +4146,7 @@ export default function AiAssistant() {
 
           {/* ─────── Migration Wizard View ─────── */}
           {mode === 'migrate' && (
-            <div className={styles.migrateBody}>
+            <div className={`${styles.migrateBody} ${migrationFlow === 'upgrade' ? styles.migrateBodyNoScroll : ''}`}>
               <div className={styles.settingsSection}>
                 <h3 className={styles.settingsTitle}>{ui('migrationTitle')}</h3>
                 <p className={styles.settingsDescription}>
