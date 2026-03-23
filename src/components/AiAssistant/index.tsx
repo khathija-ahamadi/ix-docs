@@ -150,7 +150,7 @@ async function encryptApiKey(plain: string): Promise<string> {
   const combined = new Uint8Array(12 + cipherBuf.byteLength);
   combined.set(iv, 0);
   combined.set(new Uint8Array(cipherBuf), 12);
-  return btoa(String.fromCharCode(...combined));
+  return btoa(String.fromCharCode(...Array.from(combined)));
 }
 
 async function decryptApiKey(stored: string): Promise<string> {
@@ -236,6 +236,28 @@ function getPanelMaxHeightPx(): number {
   if (typeof window === 'undefined') return 600;
   const vpH = document.documentElement.clientHeight;
   return Math.max(200, vpH - PANEL_BOTTOM_PX - PANEL_TOP_RESERVED_PX);
+}
+
+function stripCodeFence(code: string): string {
+  return code
+    .replace(/^```[\w-]*\n?/gm, '')
+    .replace(/```$/gm, '')
+    .trim();
+}
+
+function getDownloadFileName(framework: Framework): string {
+  return `ix-${framework}-generated.txt`;
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 // ── History helpers ─────────────────────────────────────────────────
@@ -1059,10 +1081,7 @@ export default function AiAssistant() {
   };
 
   const handleCopy = async () => {
-    const codeOnly = generatedCode
-      .replace(/^```[\w-]*\n?/gm, '')
-      .replace(/```$/gm, '')
-      .trim();
+    const codeOnly = stripCodeFence(generatedCode);
     try {
       await navigator.clipboard.writeText(codeOnly);
       setCopied(true);
@@ -1076,6 +1095,21 @@ export default function AiAssistant() {
       document.body.removeChild(textarea);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleDownload = () => {
+    if (!generatedCode.trim()) return;
+
+    setCodeError('');
+
+    try {
+      downloadBlob(
+        new Blob([generatedCode], { type: 'text/plain;charset=utf-8' }),
+        getDownloadFileName(framework)
+      );
+    } catch (err: any) {
+      setCodeError(err?.message || 'Could not download generated content.');
     }
   };
 
@@ -1145,10 +1179,7 @@ export default function AiAssistant() {
   //  FEATURE 2 — OPEN IN STACKBLITZ
   // ════════════════════════════════════════════════════════════
   const openInStackBlitz = () => {
-    const clean = generatedCode
-      .replace(/^```[\w-]*\n?/gm, '')
-      .replace(/```$/gm, '')
-      .trim();
+    const clean = stripCodeFence(generatedCode);
     const fileNames: Record<Framework, string> = {
       react: 'src/App.tsx',
       angular: 'src/app/app.component.ts',
@@ -2016,6 +2047,19 @@ export default function AiAssistant() {
                         </svg>
                         Regenerate
                       </button>
+                      <button
+                        className={styles.downloadBtn}
+                        onClick={handleDownload}
+                        disabled={codeLoading}
+                        title="Download code"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                          <path d="M8 2v7" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+                          <path d="M5.25 6.75L8 9.5l2.75-2.75" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M3 12.5h10" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+                        </svg>
+                        Download
+                      </button>
                       <button className={styles.copyBtn} onClick={handleCopy} title={copied ? 'Copied!' : 'Copy code'}>
                         {copied ? (
                           <>
@@ -2038,10 +2082,7 @@ export default function AiAssistant() {
                   </div>
                   <pre className={styles.codeBlock}>
                     <code>
-                      {generatedCode
-                        .replace(/^```[\w-]*\n?/gm, '')
-                        .replace(/```$/gm, '')
-                        .trim()}
+                      {stripCodeFence(generatedCode)}
                     </code>
                   </pre>
                 </div>
