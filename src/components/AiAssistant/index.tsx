@@ -1646,8 +1646,8 @@ const EXAMPLE_PROMPTS = [
   'Build a notification center using messagebar with dismiss and action buttons',
 ];
 
-const DEFAULT_WIDTH = 640;
-const DEFAULT_HEIGHT_VH = 80; // percent of viewport height
+const DEFAULT_WIDTH = 720;
+const DEFAULT_HEIGHT_VH = 84; // percent of viewport height
 const PANEL_BOTTOM_PX = 92; // must match CSS .panel { bottom }
 const PANEL_RIGHT_PX = 24; // must match CSS .panel { right }
 const VIEWPORT_PADDING = 8; // breathing room from edges
@@ -3144,7 +3144,15 @@ export default function AiAssistant() {
         aria-label={isOpen ? ui('closeAssistant') : ui('openAssistant')}
         title={ui('assistantTitle')}
       >
-        {isOpen ? '✕' : '🤖'}
+        {isOpen ? '✕' : (
+          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, lineHeight: 1 }}>
+            <span style={{ fontSize: 15 }}>🤖</span>
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, fontSize: 8, fontWeight: 600, letterSpacing: '0.01em' }}>
+              <span>iX</span>
+              <span>Assistant</span>
+            </span>
+          </span>
+        )}
       </button>
 
       {/* ── Unified panel ── */}
