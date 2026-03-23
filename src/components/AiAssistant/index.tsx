@@ -1892,7 +1892,21 @@ export default function AiAssistant() {
                     Go to docs
                   </a>
                   <a
-                    href="https://github.com/siemens/ix/discussions"
+                    href="https://ix.siemens.io/blog"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.helpLink}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className={styles.helpLinkIcon}>
+                      <rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                      <line x1="5" y1="5.5" x2="11" y2="5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                      <line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                      <line x1="5" y1="10.5" x2="9" y2="10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                    </svg>
+                    Blog
+                  </a>
+                  <a
+                    href="https://ix.siemens.io/docs/home/support/contact-us"
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.helpLink}
@@ -1902,31 +1916,19 @@ export default function AiAssistant() {
                       <path d="M6.5 6.5C6.5 5.67 7.17 5 8 5s1.5.67 1.5 1.5c0 1-1.5 1.5-1.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                       <circle cx="8" cy="11.5" r="0.75" fill="currentColor"/>
                     </svg>
-                    Go to support forums
+                    Support
                   </a>
                   <a
-                    href="https://support.industry.siemens.com/"
+                    href="https://ix.siemens.io/docs/home/getting-started/starter-app"
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.helpLink}
                   >
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className={styles.helpLinkIcon}>
-                      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5"/>
-                      <path d="M6.5 6.5C6.5 5.67 7.17 5 8 5s1.5.67 1.5 1.5c0 1-1.5 1.5-1.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                      <circle cx="8" cy="11.5" r="0.75" fill="currentColor"/>
+                      <path d="M3 2.5A1.5 1.5 0 014.5 1h7A1.5 1.5 0 0113 2.5v11a1.5 1.5 0 01-1.5 1.5h-7A1.5 1.5 0 013 13.5v-11z" stroke="currentColor" strokeWidth="1.5"/>
+                      <path d="M7 5l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    Contact support
-                  </a>
-                  <a
-                    href="https://www.siemens.com/global/en/company/contact.html"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.helpLink}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className={styles.helpLinkIcon}>
-                      <path d="M2 3.5A1.5 1.5 0 013.5 2h9A1.5 1.5 0 0114 3.5v7A1.5 1.5 0 0112.5 12H5l-3 2.5V3.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-                    </svg>
-                    Contact sales
+                    Starter app
                   </a>
                 </div>
               </div>
