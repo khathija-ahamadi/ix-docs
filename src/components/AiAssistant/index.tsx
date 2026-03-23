@@ -16,6 +16,7 @@ const CODEGEN_PROVIDER_STORAGE = 'ix-assistant-codegen-provider';
 const GROQ_KEY_STORAGE = 'ix-assistant-groq-key';
 const CHAT_MODEL_STORAGE = 'ix-assistant-chat-model';
 const CODEGEN_MODEL_STORAGE = 'ix-assistant-codegen-model';
+const USER_PROFILE_STORAGE = 'ix-assistant-user-profile';
 
 // ── Multi-language support ──────────────────────────────────────────────────
 type Language = 'en' | 'de' | 'zh' | 'fr' | 'es' | 'ja' | 'pt' | 'ko';
@@ -89,6 +90,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     queries: 'Queries',
     chat: 'Chat',
     codeGen: 'Code Gen',
+    account: 'Account',
     more: 'More',
     moreOptions: 'More options',
     history: 'History',
@@ -233,6 +235,26 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     keysEncryptedSuffix: "before being saved to localStorage — never stored as plain text. Keys are only sent to the chosen provider's API endpoint.",
     changeProviderModel: 'Change provider and model',
     addKeyInSettingsSuffix: ' (add key in Settings)',
+    accountTitle: '👤 Your Account',
+    accountDescription: 'Manage your iX AI Assistant profile and preferences.',
+    userName: 'Display Name',
+    userNamePlaceholder: 'Enter your name (e.g., John Doe)',
+    userEmail: 'Email Address',
+    userEmailPlaceholder: 'your.email@siemens.com',
+    userTheme: 'Theme Preference',
+    lightTheme: 'Light',
+    darkTheme: 'Dark',
+    autoTheme: 'Auto (System)',
+    notificationsEnabled: 'Enable Notifications',
+    notificationsDescription: 'Get notified when chat responses are ready',
+    saveProfile: 'Save Profile',
+    profileSaved: '✓ Profile saved successfully!',
+    profileSaveError: 'Failed to save profile. Please try again.',
+    accountStats: 'Your Statistics',
+    chatSessions: 'Chat Sessions',
+    codeGenSessions: 'Code Generations',
+    questionsAsked: 'Questions Asked',
+    codeGenerated: 'Code Generated',
   },
   de: {
     analyticsTitle: '📊 Nutzungsanalyse',
@@ -247,6 +269,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     queries: 'Anfragen',
     chat: 'Chat',
     codeGen: 'Code-Gen',
+    account: 'Konto',
     more: 'Mehr',
     moreOptions: 'Weitere Optionen',
     history: 'Verlauf',
@@ -286,7 +309,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     copy: 'Kopieren',
   },
   zh: {
-    chat: '聊天', codeGen: '代码生成', more: '更多', settings: '设置', help: '帮助', migrate: '迁移',
+    chat: '聊天', codeGen: '代码生成', account: '账户', more: '更多', settings: '设置', help: '帮助', migrate: '迁移',
     responseLanguageTitle: '🌍 回复语言',
     responseLanguageDescription: 'AI 将使用所选语言回复，代码示例始终保持原始语言。',
     send: '发送', askPlaceholder: '询问 Siemens iX 相关问题...', listening: '正在聆听…',
@@ -443,7 +466,7 @@ async function decryptApiKey(stored: string): Promise<string> {
   return new TextDecoder().decode(plainBuf);
 }
 
-type Mode = 'chat' | 'codegen' | 'settings' | 'migrate' | 'help' | 'analytics';
+type Mode = 'chat' | 'codegen' | 'account' | 'settings' | 'migrate' | 'help' | 'analytics';
 type Framework = 'react' | 'angular' | 'angular-standalone' | 'vue' | 'webcomponents';
 type MigrationFlow = 'api' | 'upgrade';
 
@@ -524,6 +547,15 @@ interface CodeGenSession {
   framework: Framework;
   code: string;
   matchedComponents: MatchedComponent[];
+}
+
+interface UserProfile {
+  name: string;
+  email: string;
+  theme: 'light' | 'dark' | 'auto';
+  notificationsEnabled: boolean;
+  createdAt: number;
+  lastUpdated: number;
 }
 
 const FRAMEWORK_LABELS: Record<Framework, string> = {
@@ -854,6 +886,23 @@ export default function AiAssistant() {
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [showCodeGenHistory, setShowCodeGenHistory] = useState(false);
 
+  // ── User Account state ──
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(USER_PROFILE_STORAGE);
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
+  });
+  const [userFormInput, setUserFormInput] = useState<Partial<UserProfile>>({});
+  const [profileSaveStatus, setProfileSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+
   // ── Active session ID refs (prevent duplicates when saving) ──
   const activeChatSessionIdRef = useRef<string | null>(null);
   const activeCodeGenSessionIdRef = useRef<string | null>(null);
@@ -862,6 +911,10 @@ export default function AiAssistant() {
   useEffect(() => {
     setChatHistory(loadChatHistory());
     setCodeGenHistory(loadCodeGenHistory());
+    // Initialize user form input
+    if (userProfile) {
+      setUserFormInput(userProfile);
+    }
   }, []);
 
   // ── Decrypt stored keys on mount ──
@@ -1519,6 +1572,40 @@ export default function AiAssistant() {
   };
 
   // ════════════════════════════════════════════════════════════
+  //  USER ACCOUNT MANAGEMENT
+  // ════════════════════════════════════════════════════════════
+
+  const saveUserProfile = () => {
+    try {
+      setProfileSaveStatus('saving');
+      const now = Date.now();
+      const profile: UserProfile = {
+        name: userFormInput.name || '',
+        email: userFormInput.email || '',
+        theme: userFormInput.theme || 'auto',
+        notificationsEnabled: userFormInput.notificationsEnabled ?? true,
+        createdAt: userProfile?.createdAt || now,
+        lastUpdated: now,
+      };
+      localStorage.setItem(USER_PROFILE_STORAGE, JSON.stringify(profile));
+      setUserProfile(profile);
+      setProfileSaveStatus('success');
+      setTimeout(() => setProfileSaveStatus('idle'), 2000);
+    } catch {
+      setProfileSaveStatus('error');
+      setTimeout(() => setProfileSaveStatus('idle'), 2000);
+    }
+  };
+
+  const updateUserFormField = (key: keyof UserProfile, value: any) => {
+    setUserFormInput((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+    setProfileSaveStatus('idle');
+  };
+
+  // ════════════════════════════════════════════════════════════
   //  FEATURE 2 — OPEN IN STACKBLITZ
   // ════════════════════════════════════════════════════════════
   const openInStackBlitz = () => {
@@ -1863,7 +1950,7 @@ export default function AiAssistant() {
                   </div>
                 </div>
             <div className={styles.headerActions}>
-              {mode !== 'settings' && mode !== 'help' && mode !== 'analytics' && (
+              {mode !== 'settings' && mode !== 'account' && mode !== 'help' && mode !== 'analytics' && (
                 <>
                   {mode !== 'migrate' && (
                     <button
@@ -1892,13 +1979,20 @@ export default function AiAssistant() {
                   </button>
                 </>
               )}
+              <button
+                className={styles.accountBtn}
+                onClick={() => switchMode('account')}
+                title={ui('account')}
+              >
+                👤
+              </button>
             </div>
           </div>
             );
           })()}
 
           {/* ─────── Tier banner ─────── */}
-          {mode !== 'settings' && mode !== 'migrate' && mode !== 'help' && mode !== 'analytics' && !keyLoading && !groqKeyLoading && (
+          {mode !== 'settings' && mode !== 'account' && mode !== 'migrate' && mode !== 'help' && mode !== 'analytics' && !keyLoading && !groqKeyLoading && (
             <div className={(mode === 'chat' ? hasChatPremium : hasCodegenPremium) ? styles.tierBannerPremium : styles.tierBannerFree}>
               {(mode === 'chat' ? hasChatPremium : hasCodegenPremium) ? (
                 (() => {
@@ -2517,6 +2611,131 @@ export default function AiAssistant() {
                   >
                     {refineLoading ? <span className={styles.spinner} /> : '\u2728'} {ui('refine')}
                   </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ─────── Account View ─────── */}
+          {mode === 'account' && (
+            <div className={styles.settingsBody}>
+              <div className={styles.settingsSection}>
+                <h3 className={styles.settingsTitle}>{ui('accountTitle')}</h3>
+                <p className={styles.settingsDescription}>
+                  {ui('accountDescription')}
+                </p>
+              </div>
+
+              {/* User Profile Form */}
+              <div className={styles.settingsSection}>
+                <div className={styles.section}>
+                  <label className={styles.label}>{ui('userName')}</label>
+                  <input
+                    className={styles.keyInput}
+                    type="text"
+                    placeholder={ui('userNamePlaceholder')}
+                    value={userFormInput.name || ''}
+                    onChange={(e) => updateUserFormField('name', e.target.value)}
+                  />
+                </div>
+
+                <div className={styles.section}>
+                  <label className={styles.label}>{ui('userEmail')}</label>
+                  <input
+                    className={styles.keyInput}
+                    type="email"
+                    placeholder={ui('userEmailPlaceholder')}
+                    value={userFormInput.email || ''}
+                    onChange={(e) => updateUserFormField('email', e.target.value)}
+                  />
+                </div>
+
+                <div className={styles.section}>
+                  <label className={styles.label}>{ui('userTheme')}</label>
+                  <select
+                    className={styles.selectorSelect}
+                    value={userFormInput.theme || 'auto'}
+                    onChange={(e) => updateUserFormField('theme', e.target.value as 'light' | 'dark' | 'auto')}
+                  >
+                    <option value="auto">{ui('autoTheme')}</option>
+                    <option value="light">{ui('lightTheme')}</option>
+                    <option value="dark">{ui('darkTheme')}</option>
+                  </select>
+                </div>
+
+                <div className={styles.section}>
+                  <label className={styles.label}>
+                    <input
+                      type="checkbox"
+                      checked={userFormInput.notificationsEnabled ?? true}
+                      onChange={(e) => updateUserFormField('notificationsEnabled', e.target.checked)}
+                      style={{ marginRight: 8, cursor: 'pointer' }}
+                    />
+                    {ui('notificationsEnabled')}
+                  </label>
+                  <p className={styles.settingsDescription} style={{ marginTop: 4 }}>
+                    {ui('notificationsDescription')}
+                  </p>
+                </div>
+
+                <button
+                  className={styles.saveKeyBtn}
+                  onClick={saveUserProfile}
+                  disabled={profileSaveStatus === 'saving'}
+                  style={{ marginTop: 12 }}
+                >
+                  {profileSaveStatus === 'saving' ? (
+                    <><span className={styles.spinner} /> {ui('loading')}</>
+                  ) : (
+                    ui('saveProfile')
+                  )}
+                </button>
+
+                {profileSaveStatus === 'success' && (
+                  <div className={styles.info} style={{ marginTop: 12 }}>
+                    {ui('profileSaved')}
+                  </div>
+                )}
+
+                {profileSaveStatus === 'error' && (
+                  <div className={styles.error} style={{ marginTop: 12 }}>
+                    {ui('profileSaveError')}
+                    <button className={styles.errorClose} onClick={() => setProfileSaveStatus('idle')}>✕</button>
+                  </div>
+                )}
+              </div>
+
+              {/* User Statistics */}
+              <div className={styles.settingsSection}>
+                <h3 className={styles.settingsTitle}>{ui('accountStats')}</h3>
+                <table className={styles.tierTable}>
+                  <tbody>
+                    <tr>
+                      <td>{ui('chatSessions')}</td>
+                      <td style={{ textAlign: 'center' }}><strong>{chatHistory.length}</strong></td>
+                    </tr>
+                    <tr>
+                      <td>{ui('codeGenSessions')}</td>
+                      <td style={{ textAlign: 'center' }}><strong>{codeGenHistory.length}</strong></td>
+                    </tr>
+                    <tr>
+                      <td>{ui('questionsAsked')}</td>
+                      <td style={{ textAlign: 'center' }}><strong>{chatHistory.reduce((sum, session) => sum + session.messages.filter(m => m.role === 'user').length, 0)}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* User Profile Info */}
+              {userProfile && (
+                <div className={styles.settingsSection}>
+                  <h3 className={styles.settingsTitle}>Profile Created</h3>
+                  <p className={styles.settingsDescription}>
+                    {new Date(userProfile.createdAt).toLocaleDateString()} at {new Date(userProfile.createdAt).toLocaleTimeString()}
+                  </p>
+                  <p className={styles.settingsDescription} style={{ marginTop: 8, fontSize: '12px', color: 'var(--theme-color-std-text, rgba(245,252,255,0.7))' }}>
+                    Last updated: {new Date(userProfile.lastUpdated).toLocaleDateString()}
+                  </p>
                 </div>
               )}
             </div>
