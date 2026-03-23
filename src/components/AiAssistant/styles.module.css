@@ -1727,6 +1727,51 @@
   color: var(--theme-color-std-text, rgba(245, 252, 255, 0.9));
 }
 
+.migrationModeToggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.migrationModeBtn {
+  min-height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--theme-color-soft-bdr, rgba(229, 247, 255, 0.18));
+  background: var(--theme-color-component-1, rgba(229, 247, 255, 0.04));
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s, color 0.18s;
+}
+
+.migrationModeBtn:hover:not(:disabled) {
+  border-color: var(--theme-color-primary, #00bde3);
+  color: var(--theme-color-std-text, rgba(245, 252, 255, 0.9));
+}
+
+.migrationModeBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.migrationModeBtnActive {
+  border-color: var(--theme-color-primary, #00bde3);
+  color: var(--theme-color-primary, #00bde3);
+  background: rgba(0, 189, 227, 0.12);
+}
+
+.migrationUpgradeConfig {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.migrationVersionTableWrap {
+  border-radius: 8px;
+  overflow: auto;
+}
+
 .diffBlock {
   background: var(--theme-color-1, #0f1619);
   border: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.2));

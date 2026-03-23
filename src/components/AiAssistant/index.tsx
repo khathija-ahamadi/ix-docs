@@ -118,13 +118,33 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     starterApp: 'Starter app',
     migrationTitle: '🔀 Deprecation Migration Wizard',
     migrationDescription: 'Paste code that uses deprecated iX APIs. The wizard analyzes it and outputs upgraded code with a line-by-line diff and a plain-language migration summary.',
+    migrationModeApi: 'API Migration',
+    migrationModeUpgrade: 'Version Upgrade',
+    migrationUpgradeDescription: 'Upgrade code between supported iX versions. Select source and target versions to get guidance and transformed code.',
     yourExistingCode: 'Your existing code',
     migrationPlaceholder: 'Paste code that uses deprecated iX components or APIs…',
+    migrationUpgradePlaceholder: 'Paste code to upgrade between iX versions…',
     analyzing: 'Analyzing…',
     analyzeAndMigrate: 'Analyze & Migrate',
+    analyzeAndUpgrade: 'Analyze & Upgrade',
     summary: 'Summary:',
     diff: '🔄 Diff (old → new)',
     migratedCode: 'Migrated Code',
+    fromVersion: 'From Version',
+    toVersion: 'To Version',
+    version: 'Version',
+    versionStatus: 'Status',
+    latest: 'Latest',
+    maintenance: 'Maintenance',
+    endOfLife: 'End of Life',
+    released: 'Released',
+    maintenanceSince: 'Maintenance since',
+    eolSince: 'End of life since',
+    notApplicable: '-',
+    upgradeVersionRequired: 'Select both source and target versions.',
+    upgradeVersionOrderError: 'Target version must be newer than source version.',
+    upgradeFromEolWarning: '⚠️ Source version {version} is End of Life. Upgrade is recommended as soon as possible.',
+    upgradePathHint: 'Recommended path for V2.0.0: upgrade to V3.0.0 first, then to V4.0.0.',
     copy: 'Copy',
     voiceInputNotSupported: 'Voice input is not supported in this browser.',
     voiceRecognitionError: 'Voice recognition error. Please try again.',
@@ -425,6 +445,47 @@ async function decryptApiKey(stored: string): Promise<string> {
 
 type Mode = 'chat' | 'codegen' | 'settings' | 'migrate' | 'help' | 'analytics';
 type Framework = 'react' | 'angular' | 'angular-standalone' | 'vue' | 'webcomponents';
+type MigrationFlow = 'api' | 'upgrade';
+
+type IxVersionStatus = 'latest' | 'maintenance' | 'eol';
+
+interface IxVersionInfo {
+  id: string;
+  status: IxVersionStatus;
+  released: string;
+  maintenanceSince: string;
+  eolSince: string;
+}
+
+const IX_VERSIONS: IxVersionInfo[] = [
+  {
+    id: 'V4.0.0',
+    status: 'latest',
+    released: 'November 2025',
+    maintenanceSince: '-',
+    eolSince: '-',
+  },
+  {
+    id: 'V3.0.0',
+    status: 'maintenance',
+    released: 'May 2025',
+    maintenanceSince: 'November 2025',
+    eolSince: '-',
+  },
+  {
+    id: 'V2.0.0',
+    status: 'eol',
+    released: 'September 2023',
+    maintenanceSince: 'May 2025',
+    eolSince: 'November 2025',
+  },
+];
+
+const IX_VERSION_ORDER: Record<string, number> = {
+  'V2.0.0': 2,
+  'V3.0.0': 3,
+  'V4.0.0': 4,
+};
 
 interface Source {
   title: string;
@@ -884,6 +945,9 @@ export default function AiAssistant() {
   const [migrateLoading, setMigrateLoading] = useState(false);
   const [migrateError, setMigrateError] = useState('');
   const [migrateSummary, setMigrateSummary] = useState('');
+  const [migrationFlow, setMigrationFlow] = useState<MigrationFlow>('api');
+  const [upgradeFromVersion, setUpgradeFromVersion] = useState('V3.0.0');
+  const [upgradeToVersion, setUpgradeToVersion] = useState('V4.0.0');
 
   // ── AbortController refs for in-flight requests ──
   const chatAbortRef = useRef<AbortController | null>(null);
@@ -1578,6 +1642,18 @@ export default function AiAssistant() {
   // ════════════════════════════════════════════════════════════
   const handleMigrate = async () => {
     if (!migrateInput.trim() || migrateLoading) return;
+
+    if (migrationFlow === 'upgrade') {
+      if (!upgradeFromVersion || !upgradeToVersion) {
+        setMigrateError(ui('upgradeVersionRequired'));
+        return;
+      }
+      if ((IX_VERSION_ORDER[upgradeToVersion] || 0) <= (IX_VERSION_ORDER[upgradeFromVersion] || 0)) {
+        setMigrateError(ui('upgradeVersionOrderError'));
+        return;
+      }
+    }
+
     if (!hasCodegenPremium) {
       setMigrateError(ui('migrationNeedsKey'));
       return;
@@ -1593,7 +1669,16 @@ export default function AiAssistant() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: migrateAbortRef.current.signal,
-        body: JSON.stringify({ code: migrateInput, apiKey: codegenActiveKey, lang, provider: codegenProvider, model: effectiveCodegenModel }),
+        body: JSON.stringify({
+          code: migrateInput,
+          apiKey: codegenActiveKey,
+          lang,
+          provider: codegenProvider,
+          model: effectiveCodegenModel,
+          flow: migrationFlow,
+          fromVersion: migrationFlow === 'upgrade' ? upgradeFromVersion : undefined,
+          toVersion: migrationFlow === 'upgrade' ? upgradeToVersion : undefined,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -2792,15 +2877,110 @@ export default function AiAssistant() {
               <div className={styles.settingsSection}>
                 <h3 className={styles.settingsTitle}>{ui('migrationTitle')}</h3>
                 <p className={styles.settingsDescription}>
-                  {ui('migrationDescription')}
+                  {migrationFlow === 'upgrade' ? ui('migrationUpgradeDescription') : ui('migrationDescription')}
                 </p>
               </div>
+
+              <div className={styles.migrationModeToggle}>
+                <button
+                  className={`${styles.migrationModeBtn} ${migrationFlow === 'api' ? styles.migrationModeBtnActive : ''}`}
+                  onClick={() => {
+                    setMigrationFlow('api');
+                    setMigrateError('');
+                  }}
+                  disabled={migrateLoading}
+                >
+                  {ui('migrationModeApi')}
+                </button>
+                <button
+                  className={`${styles.migrationModeBtn} ${migrationFlow === 'upgrade' ? styles.migrationModeBtnActive : ''}`}
+                  onClick={() => {
+                    setMigrationFlow('upgrade');
+                    setMigrateError('');
+                  }}
+                  disabled={migrateLoading}
+                >
+                  {ui('migrationModeUpgrade')}
+                </button>
+              </div>
+
+              {migrationFlow === 'upgrade' && (
+                <div className={styles.migrationUpgradeConfig}>
+                  <div className={styles.selectorGroup}>
+                    <label className={styles.modelSelectorLabel} htmlFor="upgrade-from-version">{ui('fromVersion')}</label>
+                    <select
+                      id="upgrade-from-version"
+                      className={styles.selectorSelect}
+                      value={upgradeFromVersion}
+                      onChange={(e) => setUpgradeFromVersion(e.target.value)}
+                      disabled={migrateLoading}
+                    >
+                      {IX_VERSIONS.map((version) => (
+                        <option key={version.id} value={version.id}>{version.id}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className={styles.selectorGroup}>
+                    <label className={styles.modelSelectorLabel} htmlFor="upgrade-to-version">{ui('toVersion')}</label>
+                    <select
+                      id="upgrade-to-version"
+                      className={styles.selectorSelect}
+                      value={upgradeToVersion}
+                      onChange={(e) => setUpgradeToVersion(e.target.value)}
+                      disabled={migrateLoading}
+                    >
+                      {IX_VERSIONS.map((version) => (
+                        <option key={version.id} value={version.id}>{version.id}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {migrationFlow === 'upgrade' && (
+                <div className={styles.migrationVersionTableWrap}>
+                  <table className={styles.tierTable}>
+                    <thead>
+                      <tr>
+                        <th>{ui('version')}</th>
+                        <th>{ui('versionStatus')}</th>
+                        <th>{ui('released')}</th>
+                        <th>{ui('maintenanceSince')}</th>
+                        <th>{ui('eolSince')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {IX_VERSIONS.map((version) => (
+                        <tr key={version.id}>
+                          <td>{version.id}</td>
+                          <td>{version.status === 'latest' ? ui('latest') : version.status === 'maintenance' ? ui('maintenance') : ui('endOfLife')}</td>
+                          <td>{version.released}</td>
+                          <td>{version.maintenanceSince || ui('notApplicable')}</td>
+                          <td>{version.eolSince || ui('notApplicable')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {migrationFlow === 'upgrade' && IX_VERSIONS.find((v) => v.id === upgradeFromVersion)?.status === 'eol' && (
+                <div className={styles.info}>
+                  {ui('upgradeFromEolWarning', { version: upgradeFromVersion })}
+                </div>
+              )}
+
+              {migrationFlow === 'upgrade' && upgradeFromVersion === 'V2.0.0' && (
+                <div className={styles.info}>
+                  {ui('upgradePathHint')}
+                </div>
+              )}
 
               <div className={styles.section}>
                 <label className={styles.label}>{ui('yourExistingCode')}</label>
                 <textarea
                   className={styles.textarea}
-                  placeholder={ui('migrationPlaceholder')}
+                  placeholder={migrationFlow === 'upgrade' ? ui('migrationUpgradePlaceholder') : ui('migrationPlaceholder')}
                   value={migrateInput}
                   onChange={(e) => setMigrateInput(e.target.value)}
                   rows={7}
@@ -2811,10 +2991,15 @@ export default function AiAssistant() {
               <button
                 className={styles.generateBtn}
                 onClick={handleMigrate}
-                disabled={migrateLoading || !migrateInput.trim()}
+                disabled={
+                  migrateLoading ||
+                  !migrateInput.trim() ||
+                  (migrationFlow === 'upgrade' &&
+                    ((IX_VERSION_ORDER[upgradeToVersion] || 0) <= (IX_VERSION_ORDER[upgradeFromVersion] || 0)))
+                }
               >
                 {migrateLoading ? <span className={styles.spinner} /> : '🔍'}{' '}
-                {migrateLoading ? ui('analyzing') : ui('analyzeAndMigrate')}
+                {migrateLoading ? ui('analyzing') : migrationFlow === 'upgrade' ? ui('analyzeAndUpgrade') : ui('analyzeAndMigrate')}
               </button>
 
               {!hasPremium && !migrateLoading && !migrateOutput && (

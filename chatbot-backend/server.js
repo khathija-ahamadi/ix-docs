@@ -737,6 +737,19 @@ function resolveModel(provider, model, task = "chat") {
   return PROVIDER_MODELS[resolvedProvider]?.has(model) ? model : fallback;
 }
 
+function resolveApiKey(provider, userApiKey) {
+  if (typeof userApiKey === "string" && userApiKey.trim()) {
+    return userApiKey.trim();
+  }
+
+  const resolvedProvider = resolveProvider(provider);
+  if (resolvedProvider === "groq") {
+    return process.env.GROQ_API_KEY || "";
+  }
+
+  return process.env.SIEMENS_LLM_API_KEY || process.env.LLM_API_KEY || "";
+}
+
 /**
  * Unified LLM call helper supporting Siemens and Groq.
  * Groq uses the same OpenAI-compatible interface but a different base URL
@@ -786,7 +799,7 @@ async function callLLM({ messages, apiKey, provider = "siemens", model, task = "
 }
 
 async function askAI(context, question, userApiKey, lang = "en", provider = "siemens", model = null) {
-  const key = userApiKey || process.env.LLM_API_KEY;
+  const key = resolveApiKey(provider, userApiKey);
   if (!key) {
     const err = new Error("NO_API_KEY");
     err.code = "NO_API_KEY";
@@ -820,7 +833,7 @@ async function askAI(context, question, userApiKey, lang = "en", provider = "sie
  * Receives multiple component docs + the user description + target framework.
  */
 async function generateCode(componentDocs, description, framework, userApiKey, fileContent, fileName, provider = "siemens", model = null, lang = "en") {
-  const key = userApiKey || process.env.LLM_API_KEY;
+  const key = resolveApiKey(provider, userApiKey);
   if (!key) {
     const err = new Error("NO_API_KEY");
     err.code = "NO_API_KEY";
@@ -886,7 +899,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
     return res.status(400).json({ error: localize(resolvedLang, "questionRequired") });
   }
 
-  const key = userApiKey || process.env.LLM_API_KEY;
+  const key = resolveApiKey(provider, userApiKey);
 
   // Track analytics
   trackAnalytics(question, "chat", resolvedLang);
@@ -1048,17 +1061,49 @@ app.post("/generate", rateLimiter, async (req, res) => {
 
 /**
  * POST /migrate — code migration / deprecation assistant
- * Body: { code: string, apiKey?: string, lang?: string }
+ * Body: {
+ *   code: string,
+ *   apiKey?: string,
+ *   lang?: string,
+ *   flow?: "api" | "upgrade",
+ *   fromVersion?: string,
+ *   toVersion?: string
+ * }
  * Returns: { migratedCode: string, summary: string }
  */
 app.post("/migrate", rateLimiter, async (req, res) => {
-  const { code, apiKey: userApiKey, lang, provider = "siemens", model } = req.body || {};
+  const {
+    code,
+    apiKey: userApiKey,
+    lang,
+    provider = "siemens",
+    model,
+    flow,
+    fromVersion,
+    toVersion,
+  } = req.body || {};
   const resolvedLang = normalizeLang(lang);
+  const migrationFlow = flow === "upgrade" ? "upgrade" : "api";
+
   if (!code || !code.toString().trim()) {
     return res.status(400).json({ error: localize(resolvedLang, "codeRequired") });
   }
 
-  const key = userApiKey || process.env.LLM_API_KEY;
+  if (migrationFlow === "upgrade") {
+    const versionOrder = {
+      "V2.0.0": 2,
+      "V3.0.0": 3,
+      "V4.0.0": 4,
+    };
+    if (!fromVersion || !toVersion) {
+      return res.status(400).json({ error: "Both fromVersion and toVersion are required for upgrade flow." });
+    }
+    if ((versionOrder[toVersion] || 0) <= (versionOrder[fromVersion] || 0)) {
+      return res.status(400).json({ error: "toVersion must be newer than fromVersion." });
+    }
+  }
+
+  const key = resolveApiKey(provider, userApiKey);
   if (!key) {
     return res.status(400).json({ error: localize(resolvedLang, "noApiKeyAiSettings") });
   }
@@ -1068,15 +1113,23 @@ app.post("/migrate", rateLimiter, async (req, res) => {
 
   try {
     // Retrieve relevant docs to give the LLM context about iX components
-    const migrationQuery = `${code.toString()} migrate migration deprecated removed replacement Siemens iX`;
+    const migrationQuery =
+      migrationFlow === "upgrade"
+        ? `${code.toString()} Siemens iX upgrade ${fromVersion} ${toVersion} breaking changes release notes migration path`
+        : `${code.toString()} migrate migration deprecated removed replacement Siemens iX`;
     const matchedDocs = searchDocs(migrationQuery, 12);
     const topDocs = matchedDocs.slice(0, 12);
+
+    const migrationDescription =
+      migrationFlow === "upgrade"
+        ? `Upgrade the provided code from Siemens iX ${fromVersion} to ${toVersion}. Use only documented Siemens iX changes from the provided excerpts, apply required breaking/deprecation updates, preserve behavior, and return complete copy-paste-ready upgraded code.`
+        : `Migrate the provided code to the current Siemens iX APIs. Replace deprecated components/APIs with documented replacements, preserve behavior, and return complete copy-paste-ready code.`;
 
     // Ask the code-generator to produce migrated code. Use the original file content
     // so the generator can refactor/replace deprecated components where applicable.
     const migratedCode = await generateCode(
       topDocs,
-      `Migrate the following code to use the Siemens iX design system. Replace deprecated components with their recommended replacements and keep behavior identical. Return complete, copy-paste-ready code.`,
+      migrationDescription,
       "react",
       userApiKey,
       code.toString(),
@@ -1090,11 +1143,20 @@ app.post("/migrate", rateLimiter, async (req, res) => {
     const docsContext = buildDocsContextForPrompt(topDocs, { includeUrls: true });
 
     const summaryQuestion =
-      "Provide a short (2-6 sentence) summary of the migration performed: list deprecated components replaced, notable API changes, and any manual follow-ups the developer should verify.";
+      migrationFlow === "upgrade"
+        ? `Provide a short (2-6 sentence) summary of the ${fromVersion} → ${toVersion} upgrade: list notable breaking changes applied, deprecated APIs/components replaced, and manual verification steps.`
+        : "Provide a short (2-6 sentence) summary of the migration performed: list deprecated components replaced, notable API changes, and any manual follow-ups the developer should verify.";
 
-    const summary = await askAI(docsContext, `${summaryQuestion}\n\nOriginal code:\n${code.toString().slice(0, 4000)}`, userApiKey, resolvedLang, provider, model);
+    const summary = await askAI(
+      docsContext,
+      `${summaryQuestion}\n\nOriginal code:\n${code.toString().slice(0, 3000)}\n\nMigrated code:\n${migratedCode.toString().slice(0, 3000)}`,
+      userApiKey,
+      resolvedLang,
+      provider,
+      model
+    );
 
-    res.json({ migratedCode, summary });
+    res.json({ migratedCode, summary, flow: migrationFlow, fromVersion: fromVersion || null, toVersion: toVersion || null });
   } catch (err) {
     const status = err.response?.status || 500;
     const message =
@@ -1117,7 +1179,7 @@ app.post("/refine", rateLimiter, async (req, res) => {
   if (!code || !instruction) {
     return res.status(400).json({ error: localize(resolvedLang, "codeAndInstructionRequired") });
   }
-  const key = userApiKey || process.env.LLM_API_KEY;
+  const key = resolveApiKey(provider, userApiKey);
   if (!key) {
     return res.status(400).json({ error: localize(resolvedLang, "noApiKeySettings") });
   }
