@@ -1418,13 +1418,15 @@ export default function AiAssistant() {
                     className={`${styles.tab} ${mode === 'chat' ? styles.tabActive : ''}`}
                     onClick={() => switchMode('chat')}
                   >
-                    💬 Chat
+                    <span className={styles.tabIcon}>💬</span>
+                    <span className={styles.tabLabel}>Chat</span>
                   </button>
                   <button
                     className={`${styles.tab} ${mode === 'codegen' ? styles.tabActive : ''}`}
                     onClick={() => switchMode('codegen')}
                   >
-                    &lt;/&gt; Code Gen
+                    <span className={styles.tabIcon}>&lt;/&gt;</span>
+                    <span className={styles.tabLabel}>Code Gen</span>
                   </button>
 
                   {/* Promoted "more" tab — shown when an overflow mode is active */}
@@ -1433,7 +1435,8 @@ export default function AiAssistant() {
                       className={`${styles.tab} ${styles.tabActive} ${styles.tabPromoted}`}
                       onClick={() => switchMode(promotedItem.id)}
                     >
-                      {promotedItem.label}
+                      <span className={styles.tabIcon}>{promotedItem.label.split(' ')[0]}</span>
+                      <span className={styles.tabLabel}>{promotedItem.label.split(' ').slice(1).join(' ')}</span>
                     </button>
                   )}
 
@@ -1444,7 +1447,8 @@ export default function AiAssistant() {
                       onClick={() => setShowMoreMenu((v) => !v)}
                       title="More options"
                     >
-                      ··· More
+                      <span className={styles.tabIcon}>···</span>
+                      <span className={styles.tabLabel}>More</span>
                     </button>
                     {showMoreMenu && (
                       <div className={styles.moreMenu}>
