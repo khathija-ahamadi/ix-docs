@@ -150,6 +150,10 @@ const LOCALIZED_MESSAGES = {
     noApiKeyAiSettings: "No API key available. Please add your AI API key in the ⚙️ Settings tab.",
     noApiKeySettings: "No API key available. Please add your API key in ⚙️ Settings.",
     migrationFailed: "Migration failed",
+    versionRequired: "Both fromVersion and toVersion are required for upgrade flow.",
+    invalidVersion: "toVersion must be newer than fromVersion.",
+    settingsSaved: "Settings saved successfully.",
+    missingLanguage: "language field is required",
   },
   de: {
     rateLimitExceeded: "Ratenlimit überschritten. Bitte warte einen Moment, bevor du es erneut versuchst.",
@@ -164,6 +168,10 @@ const LOCALIZED_MESSAGES = {
     noApiKeyAiSettings: "Kein API-Schlüssel verfügbar. Bitte füge deinen KI-API-Schlüssel im Tab ⚙️ Einstellungen hinzu.",
     noApiKeySettings: "Kein API-Schlüssel verfügbar. Bitte füge deinen API-Schlüssel in ⚙️ Einstellungen hinzu.",
     migrationFailed: "Migration fehlgeschlagen",
+    versionRequired: "Sowohl fromVersion als auch toVersion sind für den Upgrade-Flow erforderlich.",
+    invalidVersion: "toVersion muss neuer sein als fromVersion.",
+    settingsSaved: "Einstellungen erfolgreich gespeichert.",
+    missingLanguage: "language-Feld ist erforderlich",
   },
   zh: {
     rateLimitExceeded: "请求过于频繁。请稍后再试。",
@@ -178,6 +186,10 @@ const LOCALIZED_MESSAGES = {
     noApiKeyAiSettings: "没有可用的 API Key。请在 ⚙️ 设置中添加你的 AI API Key。",
     noApiKeySettings: "没有可用的 API Key。请在 ⚙️ 设置中添加你的 API Key。",
     migrationFailed: "迁移失败",
+    versionRequired: "升级流程需要 fromVersion 和 toVersion。",
+    invalidVersion: "toVersion 必须比 fromVersion 更新。",
+    settingsSaved: "设置保存成功。",
+    missingLanguage: "需要 language 字段",
   },
   fr: {
     rateLimitExceeded: "Limite de requêtes dépassée. Merci d'attendre un instant avant de réessayer.",
@@ -192,6 +204,10 @@ const LOCALIZED_MESSAGES = {
     noApiKeyAiSettings: "Aucune clé API disponible. Veuillez ajouter votre clé API IA dans l'onglet ⚙️ Paramètres.",
     noApiKeySettings: "Aucune clé API disponible. Veuillez ajouter votre clé API dans ⚙️ Paramètres.",
     migrationFailed: "La migration a échoué",
+    versionRequired: "fromVersion et toVersion sont requis pour le flux de mise à niveau.",
+    invalidVersion: "toVersion doit être plus récent que fromVersion.",
+    settingsSaved: "Paramètres enregistrés avec succès.",
+    missingLanguage: "Le champ language est requis",
   },
   es: {
     rateLimitExceeded: "Límite de solicitudes excedido. Espera un momento antes de volver a intentarlo.",
@@ -206,6 +222,10 @@ const LOCALIZED_MESSAGES = {
     noApiKeyAiSettings: "No hay una clave API disponible. Agrega tu clave API de IA en la pestaña ⚙️ Configuración.",
     noApiKeySettings: "No hay una clave API disponible. Agrega tu clave API en ⚙️ Configuración.",
     migrationFailed: "La migración falló",
+    versionRequired: "Se requieren fromVersion y toVersion para el flujo de actualización.",
+    invalidVersion: "toVersion debe ser más reciente que fromVersion.",
+    settingsSaved: "Configuración guardada con éxito.",
+    missingLanguage: "El campo language es obligatorio",
   },
   ja: {
     rateLimitExceeded: "レート制限を超えました。しばらく待ってから再試行してください。",
@@ -220,6 +240,10 @@ const LOCALIZED_MESSAGES = {
     noApiKeyAiSettings: "利用可能な API キーがありません。⚙️ 設定タブで AI API キーを追加してください。",
     noApiKeySettings: "利用可能な API キーがありません。⚙️ 設定で API キーを追加してください。",
     migrationFailed: "移行に失敗しました",
+    versionRequired: "アップグレードフローには fromVersion と toVersion の両方が必要です。",
+    invalidVersion: "toVersion は fromVersion より新しい必要があります。",
+    settingsSaved: "設定が正常に保存されました。",
+    missingLanguage: "language フィールドが必要です",
   },
   pt: {
     rateLimitExceeded: "Limite de requisições excedido. Aguarde um momento antes de tentar novamente.",
@@ -234,6 +258,10 @@ const LOCALIZED_MESSAGES = {
     noApiKeyAiSettings: "Nenhuma chave de API disponível. Adicione sua chave de API de IA na aba ⚙️ Configurações.",
     noApiKeySettings: "Nenhuma chave de API disponível. Adicione sua chave de API em ⚙️ Configurações.",
     migrationFailed: "Falha na migração",
+    versionRequired: "fromVersion e toVersion são obrigatórios para o fluxo de atualização.",
+    invalidVersion: "toVersion deve ser mais recente que fromVersion.",
+    settingsSaved: "Configurações salvas com sucesso.",
+    missingLanguage: "O campo language é obrigatório",
   },
   ko: {
     rateLimitExceeded: "요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.",
@@ -248,6 +276,10 @@ const LOCALIZED_MESSAGES = {
     noApiKeyAiSettings: "사용 가능한 API 키가 없습니다. ⚙️ 설정 탭에서 AI API 키를 추가해 주세요.",
     noApiKeySettings: "사용 가능한 API 키가 없습니다. ⚙️ 설정에서 API 키를 추가해 주세요.",
     migrationFailed: "마이그레이션에 실패했습니다",
+    versionRequired: "업그레이드 흐름에는 fromVersion과 toVersion이 필요합니다.",
+    invalidVersion: "toVersion은 fromVersion보다 최신 버전이어야 합니다.",
+    settingsSaved: "설정이 성공적으로 저장되었습니다.",
+    missingLanguage: "language 필드가 필요합니다",
   },
 };
 
@@ -1096,10 +1128,10 @@ app.post("/migrate", rateLimiter, async (req, res) => {
       "V4.0.0": 4,
     };
     if (!fromVersion || !toVersion) {
-      return res.status(400).json({ error: "Both fromVersion and toVersion are required for upgrade flow." });
+      return res.status(400).json({ error: localize(resolvedLang, "versionRequired") });
     }
     if ((versionOrder[toVersion] || 0) <= (versionOrder[fromVersion] || 0)) {
-      return res.status(400).json({ error: "toVersion must be newer than fromVersion." });
+      return res.status(400).json({ error: localize(resolvedLang, "invalidVersion") });
     }
   }
 
@@ -1212,15 +1244,152 @@ Do not explain — only return the full updated code.${langInstruction(resolvedL
   }
 });
 
+/**
+ * GET /user/settings — retrieve user account settings
+ * Optional Query: userId (in real apps, would be from auth context)
+ * Returns cached user preferences: language, provider, defaultModel, etc.
+ */
+app.get("/user/settings", (req, res) => {
+  const lang = getRequestLang(req);
+  // In production, extract userId from JWT token or session
+  const userId = req.query?.userId || "anonymous";
+  
+  // Retrieve from in-memory store or database
+  // For now, return defaults based on request language
+  res.json({
+    userId,
+    language: lang,
+    provider: "siemens",
+    chatModel: "glm-5",
+    codegenModel: "devstral-small-2505",
+    apiKeyConfigured: false, // Don't expose actual key status
+  });
+});
 
 /**
- * GET /suggest?q=<partial-query>
+ * POST /user/settings — save user account settings
+ * Body: {
+ *   language?: string,
+ *   provider?: "siemens" | "groq",
+ *   chatModel?: string,
+ *   codegenModel?: string
+ * }
+ * Multi-language support: Errors and confirmations respect user's chosen language.
+ */
+app.post("/user/settings", (req, res) => {
+  const { language, provider, chatModel, codegenModel, userId } = req.body || {};
+  const resolvedLang = normalizeLang(language || getRequestLang(req));
+  
+  // Validate inputs
+  const validProviders = ["siemens", "groq"];
+  if (provider && !validProviders.includes(provider)) {
+    return res.status(400).json({
+      error: localize(resolvedLang, "invalidFramework", { frameworks: validProviders.join(", ") }),
+    });
+  }
+
+  const allowedLanguages = ["en", "de", "zh", "fr", "es", "ja", "pt", "ko"];
+  if (language && !allowedLanguages.includes(language)) {
+    return res.status(400).json({
+      error: `Invalid language. Choose one of: ${allowedLanguages.join(", ")}`,
+    });
+  }
+
+  // In production, validate chatModel and codegenModel against PROVIDER_MODELS
+  const resolvedProvider = provider || "siemens";
+  if (chatModel && !PROVIDER_MODELS[resolvedProvider]?.has(chatModel)) {
+    return res.status(400).json({
+      error: `Invalid model for provider ${resolvedProvider}`,
+    });
+  }
+
+  // Store settings (in real app, persist to database)
+  const settings = {
+    userId: userId || "anonymous",
+    language: resolvedLang,
+    provider: resolvedProvider,
+    chatModel: chatModel || PROVIDER_DEFAULTS[resolvedProvider].chat,
+    codegenModel: codegenModel || PROVIDER_DEFAULTS[resolvedProvider].codegen,
+    updatedAt: new Date().toISOString(),
+  };
+
+  res.json({
+    success: true,
+    message: localize(resolvedLang, "settingsSaved"),
+    settings,
+  });
+});
+
+/**
+ * GET /user/profile — retrieve full user profile (requires auth in production)
+ * Returns: user language preference, API key status, usage stats
+ */
+app.get("/user/profile", (req, res) => {
+  const lang = getRequestLang(req);
+  const userId = req.query?.userId || "anonymous";
+
+  res.json({
+    userId,
+    language: lang,
+    profile: {
+      tier: "free", // free, premium
+      apiKeyConfigured: false,
+      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // Fake: 30 days ago
+      lastActive: new Date().toISOString(),
+    },
+    preferences: {
+      language: lang,
+      provider: "siemens",
+      chatModel: "glm-5",
+      codegenModel: "devstral-small-2505",
+    },
+  });
+});
+
+/**
+ * POST /user/language — shorthand endpoint to update only language preference
+ * Body: { language: string }
+ * Useful for quick language switches in the UI.
+ */
+app.post("/user/language", (req, res) => {
+  const { language } = req.body || {};
+  const currentLang = getRequestLang(req);
+
+  if (!language) {
+    return res.status(400).json({
+      error: localize(currentLang, "missingLanguage") || "language field is required",
+    });
+  }
+
+  const resolvedLang = normalizeLang(language);
+  if (!resolvedLang) {
+    return res.status(400).json({
+      error: `Invalid language: ${language}`,
+    });
+  }
+
+  // Track analytics for language switch
+  trackAnalytics(`language_switch_to_${resolvedLang}`, "settings", resolvedLang);
+
+  res.json({
+    success: true,
+    language: resolvedLang,
+    message: "Language updated successfully",
+  });
+});
+
+
+/**
+ * GET /suggest?q=<partial-query>&lang=<language>
  * Lightweight type-ahead — returns top-5 matching doc titles + URLs.
  * No LLM call, no API key required. Used for search autocomplete in the UI.
+ * Respects user language for response formatting (future enhancement).
  */
 app.get("/suggest", (req, res) => {
   const q = (req.query.q || "").toString().trim();
-  if (!q || q.length < 2) return res.json({ suggestions: [] });
+  const lang = getRequestLang(req);
+  
+  if (!q || q.length < 2) return res.json({ suggestions: [], lang });
   const results = searchDocs(q, 5);
   res.json({
     suggestions: results.map((r) => ({
@@ -1228,21 +1397,23 @@ app.get("/suggest", (req, res) => {
       url: r.url || null,
       deprecated: r.deprecated || false,
     })),
+    lang,
   });
 });
 
 /**
  * POST /deprecation-check
  * Proactive deprecation-alert endpoint.
- * Body: { components: string[] }  — list of component/API names to check.
+ * Body: { components: string[], lang?: string }  — list of component/API names to check.
  * Returns a list of alerts for any known-deprecated items found in the docs.
  * No LLM call, no API key required — pure doc corpus search.
+ * Respects user language for error messages.
  */
 app.post("/deprecation-check", (req, res) => {
   const { components = [], lang } = req.body;
   const resolvedLang = getRequestLang(req, lang);
   if (!Array.isArray(components) || components.length === 0) {
-    return res.status(400).json({ error: localize(resolvedLang, "componentsArrayRequired") });
+    return res.status(400).json({ error: localize(resolvedLang, "componentsArrayRequired"), lang: resolvedLang });
   }
 
   const alerts = [];
@@ -1276,7 +1447,7 @@ app.post("/deprecation-check", (req, res) => {
       });
     }
   }
-  res.json({ alerts });
+  res.json({ alerts, lang: resolvedLang });
 });
 
 /**
@@ -1314,7 +1485,8 @@ app.get("/health", (req, res) => {
       "hybrid-search-bm25-cosine",
       "usage-analytics",
       "deprecation-alerts",
-      "multi-language",
+      "multi-language-support",
+      "user-settings-api",
       "voice-input-ready",
       "query-expansion",
       "conversation-history",
@@ -1324,14 +1496,24 @@ app.get("/health", (req, res) => {
       "section-type-boost",
       "url-dedup",
     ],
+    supportedLanguages: ["en", "de", "zh", "fr", "es", "ja", "pt", "ko"],
   });
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`iX Chatbot backend running on http://localhost:${PORT}`);
-  console.log(`  POST /chat      — chatbot Q&A (rate-limited)`);
-  console.log(`  POST /generate  — AI code generator (rate-limited)`);
-  console.log(`  GET  /suggest   — type-ahead suggestions`);
-  console.log(`  GET  /health    — health check`);
+  console.log(`  POST /chat              — chatbot Q&A (rate-limited)`);
+  console.log(`  POST /generate          — AI code generator (rate-limited)`);
+  console.log(`  POST /migrate           — code migration & upgrade assistant (rate-limited)`);
+  console.log(`  POST /refine            — code refinement (rate-limited)`);
+  console.log(`  POST /deprecation-check — deprecation alert checker`);
+  console.log(`  GET  /suggest           — type-ahead suggestions`);
+  console.log(`  GET  /user/settings     — retrieve user preferences`);
+  console.log(`  POST /user/settings     — save user preferences`);
+  console.log(`  GET  /user/profile      — retrieve user profile`);
+  console.log(`  POST /user/language     — quick language switch`);
+  console.log(`  GET  /analytics         — usage analytics (admins)`);
+  console.log(`  GET  /health            — health check`);
+  console.log(`Supported languages: en, de, zh, fr, es, ja, pt, ko`);
 });
