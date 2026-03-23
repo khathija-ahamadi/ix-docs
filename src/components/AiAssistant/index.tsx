@@ -78,7 +78,7 @@ const LANGUAGE_LABELS: Record<Language, string> = {
 
 const UI_TEXT: Record<Language, Record<string, string>> = {
   en: {
-    analyticsTitle: '◫ Usage Analytics',
+    analyticsTitle: 'Usage Analytics',
     analyticsDescription: 'Track common questions to improve documentation and product guidance. Data is in-memory and resets on server restart.',
     loading: 'Loading…',
     analyticsLoadError: '⚠️ Could not load analytics: {error}',
@@ -257,7 +257,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     codeGenerated: 'Code Generated',
   },
   de: {
-    analyticsTitle: '◫ Nutzungsanalyse',
+    analyticsTitle: 'Nutzungsanalyse',
     analyticsDescription: 'Verfolge häufige Fragen, um Dokumentation und Produkt-Hinweise zu verbessern. Die Daten sind im Speicher und werden beim Server-Neustart zurückgesetzt.',
     loading: 'Wird geladen…',
     analyticsLoadError: '⚠️ Analyse konnte nicht geladen werden: {error}',
@@ -436,7 +436,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     codeGenerated: 'Generierter Code',
   },
   zh: {
-    analyticsTitle: '◫ 使用分析',
+    analyticsTitle: '使用分析',
     analyticsDescription: '跟踪常见问题以改进文档和产品指导。数据在内存中，服务器重启时重置。',
     loading: '加载中…',
     analyticsLoadError: '⚠️ 无法加载分析：{error}',
@@ -609,7 +609,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     responseLanguageTitle: '🌍 Langue de réponse',
     responseLanguageDescription: 'L’IA répond dans la langue sélectionnée. Les exemples de code restent dans leur langue d’origine.',
     send: 'Envoyer', askPlaceholder: 'Posez une question sur Siemens iX...', listening: 'Écoute…',
-    analyticsTitle: '◫ Analytique d’usage',
+    analyticsTitle: 'Analytique d’usage',
     analyticsDescription: 'Suivez les questions fréquentes pour améliorer la documentation et les conseils produit. Les données sont en mémoire et réinitialisées au redémarrage du serveur.',
     loading: 'Chargement…',
     analyticsLoadError: '⚠️ Impossible de charger l’analytique : {error}',
@@ -768,7 +768,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     responseLanguageTitle: '🌍 Idioma de respuesta',
     responseLanguageDescription: 'La IA responderá en el idioma seleccionado. Los ejemplos de código se mantienen en su idioma original.',
     send: 'Enviar', askPlaceholder: 'Pregunta sobre Siemens iX...', listening: 'Escuchando…',
-    analyticsTitle: '◫ Analítica de uso',
+    analyticsTitle: 'Analítica de uso',
     analyticsDescription: 'Haz seguimiento de las preguntas comunes para mejorar la documentación y la orientación del producto. Los datos están en memoria y se reinician al reiniciar el servidor.',
     loading: 'Cargando…',
     analyticsLoadError: '⚠️ No se pudo cargar la analítica: {error}',
@@ -927,7 +927,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     responseLanguageTitle: '🌍 応答言語',
     responseLanguageDescription: 'AI は選択した言語で回答します。コード例は元の言語のままです。',
     send: '送信', askPlaceholder: 'Siemens iX について質問...', listening: '音声入力中…',
-    analyticsTitle: '◫ 利用分析',
+    analyticsTitle: '利用分析',
     analyticsDescription: 'よくある質問を追跡して、ドキュメントと製品ガイダンスを改善します。データはメモリ上に保持され、サーバー再起動時にリセットされます。',
     loading: '読み込み中…',
     analyticsLoadError: '⚠️ 分析を読み込めませんでした: {error}',
@@ -1086,7 +1086,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     responseLanguageTitle: '🌍 Idioma da resposta',
     responseLanguageDescription: 'A IA responderá no idioma selecionado. Exemplos de código permanecem no idioma original.',
     send: 'Enviar', askPlaceholder: 'Pergunte sobre Siemens iX...', listening: 'Ouvindo…',
-    analyticsTitle: '◫ Análise de uso',
+    analyticsTitle: 'Análise de uso',
     analyticsDescription: 'Acompanhe perguntas comuns para melhorar a documentação e a orientação do produto. Os dados ficam em memória e são redefinidos ao reiniciar o servidor.',
     loading: 'Carregando…',
     analyticsLoadError: '⚠️ Não foi possível carregar a análise: {error}',
@@ -1245,7 +1245,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     responseLanguageTitle: '🌍 응답 언어',
     responseLanguageDescription: 'AI는 선택한 언어로 응답합니다. 코드 예시는 원래 언어를 유지합니다.',
     send: '보내기', askPlaceholder: 'Siemens iX에 대해 질문하세요...', listening: '듣는 중…',
-    analyticsTitle: '◫ 사용 분석',
+    analyticsTitle: '사용 분석',
     analyticsDescription: '자주 묻는 질문을 추적하여 문서와 제품 가이드를 개선하세요. 데이터는 메모리에 저장되며 서버 재시작 시 초기화됩니다.',
     loading: '로딩 중…',
     analyticsLoadError: '⚠️ 분석을 불러올 수 없습니다: {error}',
@@ -2934,7 +2934,7 @@ export default function AiAssistant() {
             // All overflow items with icon + label
             const MORE_ITEMS: { id: Mode; icon: string; label: string }[] = [
               { id: 'migrate', icon: '↔', label: ui('migrate') },
-              { id: 'analytics', icon: '◫', label: ui('analyticsTitle').replace('📊 ', '') },
+              { id: 'analytics', icon: '◫', label: ui('analyticsTitle') },
               { id: 'settings', icon: '⚙', label: ui('settings') },
               { id: 'help', icon: '?', label: ui('help') },
             ];
