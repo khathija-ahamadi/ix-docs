@@ -2081,10 +2081,6 @@ export default function AiAssistant() {
 
               {/* ─── Provider selector ─── */}
               <div className={styles.settingsSection}>
-                <h3 className={styles.settingsTitle}>🤖 AI Provider &amp; Model</h3>
-                <p className={styles.settingsDescription}>
-                  Choose provider and model per target (Chat or Code Gen). Model list updates based on provider.
-                </p>
                 <div className={styles.selectorGroup} style={{ marginTop: 10, maxWidth: 320 }}>
                   <label className={styles.modelSelectorLabel} htmlFor="settings-target-provider-select">
                     {settingsModelTarget === 'chat' ? 'Chat provider' : 'Code Gen provider'}
@@ -2095,8 +2091,8 @@ export default function AiAssistant() {
                     value={targetProvider}
                     onChange={(e) => setTargetProvider(e.target.value as Provider)}
                   >
-                    <option value="siemens">🏭 Siemens{apiKey ? ' ✓ key saved' : ''}</option>
-                    <option value="groq">⚡ Groq{groqApiKey ? ' ✓ key saved' : ''}</option>
+                    <option value="siemens">Siemens{apiKey ? ' ✓ api key saved' : ''}</option>
+                    <option value="groq">Groq{groqApiKey ? ' ✓ api key saved' : ''}</option>
                   </select>
                 </div>
                 <p className={styles.settingsNote} style={{ marginTop: 8 }}>
@@ -2106,13 +2102,6 @@ export default function AiAssistant() {
 
               {/* ─── Model selector ─── */}
               <div className={styles.settingsSection}>
-                <h3 className={styles.settingsTitle}>🧠 Model</h3>
-                <p className={styles.settingsDescription}>
-                  {targetProvider === 'siemens'
-                    ? 'Stable Siemens-hosted models. Recommended: glm-5 for Chat and devstral-small-2505 for Code Gen.'
-                    : 'Groq-hosted open-weight models with ultra-fast inference.'}
-                </p>
-
                 <div className={styles.settingsModelRow}>
                   <div className={styles.selectorGroup}>
                     <label className={styles.modelSelectorLabel} htmlFor="settings-model-target">Model target</label>
