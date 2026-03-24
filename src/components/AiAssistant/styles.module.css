@@ -285,6 +285,38 @@
   color: var(--theme-color-inv-std-text, rgba(0, 10, 20, 0.9));
 }
 
+.bubbleActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.speakBtn {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--theme-color-weak-bdr, rgba(224, 245, 255, 0.25));
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.75));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.speakBtn:hover {
+  border-color: var(--theme-color-primary, #00bde3);
+  color: var(--theme-color-primary, #00bde3);
+  background: rgba(0, 189, 227, 0.1);
+}
+
+.speakBtnActive {
+  border-color: var(--theme-color-primary, #00bde3);
+  color: var(--theme-color-primary, #00bde3);
+  background: rgba(0, 189, 227, 0.14);
+}
+
 .typing {
   font-size: 13px;
   color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));

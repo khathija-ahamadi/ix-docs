@@ -185,6 +185,9 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     voiceInput: 'Voice input',
     stopVoiceInput: 'Stop voice input',
     startVoiceInput: 'Start voice input',
+    readAloud: 'Read aloud',
+    stopReading: 'Stop reading',
+    ttsNotSupported: 'Text-to-speech is not supported in this browser.',
     describeYourUi: 'Describe your UI',
     describeUiPlaceholder: 'e.g. Create a login page with username, password, and login button',
     pressCtrlEnter: 'Press Ctrl+Enter to generate',
@@ -1420,6 +1423,16 @@ function uiText(lang: Language, key: string, vars: Record<string, string | numbe
   return template.replace(/\{(\w+)\}/g, (_, token) => String(vars[token] ?? `{${token}}`));
 }
 
+function getSpeechLocale(lang: Language): string {
+  return lang === 'zh' ? 'zh-CN' :
+         lang === 'ja' ? 'ja-JP' :
+         lang === 'ko' ? 'ko-KR' :
+         lang === 'de' ? 'de-DE' :
+         lang === 'fr' ? 'fr-FR' :
+         lang === 'es' ? 'es-ES' :
+         lang === 'pt' ? 'pt-PT' : 'en-US';
+}
+
 // ── Deprecated iX component registry (for proactive hints) ──────────────
 const DEPRECATED_PATTERNS = [
   'ix-datetime-picker', 'IxDatetimePicker',
@@ -2112,6 +2125,10 @@ export default function AiAssistant() {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
 
+  // ── Voice output state ──
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
+  const speakingRef = useRef<SpeechSynthesisUtterance | null>(null);
+
   // ── Proactive deprecation hint state ──
   const [deprecationHint, setDeprecationHint] = useState('');
 
@@ -2167,13 +2184,7 @@ export default function AiAssistant() {
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
-    recognition.lang = lang === 'zh' ? 'zh-CN' :
-                       lang === 'ja' ? 'ja-JP' :
-                       lang === 'ko' ? 'ko-KR' :
-                       lang === 'de' ? 'de-DE' :
-                       lang === 'fr' ? 'fr-FR' :
-                       lang === 'es' ? 'es-ES' :
-                       lang === 'pt' ? 'pt-PT' : 'en-US';
+    recognition.lang = getSpeechLocale(lang);
     recognition.onresult = (event: any) => {
       const transcript = Array.from(event.results as any[])
         .map((r: any) => r[0].transcript)
@@ -2186,6 +2197,60 @@ export default function AiAssistant() {
     recognition.start();
     setIsListening(true);
   };
+
+  const stopSpeaking = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      setSpeakingIndex(null);
+      speakingRef.current = null;
+      return;
+    }
+    window.speechSynthesis.cancel();
+    setSpeakingIndex(null);
+    speakingRef.current = null;
+  };
+
+  const toggleReadAloud = (text: string, index: number) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      setChatError(ui('ttsNotSupported'));
+      return;
+    }
+    if (!text.trim()) return;
+    if (speakingIndex === index) {
+      stopSpeaking();
+      return;
+    }
+
+    stopSpeaking();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = getSpeechLocale(lang);
+    utterance.onend = () => {
+      if (speakingRef.current === utterance) {
+        speakingRef.current = null;
+        setSpeakingIndex(null);
+      }
+    };
+    utterance.onerror = () => {
+      if (speakingRef.current === utterance) {
+        speakingRef.current = null;
+        setSpeakingIndex(null);
+      }
+    };
+
+    speakingRef.current = utterance;
+    setSpeakingIndex(index);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      stopSpeaking();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    return () => stopSpeaking();
+  }, []);
 
   // ── Proactive deprecation hint ──
   // Runs when the user pauses typing in the chat input (300 ms debounce).
@@ -3450,6 +3515,28 @@ export default function AiAssistant() {
                         : ui('ixBot')}
                     </span>
                     <p className={styles.bubbleText}>{msg.text}</p>
+                    {msg.role === 'bot' && (
+                      <div className={styles.bubbleActions}>
+                        <button
+                          className={`${styles.speakBtn} ${speakingIndex === i ? styles.speakBtnActive : ''}`}
+                          onClick={() => toggleReadAloud(msg.text, i)}
+                          title={speakingIndex === i ? ui('stopReading') : ui('readAloud')}
+                          aria-label={speakingIndex === i ? ui('stopReading') : ui('readAloud')}
+                        >
+                          {speakingIndex === i ? (
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                              <rect x="4" y="4" width="8" height="8" rx="1.5" fill="currentColor" />
+                            </svg>
+                          ) : (
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                              <path d="M2.5 6.5h3l3-2v7l-3-2h-3z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                              <path d="M10.8 6a2.8 2.8 0 0 1 0 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                              <path d="M12.6 4.5a4.9 4.9 0 0 1 0 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    )}
                     {/* Deprecation warning banner */}
                     {msg.role === 'bot' && msg.hasDeprecationWarnings && (
                       <div className={styles.deprecationBanner}>
