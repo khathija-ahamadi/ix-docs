@@ -684,8 +684,54 @@ function cosineSimilarity(queryTokens, idf, docVector) {
  * Returns top-K docs sorted by hybrid relevance score.
  */
 const HYBRID_ALPHA = 0.60; // 60% BM25, 40% cosine semantic
+const SEARCH_MODE = {
+  HYBRID: "hybrid",
+  BM25: "bm25",
+};
 
-function searchDocs(query, topK = 10) {
+const FREE_CHAT_CACHE_TTL_MS = 30_000;
+const FREE_CHAT_CACHE_MAX = 300;
+const freeChatCache = new Map();
+
+function normalizeQueryForCache(query) {
+  return String(query || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 300);
+}
+
+function getFreeChatCacheKey(question, lang) {
+  return `${normalizeLang(lang)}::${normalizeQueryForCache(question)}`;
+}
+
+function getCachedFreeChatResponse(question, lang) {
+  const key = getFreeChatCacheKey(question, lang);
+  const entry = freeChatCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    freeChatCache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function setCachedFreeChatResponse(question, lang, value) {
+  const key = getFreeChatCacheKey(question, lang);
+  freeChatCache.set(key, {
+    value,
+    expiresAt: Date.now() + FREE_CHAT_CACHE_TTL_MS,
+  });
+
+  if (freeChatCache.size > FREE_CHAT_CACHE_MAX) {
+    const oldestKey = freeChatCache.keys().next().value;
+    if (oldestKey) freeChatCache.delete(oldestKey);
+  }
+}
+
+function searchDocs(query, topK = 10, options = {}) {
+  const mode = options.mode === SEARCH_MODE.BM25 ? SEARCH_MODE.BM25 : SEARCH_MODE.HYBRID;
+  const includeSectionBoost = mode === SEARCH_MODE.HYBRID;
   const expanded = expandQuery(query);
   const queryTokens = tokenize(expanded);
   if (queryTokens.length === 0) return [];
@@ -729,12 +775,18 @@ function searchDocs(query, topK = 10) {
 
   const scores = rawScores.map(({ docIdx, doc, bm25, matchedKeywords }) => {
     const bm25Norm = bm25 / maxBM25;
-    const cosine = cosineSimilarity(queryTokens, idf, docVectors[docIdx]);
-    const hybridScore = HYBRID_ALPHA * bm25Norm + (1 - HYBRID_ALPHA) * cosine;
+    const cosine =
+      mode === SEARCH_MODE.HYBRID
+        ? cosineSimilarity(queryTokens, idf, docVectors[docIdx])
+        : 0;
+    const blendedScore =
+      mode === SEARCH_MODE.HYBRID
+        ? HYBRID_ALPHA * bm25Norm + (1 - HYBRID_ALPHA) * cosine
+        : bm25Norm;
     return {
       title: doc.title,
       content: doc.content,
-      score: hybridScore,
+      score: blendedScore,
       source: doc.source,
       url: doc.url || null,
       matchedKeywords,
@@ -749,7 +801,9 @@ function searchDocs(query, topK = 10) {
   for (const r of ranked) {
     const doc = docs.find((d) => d.source === r.source);
     if (doc) {
-      r.score *= sectionTypeBoost(doc, queryTokens);
+      if (includeSectionBoost) {
+        r.score *= sectionTypeBoost(doc, queryTokens);
+      }
       r.deprecated = hasDeprecationSignal(r.content);
     }
   }
@@ -1064,21 +1118,36 @@ app.post("/chat", rateLimiter, async (req, res) => {
   // Track analytics
   trackAnalytics(question, "chat", resolvedLang);
 
-  // RAG: Hybrid search (BM25 + cosine TF-IDF) over the full documentation corpus
-  const matchedDocs = searchDocs(question, 10);
+  const isFreeTierRequest = !key;
+
+  if (isFreeTierRequest) {
+    const cached = getCachedFreeChatResponse(question, resolvedLang);
+    if (cached) {
+      return res.json(cached);
+    }
+  }
+
+  // RAG search over the full documentation corpus
+  const matchedDocs = isFreeTierRequest
+    ? searchDocs(question, 5, { mode: SEARCH_MODE.BM25 })
+    : searchDocs(question, 10, { mode: SEARCH_MODE.HYBRID });
 
   if (matchedDocs.length === 0) {
-    return res.json({
+    const emptyResponse = {
       answer:
         getLocalizedText(resolvedLang).noDocsFound,
       tier: "free",
       sources: [],
-    });
+    };
+    if (isFreeTierRequest) {
+      setCachedFreeChatResponse(question, resolvedLang, emptyResponse);
+    }
+    return res.json(emptyResponse);
   }
 
-  // Build context with source references
-  const topDocs = matchedDocs.slice(0, 8);
-  const docsContext = buildDocsContextForPrompt(topDocs, { includeUrls: true });
+  const topDocs = isFreeTierRequest
+    ? matchedDocs.slice(0, 3)
+    : matchedDocs.slice(0, 8);
 
   // Collect unique source URLs for citation
   const sources = [...new Map(
@@ -1088,14 +1157,19 @@ app.post("/chat", rateLimiter, async (req, res) => {
   ).values()].slice(0, 5);
 
   // Free-tier fallback: no key available -> return extractive docs answer without LLM
-  if (!key) {
-    return res.json({
+  if (isFreeTierRequest) {
+    const freeResponse = {
       answer: buildFreeTierAnswer(question, topDocs, resolvedLang),
       tier: "free",
       sources,
       hasDeprecationWarnings: topDocs.some((d) => d.deprecated),
-    });
+    };
+    setCachedFreeChatResponse(question, resolvedLang, freeResponse);
+    return res.json(freeResponse);
   }
+
+  // Build context with source references (premium only)
+  const docsContext = buildDocsContextForPrompt(topDocs, { includeUrls: true });
 
   // Build conversation messages (multi-turn)
   const messages = [
