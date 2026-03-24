@@ -194,6 +194,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     describeUiPlaceholder: 'e.g. Create a login page with username, password, and login button',
     pressCtrlEnter: 'Press Ctrl+Enter to generate',
     tryExample: 'Try an example',
+    showExamples: '▼ Show examples',
     componentPicker: 'Component Picker',
     hide: 'Hide',
     browseAndAdd: 'Browse & add ▾',
@@ -386,6 +387,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     describeUiPlaceholder: 'z.B. Erstelle eine Login-Seite mit Benutzername, Passwort und Login-Button',
     pressCtrlEnter: 'Drücke Strg+Enter zum Generieren',
     tryExample: 'Probiere ein Beispiel',
+    showExamples: '▼ Beispiele anzeigen',
     componentPicker: 'Komponenten-Auswahl',
     hide: 'Verbergen',
     browseAndAdd: 'Durchsuchen & hinzufügen ▾',
@@ -561,6 +563,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     describeUiPlaceholder: '例如：创建一个带有用户名、密码和登录按钮的登录页面',
     pressCtrlEnter: '按 Ctrl+Enter 生成',
     tryExample: '尝试一个示例',
+    showExamples: '▼ 显示示例',
     componentPicker: '组件选择器',
     hide: '隐藏',
     browseAndAdd: '浏览并添加 ▾',
@@ -726,6 +729,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     describeUiPlaceholder: 'ex. : Créer une page de connexion avec nom d\'utilisateur, mot de passe et bouton de connexion',
     pressCtrlEnter: 'Appuyez sur Ctrl+Entrée pour générer',
     tryExample: 'Essayer un exemple',
+    showExamples: '▼ Afficher les exemples',
     componentPicker: 'Sélecteur de composants',
     hide: 'Masquer',
     browseAndAdd: 'Parcourir et ajouter ▾',
@@ -891,6 +895,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     describeUiPlaceholder: 'ej.: Crear una página de inicio de sesión con nombre de usuario, contraseña y botón de inicio de sesión',
     pressCtrlEnter: 'Presiona Ctrl+Enter para generar',
     tryExample: 'Probar un ejemplo',
+    showExamples: '▼ Mostrar ejemplos',
     componentPicker: 'Selector de componentes',
     hide: 'Ocultar',
     browseAndAdd: 'Explorar y agregar ▾',
@@ -1056,6 +1061,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     describeUiPlaceholder: '例：ユーザー名、パスワード、ログインボタンを含むログインページを作成',
     pressCtrlEnter: 'Ctrl+Enter で生成',
     tryExample: '例を試す',
+    showExamples: '▼ 例を表示',
     componentPicker: 'コンポーネントピッカー',
     hide: '非表示',
     browseAndAdd: '参照して追加 ▾',
@@ -1221,6 +1227,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     describeUiPlaceholder: 'ex.: Criar uma página de login com nome de usuário, senha e botão de login',
     pressCtrlEnter: 'Pressione Ctrl+Enter para gerar',
     tryExample: 'Tentar um exemplo',
+    showExamples: '▼ Mostrar exemplos',
     componentPicker: 'Seletor de componentes',
     hide: 'Ocultar',
     browseAndAdd: 'Navegar e adicionar ▾',
@@ -1386,6 +1393,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     describeUiPlaceholder: '예: 사용자 이름, 비밀번호 및 로그인 버튼이 있는 로그인 페이지 만들기',
     pressCtrlEnter: 'Ctrl+Enter를 눌러 생성',
     tryExample: '예제 시도',
+    showExamples: '▼ 예제 보기',
     componentPicker: '컴포넌트 선택기',
     hide: '숨기기',
     browseAndAdd: '탐색 및 추가 ▾',
@@ -2132,6 +2140,9 @@ export default function AiAssistant() {
   const [codeFileContent, setCodeFileContent] = useState<string | null>(null);
   const [codeFileName, setCodeFileName] = useState('');
   const codeFileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Example prompts collapsed state ──
+  const [showExamples, setShowExamples] = useState(false);
 
   // ── Visual Component Picker state ──
   const [showCompPicker, setShowCompPicker] = useState(false);
@@ -3933,22 +3944,31 @@ export default function AiAssistant() {
               </div>
 
               {/* Example prompts */}
-              {!generatedCode && !codeLoading && (
-                <div className={styles.section}>
+              <div className={styles.section}>
+                <div className={styles.compPickerHeader}>
                   <label className={styles.label}>{ui('tryExample')}</label>
+                  <button
+                    className={styles.compPickerToggle}
+                    onClick={() => setShowExamples(v => !v)}
+                  >
+                    {showExamples ? ui('hide') : ui('showExamples')}
+                  </button>
+                </div>
+                {showExamples && (
                   <div className={styles.examples}>
                     {EXAMPLE_PROMPTS.map((prompt, i) => (
                       <button
                         key={i}
                         className={styles.exampleBtn}
+                        disabled={codeLoading}
                         onClick={() => handleExampleClick(prompt)}
                       >
                         {prompt}
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* ── Feature 3: Visual Component Picker ──────────────────────── */}
               <div className={styles.section}>
