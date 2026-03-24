@@ -125,6 +125,11 @@ const sidebars: SidebarsConfig = {
       id: 'home/mcp-server',
       className: 'doc-sidebar-item-bold',
     },
+    {
+      type: 'doc',
+      id: 'home/ai-assistant',
+      className: 'doc-sidebar-item-bold',
+    }
   ],
   components: [
     {
