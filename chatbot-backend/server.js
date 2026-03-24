@@ -1049,15 +1049,17 @@ Refactor or extend the following code to fulfil the user request using iX compon
  * Body: { question: string, apiKey?: string, history?: Array<{role,text}> }
  */
 app.post("/chat", rateLimiter, async (req, res) => {
-  const { question, apiKey: userApiKey, history, lang, provider = "siemens", model } = req.body;
+  const { question, apiKey: userApiKey, history, lang, provider, model } = req.body || {};
   const resolvedLang = normalizeLang(lang);
   const hasExplicitUserApiKey = typeof userApiKey === "string" && userApiKey.trim().length > 0;
+  const hasExplicitProviderSelection = typeof provider === "string" || typeof model === "string";
+  const shouldUsePremiumChat = hasExplicitUserApiKey || hasExplicitProviderSelection;
 
   if (!question || !question.trim()) {
     return res.status(400).json({ error: localize(resolvedLang, "questionRequired") });
   }
 
-  const key = resolveApiKey(provider, userApiKey);
+  const key = shouldUsePremiumChat ? resolveApiKey(provider, userApiKey) : "";
 
   // Track analytics
   trackAnalytics(question, "chat", resolvedLang);
@@ -1141,7 +1143,7 @@ app.post("/chat", rateLimiter, async (req, res) => {
   } catch (err) {
     const status = err.response?.status || 500;
     const message = err.response?.data?.error?.message || err.message;
-    console.error(`[${provider}] LLM API error:`, status, message);
+    console.error(`[${resolveProvider(provider)}] LLM API error:`, status, message);
 
     // Graceful fallback for free-tier usage: if no explicit user key was supplied,
     // return extractive docs answer instead of surfacing upstream availability errors.
