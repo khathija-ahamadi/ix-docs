@@ -2138,16 +2138,71 @@ export default function AiAssistant() {
   const [compSearch, setCompSearch] = useState('');
 
   // ── Migration Wizard state ──
-  const [migrateInput, setMigrateInput] = useState('');
-  const [migrateOutput, setMigrateOutput] = useState('');
+  const [migrateApiInput, setMigrateApiInput] = useState('');
+  const [migrateUpgradeInput, setMigrateUpgradeInput] = useState('');
+  const [migrateApiSourceInput, setMigrateApiSourceInput] = useState('');
+  const [migrateUpgradeSourceInput, setMigrateUpgradeSourceInput] = useState('');
+  const [migrateApiOutput, setMigrateApiOutput] = useState('');
+  const [migrateUpgradeOutput, setMigrateUpgradeOutput] = useState('');
   const [migrateLoading, setMigrateLoading] = useState(false);
-  const [migrateError, setMigrateError] = useState('');
-  const [migrateSummary, setMigrateSummary] = useState('');
-  const [migrateFeedback, setMigrateFeedback] = useState<FeedbackState>(createFeedbackState());
+  const [migrateApiError, setMigrateApiError] = useState('');
+  const [migrateUpgradeError, setMigrateUpgradeError] = useState('');
+  const [migrateApiSummary, setMigrateApiSummary] = useState('');
+  const [migrateUpgradeSummary, setMigrateUpgradeSummary] = useState('');
+  const [migrateApiFeedback, setMigrateApiFeedback] = useState<FeedbackState>(createFeedbackState());
+  const [migrateUpgradeFeedback, setMigrateUpgradeFeedback] = useState<FeedbackState>(createFeedbackState());
   const [migrationFlow, setMigrationFlow] = useState<MigrationFlow>('api');
   const [upgradeFromVersion, setUpgradeFromVersion] = useState('V3.0.0');
   const [upgradeToVersion, setUpgradeToVersion] = useState('V4.0.0');
   const [showVersionTable, setShowVersionTable] = useState(false);
+  const activeMigrateInput = migrationFlow === 'upgrade' ? migrateUpgradeInput : migrateApiInput;
+  const activeMigrateSourceInput = migrationFlow === 'upgrade' ? migrateUpgradeSourceInput : migrateApiSourceInput;
+  const activeMigrateOutput = migrationFlow === 'upgrade' ? migrateUpgradeOutput : migrateApiOutput;
+  const activeMigrateError = migrationFlow === 'upgrade' ? migrateUpgradeError : migrateApiError;
+  const activeMigrateSummary = migrationFlow === 'upgrade' ? migrateUpgradeSummary : migrateApiSummary;
+  const activeMigrateFeedback = migrationFlow === 'upgrade' ? migrateUpgradeFeedback : migrateApiFeedback;
+  const setActiveMigrateInput = (value: string) => {
+    if (migrationFlow === 'upgrade') {
+      setMigrateUpgradeInput(value);
+      return;
+    }
+    setMigrateApiInput(value);
+  };
+  const setActiveMigrateSourceInput = (value: string) => {
+    if (migrationFlow === 'upgrade') {
+      setMigrateUpgradeSourceInput(value);
+      return;
+    }
+    setMigrateApiSourceInput(value);
+  };
+  const setActiveMigrateOutput = (value: string) => {
+    if (migrationFlow === 'upgrade') {
+      setMigrateUpgradeOutput(value);
+      return;
+    }
+    setMigrateApiOutput(value);
+  };
+  const setActiveMigrateError = (value: string) => {
+    if (migrationFlow === 'upgrade') {
+      setMigrateUpgradeError(value);
+      return;
+    }
+    setMigrateApiError(value);
+  };
+  const setActiveMigrateSummary = (value: string) => {
+    if (migrationFlow === 'upgrade') {
+      setMigrateUpgradeSummary(value);
+      return;
+    }
+    setMigrateApiSummary(value);
+  };
+  const setActiveMigrateFeedback = (value: FeedbackState | ((prev: FeedbackState) => FeedbackState)) => {
+    if (migrationFlow === 'upgrade') {
+      setMigrateUpgradeFeedback(value);
+      return;
+    }
+    setMigrateApiFeedback(value);
+  };
 
   // ── AbortController refs for in-flight requests ──
   const chatAbortRef = useRef<AbortController | null>(null);
@@ -3063,28 +3118,30 @@ export default function AiAssistant() {
   //  FEATURE 5 — DEPRECATION MIGRATION WIZARD
   // ════════════════════════════════════════════════════════════
   const handleMigrate = async () => {
-    if (!migrateInput.trim() || migrateLoading) return;
+    const inputToMigrate = activeMigrateInput.trim();
+    if (!inputToMigrate || migrateLoading) return;
 
     if (migrationFlow === 'upgrade') {
       if (!upgradeFromVersion || !upgradeToVersion) {
-        setMigrateError(ui('upgradeVersionRequired'));
+        setActiveMigrateError(ui('upgradeVersionRequired'));
         return;
       }
       if ((IX_VERSION_ORDER[upgradeToVersion] || 0) <= (IX_VERSION_ORDER[upgradeFromVersion] || 0)) {
-        setMigrateError(ui('upgradeVersionOrderError'));
+        setActiveMigrateError(ui('upgradeVersionOrderError'));
         return;
       }
     }
 
     if (!hasCodegenPremium) {
-      setMigrateError(ui('migrationNeedsKey'));
+      setActiveMigrateError(ui('migrationNeedsKey'));
       return;
     }
     setMigrateLoading(true);
-    setMigrateError('');
-    setMigrateOutput('');
-    setMigrateSummary('');
-    setMigrateFeedback(createFeedbackState());
+    setActiveMigrateError('');
+    setActiveMigrateOutput('');
+    setActiveMigrateSummary('');
+    setActiveMigrateSourceInput(activeMigrateInput);
+    setActiveMigrateFeedback(createFeedbackState());
     migrateAbortRef.current?.abort();
     migrateAbortRef.current = new AbortController();
     try {
@@ -3093,7 +3150,7 @@ export default function AiAssistant() {
         headers: { 'Content-Type': 'application/json' },
         signal: migrateAbortRef.current.signal,
         body: JSON.stringify({
-          code: migrateInput,
+          code: activeMigrateInput,
           apiKey: codegenActiveKey,
           lang,
           provider: codegenProvider,
@@ -3108,11 +3165,11 @@ export default function AiAssistant() {
         throw new Error(data.error || `Server error (${res.status})`);
       }
       const data = await res.json();
-      setMigrateOutput(data.migratedCode || '');
-      setMigrateSummary(data.summary || '');
+      setActiveMigrateOutput(data.migratedCode || '');
+      setActiveMigrateSummary(data.summary || '');
     } catch (err: any) {
       if (err.name === 'AbortError') return;
-      setMigrateError(err.message || ui('migrationFailed'));
+      setActiveMigrateError(err.message || ui('migrationFailed'));
     } finally {
       setMigrateLoading(false);
     }
@@ -3122,11 +3179,21 @@ export default function AiAssistant() {
     migrateAbortRef.current?.abort();
     migrateAbortRef.current = null;
     setMigrateLoading(false);
-    setMigrateInput('');
-    setMigrateOutput('');
-    setMigrateError('');
-    setMigrateSummary('');
-    setMigrateFeedback(createFeedbackState());
+    if (migrationFlow === 'upgrade') {
+      setMigrateUpgradeInput('');
+      setMigrateUpgradeSourceInput('');
+      setMigrateUpgradeOutput('');
+      setMigrateUpgradeError('');
+      setMigrateUpgradeSummary('');
+      setMigrateUpgradeFeedback(createFeedbackState());
+    } else {
+      setMigrateApiInput('');
+      setMigrateApiSourceInput('');
+      setMigrateApiOutput('');
+      setMigrateApiError('');
+      setMigrateApiSummary('');
+      setMigrateApiFeedback(createFeedbackState());
+    }
   };
 
   const submitCodegenRating = (rating: FeedbackRating) => {
@@ -3163,35 +3230,35 @@ export default function AiAssistant() {
   };
 
   const submitMigrateRating = (rating: FeedbackRating) => {
-    if (!migrateOutput || migrateFeedback.submitted || migrateFeedback.submitting) return;
+    if (!activeMigrateOutput || activeMigrateFeedback.submitted || activeMigrateFeedback.submitting) return;
 
     if (rating === 'down') {
-      setMigrateFeedback((prev) => ({ ...prev, rating, showCorrection: true, error: '' }));
+      setActiveMigrateFeedback((prev) => ({ ...prev, rating, showCorrection: true, error: '' }));
       return;
     }
 
-    setMigrateFeedback((prev) => ({ ...prev, rating, submitting: true, error: '', showCorrection: false }));
+    setActiveMigrateFeedback((prev) => ({ ...prev, rating, submitting: true, error: '', showCorrection: false }));
     submitFeedback({
       scope: 'migrate',
       rating: 'up',
-      userInput: migrateInput,
-      aiOutput: `${migrateSummary}\n\n${stripCodeFence(migrateOutput)}`,
-      onSuccess: () => setMigrateFeedback((prev) => ({ ...prev, submitting: false, submitted: true })),
-      onError: (message) => setMigrateFeedback((prev) => ({ ...prev, submitting: false, error: message })),
+      userInput: activeMigrateSourceInput,
+      aiOutput: `${activeMigrateSummary}\n\n${stripCodeFence(activeMigrateOutput)}`,
+      onSuccess: () => setActiveMigrateFeedback((prev) => ({ ...prev, submitting: false, submitted: true })),
+      onError: (message) => setActiveMigrateFeedback((prev) => ({ ...prev, submitting: false, error: message })),
     });
   };
 
   const submitMigrateCorrection = () => {
-    if (!migrateOutput || migrateFeedback.submitted || migrateFeedback.submitting) return;
-    setMigrateFeedback((prev) => ({ ...prev, submitting: true, error: '' }));
+    if (!activeMigrateOutput || activeMigrateFeedback.submitted || activeMigrateFeedback.submitting) return;
+    setActiveMigrateFeedback((prev) => ({ ...prev, submitting: true, error: '' }));
     submitFeedback({
       scope: 'migrate',
       rating: 'down',
-      correction: migrateFeedback.correction,
-      userInput: migrateInput,
-      aiOutput: `${migrateSummary}\n\n${stripCodeFence(migrateOutput)}`,
-      onSuccess: () => setMigrateFeedback((prev) => ({ ...prev, submitting: false, submitted: true, showCorrection: false })),
-      onError: (message) => setMigrateFeedback((prev) => ({ ...prev, submitting: false, error: message })),
+      correction: activeMigrateFeedback.correction,
+      userInput: activeMigrateSourceInput,
+      aiOutput: `${activeMigrateSummary}\n\n${stripCodeFence(activeMigrateOutput)}`,
+      onSuccess: () => setActiveMigrateFeedback((prev) => ({ ...prev, submitting: false, submitted: true, showCorrection: false })),
+      onError: (message) => setActiveMigrateFeedback((prev) => ({ ...prev, submitting: false, error: message })),
     });
   };
 
@@ -3200,17 +3267,17 @@ export default function AiAssistant() {
   };
 
   const handleMigrateDownload = () => {
-    if (!migrateOutput.trim()) return;
+    if (!activeMigrateOutput.trim()) return;
 
-    setMigrateError('');
+    setActiveMigrateError('');
 
     try {
       downloadBlob(
-        new Blob([stripCodeFence(migrateOutput)], { type: 'text/plain;charset=utf-8' }),
+        new Blob([stripCodeFence(activeMigrateOutput)], { type: 'text/plain;charset=utf-8' }),
         'ix-migrated-code.txt'
       );
     } catch (err: any) {
-      setMigrateError(err?.message || ui('somethingWentWrong'));
+      setActiveMigrateError(err?.message || ui('somethingWentWrong'));
     }
   };
 
@@ -4629,7 +4696,7 @@ export default function AiAssistant() {
                   onClick={() => {
                     setMigrationFlow('api');
                     setShowVersionTable(false);
-                    setMigrateError('');
+                    setMigrateApiError('');
                   }}
                   disabled={migrateLoading}
                 >
@@ -4640,7 +4707,7 @@ export default function AiAssistant() {
                   onClick={() => {
                     setMigrationFlow('upgrade');
                     setShowVersionTable(false);
-                    setMigrateError('');
+                    setMigrateUpgradeError('');
                   }}
                   disabled={migrateLoading}
                 >
@@ -4656,7 +4723,10 @@ export default function AiAssistant() {
                       id="upgrade-from-version"
                       className={styles.selectorSelect}
                       value={upgradeFromVersion}
-                      onChange={(e) => setUpgradeFromVersion(e.target.value)}
+                      onChange={(e) => {
+                        setUpgradeFromVersion(e.target.value);
+                        setMigrateUpgradeError('');
+                      }}
                       disabled={migrateLoading}
                     >
                       {IX_VERSIONS.map((version) => (
@@ -4670,7 +4740,10 @@ export default function AiAssistant() {
                       id="upgrade-to-version"
                       className={styles.selectorSelect}
                       value={upgradeToVersion}
-                      onChange={(e) => setUpgradeToVersion(e.target.value)}
+                      onChange={(e) => {
+                        setUpgradeToVersion(e.target.value);
+                        setMigrateUpgradeError('');
+                      }}
                       disabled={migrateLoading}
                     >
                       {IX_VERSIONS.map((version) => (
@@ -4738,8 +4811,8 @@ export default function AiAssistant() {
                 <textarea
                   className={styles.textarea}
                   placeholder={migrationFlow === 'upgrade' ? ui('migrationUpgradePlaceholder') : ui('migrationPlaceholder')}
-                  value={migrateInput}
-                  onChange={(e) => setMigrateInput(e.target.value)}
+                  value={activeMigrateInput}
+                  onChange={(e) => setActiveMigrateInput(e.target.value)}
                   rows={7}
                   disabled={migrateLoading}
                 />
@@ -4750,7 +4823,7 @@ export default function AiAssistant() {
                 onClick={handleMigrate}
                 disabled={
                   migrateLoading ||
-                  !migrateInput.trim() ||
+                  !activeMigrateInput.trim() ||
                   (migrationFlow === 'upgrade' &&
                     ((IX_VERSION_ORDER[upgradeToVersion] || 0) <= (IX_VERSION_ORDER[upgradeFromVersion] || 0)))
                 }
@@ -4759,7 +4832,7 @@ export default function AiAssistant() {
                 {migrateLoading ? ui('analyzing') : migrationFlow === 'upgrade' ? ui('analyzeAndUpgrade') : ui('analyzeAndMigrate')}
               </button>
 
-              {!hasPremium && !migrateLoading && !migrateOutput && (
+              {!hasPremium && !migrateLoading && !activeMigrateOutput && (
                 <div className={styles.info}>
                   {ui('migrationRequiresApiKey')}
                   <button className={styles.settingsLinkBtn} onClick={() => setMode('settings')} style={{ marginLeft: 6 }}>
@@ -4768,25 +4841,25 @@ export default function AiAssistant() {
                 </div>
               )}
 
-              {migrateError && (
+              {activeMigrateError && (
                 <div className={styles.error}>
-                  ⚠️ {migrateError}
-                  <button className={styles.errorClose} onClick={() => setMigrateError('')}>✕</button>
+                  ⚠️ {activeMigrateError}
+                  <button className={styles.errorClose} onClick={() => setActiveMigrateError('')}>✕</button>
                 </div>
               )}
 
-              {migrateSummary && (
+              {activeMigrateSummary && (
                 <div className={styles.migrateSummary}>
-                  <strong>📋 {ui('summary')}</strong> {migrateSummary}
+                  <strong>📋 {ui('summary')}</strong> {activeMigrateSummary}
                 </div>
               )}
 
-              {migrateOutput && (
+              {activeMigrateOutput && (
                 <>
                   <div className={styles.section}>
                     <label className={styles.label}>{ui('diff')}</label>
                     <div className={styles.diffBlock}>
-                      {computeDiff(migrateInput, migrateOutput).map((line, i) => (
+                      {computeDiff(activeMigrateSourceInput, activeMigrateOutput).map((line, i) => (
                         <div
                           key={i}
                           className={
@@ -4823,7 +4896,7 @@ export default function AiAssistant() {
                         </button>
                         <button
                           className={styles.copyBtn}
-                          onClick={() => handleMigrateCopy(stripCodeFence(migrateOutput))}
+                          onClick={() => handleMigrateCopy(stripCodeFence(activeMigrateOutput))}
                           title={ui('copy')}
                         >
                           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
@@ -4835,49 +4908,49 @@ export default function AiAssistant() {
                       </div>
                     </div>
                     <pre className={styles.codeBlock}>
-                      <code>{stripCodeFence(migrateOutput)}</code>
+                      <code>{stripCodeFence(activeMigrateOutput)}</code>
                     </pre>
                     <div className={styles.feedbackBox}>
                       <div className={styles.feedbackRow}>
                         <span className={styles.feedbackTitle}>{ui('feedbackTitle')}</span>
                         <button
-                          className={`${styles.feedbackBtn} ${migrateFeedback.rating === 'up' ? styles.feedbackBtnActive : ''}`}
+                          className={`${styles.feedbackBtn} ${activeMigrateFeedback.rating === 'up' ? styles.feedbackBtnActive : ''}`}
                           onClick={() => submitMigrateRating('up')}
-                          disabled={migrateFeedback.submitted || migrateFeedback.submitting}
+                          disabled={activeMigrateFeedback.submitted || activeMigrateFeedback.submitting}
                           title={ui('thumbsUp')}
                         >
                           {ui('thumbsUp')}
                         </button>
                         <button
-                          className={`${styles.feedbackBtn} ${migrateFeedback.rating === 'down' ? styles.feedbackBtnActive : ''}`}
+                          className={`${styles.feedbackBtn} ${activeMigrateFeedback.rating === 'down' ? styles.feedbackBtnActive : ''}`}
                           onClick={() => submitMigrateRating('down')}
-                          disabled={migrateFeedback.submitted || migrateFeedback.submitting}
+                          disabled={activeMigrateFeedback.submitted || activeMigrateFeedback.submitting}
                           title={ui('thumbsDown')}
                         >
                           {ui('thumbsDown')}
                         </button>
                       </div>
-                      {migrateFeedback.showCorrection && !migrateFeedback.submitted && (
+                      {activeMigrateFeedback.showCorrection && !activeMigrateFeedback.submitted && (
                         <div className={styles.feedbackCorrectionRow}>
                           <input
                             className={styles.feedbackInput}
                             type="text"
-                            value={migrateFeedback.correction}
+                            value={activeMigrateFeedback.correction}
                             placeholder={ui('feedbackCorrectionPlaceholder')}
-                            onChange={(e) => setMigrateFeedback((prev) => ({ ...prev, correction: e.target.value }))}
-                            disabled={migrateFeedback.submitting}
+                            onChange={(e) => setActiveMigrateFeedback((prev) => ({ ...prev, correction: e.target.value }))}
+                            disabled={activeMigrateFeedback.submitting}
                           />
                           <button
                             className={styles.feedbackSubmitBtn}
                             onClick={submitMigrateCorrection}
-                            disabled={migrateFeedback.submitting}
+                            disabled={activeMigrateFeedback.submitting}
                           >
-                            {migrateFeedback.submitting ? ui('sendingFeedback') : ui('submitFeedback')}
+                            {activeMigrateFeedback.submitting ? ui('sendingFeedback') : ui('submitFeedback')}
                           </button>
                         </div>
                       )}
-                      {migrateFeedback.submitted && <div className={styles.feedbackThanks}>{ui('feedbackThanks')}</div>}
-                      {migrateFeedback.error && <div className={styles.feedbackError}>⚠️ {migrateFeedback.error}</div>}
+                      {activeMigrateFeedback.submitted && <div className={styles.feedbackThanks}>{ui('feedbackThanks')}</div>}
+                      {activeMigrateFeedback.error && <div className={styles.feedbackError}>⚠️ {activeMigrateFeedback.error}</div>}
                     </div>
                   </div>
                 </>
