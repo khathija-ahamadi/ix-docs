@@ -392,13 +392,17 @@
 }
 
 .sendBtn {
-  padding: 8px 16px;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  padding: 0;
   background: var(--theme-color-primary, #00bde3);
   color: var(--theme-color-inv-std-text, rgba(0, 10, 20, 0.9));
   border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: background 0.2s;
 }
@@ -1899,7 +1903,6 @@
   align-items: center;
   justify-content: center;
   transition: background 0.18s, color 0.18s, border-color 0.18s;
-  margin-right: 4px;
 }
 
 .micBtn:hover {

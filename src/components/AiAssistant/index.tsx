@@ -3747,6 +3747,16 @@ export default function AiAssistant() {
                 </div>
               )}
               <div className={styles.inputRow}>
+                <input
+                  ref={chatInputRef}
+                  className={styles.input}
+                  type="text"
+                  placeholder={isListening ? ui('listening') : ui('askPlaceholder')}
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onKeyDown={handleChatKeyDown}
+                  disabled={chatLoading}
+                />
                 <button
                   className={`${styles.micBtn} ${isListening ? styles.micBtnActive : ''}`}
                   onClick={toggleVoice}
@@ -3765,22 +3775,17 @@ export default function AiAssistant() {
                     </svg>
                   )}
                 </button>
-                <input
-                  ref={chatInputRef}
-                  className={styles.input}
-                  type="text"
-                  placeholder={isListening ? ui('listening') : ui('askPlaceholder')}
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  onKeyDown={handleChatKeyDown}
-                  disabled={chatLoading}
-                />
                 <button
                   className={styles.sendBtn}
                   onClick={sendMessage}
+                  title={ui('send')}
+                  aria-label={ui('send')}
                   disabled={chatLoading || !question.trim()}
                 >
-                  {ui('send')}
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M2 2.75L14 8L2 13.25L4.8 8L2 2.75Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M4.8 8H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
                 </button>
               </div>
             </div>
