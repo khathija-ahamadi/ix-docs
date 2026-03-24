@@ -22,6 +22,8 @@ const CODEGEN_PROVIDER_STORAGE = 'ix-assistant-codegen-provider';
 const GROQ_KEY_STORAGE = 'ix-assistant-groq-key';
 const CHAT_MODEL_STORAGE = 'ix-assistant-chat-model';
 const CODEGEN_MODEL_STORAGE = 'ix-assistant-codegen-model';
+const MIGRATE_PROVIDER_STORAGE = 'ix-assistant-migrate-provider';
+const MIGRATE_MODEL_STORAGE = 'ix-assistant-migrate-model';
 const USER_PROFILE_STORAGE = 'ix-assistant-user-profile';
 
 // ── Multi-language support ──────────────────────────────────────────────────
@@ -118,7 +120,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     settingsApiKey: '🔑 API Key',
     providerKeyToManage: 'Provider key to manage',
     providerModelTitle: '🤖 AI Provider & Model',
-    providerModelDescription: 'Configure Chat and Code Gen independently. Each can use a different provider and model.',
+    providerModelDescription: 'Configure Chat, Code Gen, and Migrate independently. Each can use a different provider and model.',
     freeVsAi: '🆓 Free vs AI Assistant',
     docs: 'Go to docs',
     blog: 'Blog',
@@ -311,7 +313,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     settingsApiKey: '🔑 API-Schlüssel',
     providerKeyToManage: 'Zu verwaltender Provider-Schlüssel',
     providerModelTitle: '🤖 KI-Provider & Modell',
-    providerModelDescription: 'Konfiguriere Chat und Code Gen unabhängig voneinander. Jeder kann einen anderen Provider und ein anderes Modell nutzen.',
+    providerModelDescription: 'Konfiguriere Chat, Code Gen und Migration unabhängig voneinander. Jeder kann einen anderen Provider und ein anderes Modell nutzen.',
     freeVsAi: '🆓 Kostenlos vs. KI-Assistent',
     docs: 'Zur Doku',
     blog: 'Blog',
@@ -488,7 +490,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     settingsApiKey: '🔑 API 密钥',
     providerKeyToManage: '要管理的提供商密钥',
     providerModelTitle: '🤖 AI 提供商与模型',
-    providerModelDescription: '独立配置聊天和代码生成。每个都可以使用不同的提供商和模型。',
+    providerModelDescription: '独立配置聊天、代码生成和迁移。每个都可以使用不同的提供商和模型。',
     freeVsAi: '🆓 免费版 vs AI 助手',
     responseLanguageTitle: '🌍 回复语言',
     responseLanguageDescription: 'AI 将使用所选语言回复，代码示例始终保持原始语言。',
@@ -656,7 +658,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     settingsApiKey: '🔑 Clé API',
     providerKeyToManage: 'Clé du fournisseur à gérer',
     providerModelTitle: '🤖 Fournisseur IA & modèle',
-    providerModelDescription: 'Configurez Chat et Code Gen indépendamment. Chacun peut utiliser un fournisseur et un modèle différents.',
+    providerModelDescription: 'Configurez Chat, Code Gen et Migration indépendamment. Chacun peut utiliser un fournisseur et un modèle différents.',
     freeVsAi: '🆓 Gratuit vs Assistant IA',
     docs: 'Aller à la doc', blog: 'Blog', support: 'Support', starterApp: 'Starter app',
     migrationTitle: '↔ Assistant de migration',
@@ -822,7 +824,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     settingsApiKey: '🔑 Clave API',
     providerKeyToManage: 'Clave de proveedor a gestionar',
     providerModelTitle: '🤖 Proveedor IA y modelo',
-    providerModelDescription: 'Configura Chat y Code Gen de forma independiente. Cada uno puede usar un proveedor y modelo diferentes.',
+    providerModelDescription: 'Configura Chat, Code Gen y Migración de forma independiente. Cada uno puede usar un proveedor y modelo diferentes.',
     freeVsAi: '🆓 Gratis vs Asistente IA',
     docs: 'Ir a la documentación', blog: 'Blog', support: 'Soporte', starterApp: 'App inicial',
     migrationTitle: '↔ Asistente de migración',
@@ -988,7 +990,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     settingsApiKey: '🔑 API キー',
     providerKeyToManage: '管理するプロバイダーキー',
     providerModelTitle: '🤖 AI プロバイダーとモデル',
-    providerModelDescription: 'チャットとコード生成を個別に設定します。それぞれ異なるプロバイダーとモデルを使用できます。',
+    providerModelDescription: 'チャット、コード生成、および移行を個別に設定します。それぞれ異なるプロバイダーとモデルを使用できます。',
     freeVsAi: '🆓 無料版とAIアシスタント',
     docs: 'ドキュメントへ', blog: 'ブログ', support: 'サポート', starterApp: 'スターターアプリ',
     migrationTitle: '↔ 非推奨移行ウィザード',
@@ -1153,8 +1155,8 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     queries: 'Consultas',
     settingsApiKey: '🔑 Chave de API',
     providerKeyToManage: 'Chave do provedor a gerenciar',
-    providerModelTitle: '🤖 Provedor e modelo de IA',
-    providerModelDescription: 'Configure Chat e Code Gen de forma independente. Cada um pode usar um provedor e modelo diferentes.',
+    providerModelTitle: '🤖 Provador e modelo de IA',
+    providerModelDescription: 'Configure Chat, Geração de Código e Migração de forma independente. Cada um pode usar um provedor e modelo diferentes.',
     freeVsAi: '🆓 Gratuito vs Assistente IA',
     docs: 'Ir para docs', blog: 'Blog', support: 'Suporte', starterApp: 'App inicial',
     migrationTitle: '↔ Assistente de migração',
@@ -1320,7 +1322,7 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     settingsApiKey: '🔑 API 키',
     providerKeyToManage: '관리할 제공자 키',
     providerModelTitle: '🤖 AI 제공자 및 모델',
-    providerModelDescription: '채팅과 코드 생성을 독립적으로 구성합니다. 각각 다른 제공자와 모델을 사용할 수 있습니다.',
+    providerModelDescription: '채팅, 코드 생성 및 마이그레이션을 독립적으로 구성합니다. 각각 다른 제공자와 모델을 사용할 수 있습니다.',
     freeVsAi: '🆓 무료 vs AI 어시스턴트',
     docs: '문서로 이동', blog: '블로그', support: '지원', starterApp: '스타터 앱',
     migrationTitle: '↔ 사용 중단 마이그레이션 마법사',
@@ -1982,6 +1984,18 @@ export default function AiAssistant() {
     }
     return CODEGEN_PROVIDER_DEFAULT_MODEL.siemens;
   });
+  const [migrateProvider, setMigrateProvider] = useState<Provider>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem(MIGRATE_PROVIDER_STORAGE) as Provider) || 'siemens';
+    }
+    return 'siemens';
+  });
+  const [migrateModel, setMigrateModel] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(MIGRATE_MODEL_STORAGE) || CODEGEN_PROVIDER_DEFAULT_MODEL.siemens;
+    }
+    return CODEGEN_PROVIDER_DEFAULT_MODEL.siemens;
+  });
 
   const resolveModelForProvider = (
     targetProvider: Provider,
@@ -2014,6 +2028,12 @@ export default function AiAssistant() {
     setCodegenModel((prev) => resolveModelForProvider(nextProvider, prev, 'codegen'));
   };
 
+  const switchMigrateProvider = (nextProvider: Provider) => {
+    if (!providerHasKey(nextProvider)) return;
+    setMigrateProvider(nextProvider);
+    setMigrateModel((prev) => resolveModelForProvider(nextProvider, prev, 'codegen'));
+  };
+
   // Keep models valid for the currently selected provider (also covers restored localStorage values)
   useEffect(() => {
     const resolved = resolveModelForProvider(chatProvider, chatModel, 'chat');
@@ -2025,15 +2045,23 @@ export default function AiAssistant() {
     if (resolved !== codegenModel) setCodegenModel(resolved);
   }, [codegenProvider, codegenModel]);
 
+  useEffect(() => {
+    const resolved = resolveModelForProvider(migrateProvider, migrateModel, 'codegen');
+    if (resolved !== migrateModel) setMigrateModel(resolved);
+  }, [migrateProvider, migrateModel]);
+
   const effectiveChatModel = resolveModelForProvider(chatProvider, chatModel, 'chat');
   const effectiveCodegenModel = resolveModelForProvider(codegenProvider, codegenModel, 'codegen');
+  const effectiveMigrateModel = resolveModelForProvider(migrateProvider, migrateModel, 'codegen');
 
   // Active keys by mode/provider
   const chatActiveKey = chatProvider === 'siemens' ? apiKey : groqApiKey;
   const codegenActiveKey = codegenProvider === 'siemens' ? apiKey : groqApiKey;
+  const migrateActiveKey = migrateProvider === 'siemens' ? apiKey : groqApiKey;
   const hasChatPremium = providerHasKey(chatProvider);
   const hasCodegenPremium = providerHasKey(codegenProvider);
-  const hasPremium = hasChatPremium || hasCodegenPremium;
+  const hasMigratePremium = providerHasKey(migrateProvider);
+  const hasPremium = hasChatPremium || hasCodegenPremium || hasMigratePremium;
   const chatRequestProvider = hasChatPremium ? chatProvider : undefined;
   const chatRequestModel = hasChatPremium ? effectiveChatModel : undefined;
   const chatRequestApiKey = hasChatPremium ? chatActiveKey : '';
@@ -2274,16 +2302,18 @@ export default function AiAssistant() {
     if (typeof window !== 'undefined') {
       localStorage.setItem(CHAT_PROVIDER_STORAGE, chatProvider);
       localStorage.setItem(CODEGEN_PROVIDER_STORAGE, codegenProvider);
+      localStorage.setItem(MIGRATE_PROVIDER_STORAGE, migrateProvider);
     }
-  }, [chatProvider, codegenProvider]);
+  }, [chatProvider, codegenProvider, migrateProvider]);
 
   // ── Persist model preferences ──
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem(CHAT_MODEL_STORAGE, chatModel);
       localStorage.setItem(CODEGEN_MODEL_STORAGE, codegenModel);
+      localStorage.setItem(MIGRATE_MODEL_STORAGE, migrateModel);
     }
-  }, [chatModel, codegenModel]);
+  }, [chatModel, codegenModel, migrateModel]);
 
   // ── Voice input: toggle listening ──
   const toggleVoice = () => {
@@ -3164,7 +3194,7 @@ export default function AiAssistant() {
       }
     }
 
-    if (!hasCodegenPremium) {
+    if (!hasMigratePremium) {
       setActiveMigrateError(ui('migrationNeedsKey'));
       return;
     }
@@ -3183,10 +3213,10 @@ export default function AiAssistant() {
         signal: migrateAbortRef.current.signal,
         body: JSON.stringify({
           code: activeMigrateInput,
-          apiKey: codegenActiveKey,
+          apiKey: migrateActiveKey,
           lang,
-          provider: codegenProvider,
-          model: effectiveCodegenModel,
+          provider: migrateProvider,
+          model: effectiveMigrateModel,
           flow: migrationFlow,
           fromVersion: migrationFlow === 'upgrade' ? upgradeFromVersion : undefined,
           toVersion: migrationFlow === 'upgrade' ? upgradeToVersion : undefined,
@@ -3511,13 +3541,14 @@ export default function AiAssistant() {
           })()}
 
           {/* ─────── Tier banner ─────── */}
-          {mode !== 'settings' && mode !== 'account' && mode !== 'migrate' && mode !== 'help' && mode !== 'analytics' && !keyLoading && !groqKeyLoading && (
-            <div className={(mode === 'chat' ? hasChatPremium : hasCodegenPremium) ? styles.tierBannerPremium : styles.tierBannerFree}>
-              {(mode === 'chat' ? hasChatPremium : hasCodegenPremium) ? (
+          {mode !== 'settings' && mode !== 'account' && mode !== 'help' && mode !== 'analytics' && !keyLoading && !groqKeyLoading && (
+            <div className={(mode === 'chat' ? hasChatPremium : mode === 'codegen' ? hasCodegenPremium : hasMigratePremium) ? styles.tierBannerPremium : styles.tierBannerFree}>
+              {(mode === 'chat' ? hasChatPremium : mode === 'codegen' ? hasCodegenPremium : hasMigratePremium) ? (
                 (() => {
                   const isCodegenMode = mode === 'codegen';
-                  const activeProvider = isCodegenMode ? codegenProvider : chatProvider;
-                  const activeModel = isCodegenMode ? effectiveCodegenModel : effectiveChatModel;
+                  const isMigrateMode = mode === 'migrate';
+                  const activeProvider = isMigrateMode ? migrateProvider : (isCodegenMode ? codegenProvider : chatProvider);
+                  const activeModel = isMigrateMode ? effectiveMigrateModel : (isCodegenMode ? effectiveCodegenModel : effectiveChatModel);
 
                   return (
                     <>
@@ -3552,7 +3583,8 @@ export default function AiAssistant() {
                                 value={activeProvider}
                                 onChange={(e) => {
                                   const nextProvider = e.target.value as Provider;
-                                  if (isCodegenMode) switchCodegenProvider(nextProvider);
+                                  if (isMigrateMode) switchMigrateProvider(nextProvider);
+                                  else if (isCodegenMode) switchCodegenProvider(nextProvider);
                                   else switchChatProvider(nextProvider);
                                 }}
                               >
@@ -3573,7 +3605,9 @@ export default function AiAssistant() {
                                 disabled={!providerHasKey(activeProvider)}
                                 onChange={(e) => {
                                   const nextModel = e.target.value;
-                                  if (isCodegenMode) {
+                                  if (isMigrateMode) {
+                                    setMigrateModel(resolveModelForProvider(migrateProvider, nextModel, 'codegen'));
+                                  } else if (isCodegenMode) {
                                     setCodegenModel(resolveModelForProvider(codegenProvider, nextModel, 'codegen'));
                                   } else {
                                     setChatModel(resolveModelForProvider(chatProvider, nextModel, 'chat'));
@@ -3596,6 +3630,13 @@ export default function AiAssistant() {
               ) : mode === 'codegen' ? (
                 <>
                   ⚡ <strong>{ui('codeGeneration')}</strong> —{' '}
+                  <button className={styles.tierLink} onClick={() => setMode('settings')}>
+                    {ui('addApiKey')}
+                  </button>
+                </>
+              ) : mode === 'migrate' ? (
+                <>
+                  ↔ <strong>{ui('migrate')}</strong> —{' '}
                   <button className={styles.tierLink} onClick={() => setMode('settings')}>
                     {ui('addApiKey')}
                   </button>
@@ -4625,6 +4666,55 @@ export default function AiAssistant() {
                       </button>
                     </div> */}
                   </div>
+
+                  <div className={styles.settingsConfigCard}>
+                    <div className={styles.settingsConfigHeader}>
+                      <span>↔ {ui('migrate')}</span>
+                      <span className={styles.settingsModelHint}>
+                        {PROVIDER_LABELS[migrateProvider]} · {PROVIDER_MODELS[migrateProvider].find((m) => m.id === effectiveMigrateModel)?.label || effectiveMigrateModel}
+                      </span>
+                    </div>
+
+                    <div className={styles.settingsConfigSelectRow}>
+                      <div className={styles.selectorGroup}>
+                        <label className={styles.modelSelectorLabel} htmlFor="settings-migrate-provider">
+                          {ui('provider')}
+                        </label>
+                        <select
+                          id="settings-migrate-provider"
+                          className={styles.selectorSelect}
+                          value={migrateProvider}
+                          onChange={(e) => switchMigrateProvider(e.target.value as Provider)}
+                        >
+                          <option value="siemens" disabled={!hasSiemensKey}>
+                            Siemens{hasSiemensKey ? ui('keySavedSuffix') : ui('addKeyFirstSuffix')}
+                          </option>
+                          <option value="groq" disabled={!hasGroqKey}>
+                            Groq{hasGroqKey ? ui('keySavedSuffix') : ui('addKeyFirstSuffix')}
+                          </option>
+                        </select>
+                      </div>
+
+                      <div className={styles.selectorGroup}>
+                        <label className={styles.modelSelectorLabel} htmlFor="settings-migrate-model">
+                          {ui('model')}
+                        </label>
+                        <select
+                          id="settings-migrate-model"
+                          className={styles.selectorSelect}
+                          value={effectiveMigrateModel}
+                          disabled={!providerHasKey(migrateProvider)}
+                          onChange={(e) => setMigrateModel(resolveModelForProvider(migrateProvider, e.target.value, 'codegen'))}
+                        >
+                          {PROVIDER_MODELS[migrateProvider].map((m) => (
+                            <option key={`migrate-${m.id}`} value={m.id}>
+                              {m.label}{m.recommended ? ' ★' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -4680,7 +4770,7 @@ export default function AiAssistant() {
                 <h3 className={styles.settingsTitle}>{ui('help')}</h3>
                 <div className={styles.helpLinks}>
                   <a
-                    href="https://ix.siemens.io/docs/"
+                    href="https://ix.siemens.io/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.helpLink}
