@@ -1724,6 +1724,12 @@ function getPanelMaxHeightPx(): number {
   return Math.max(200, vpH - PANEL_BOTTOM_PX - PANEL_TOP_RESERVED_PX);
 }
 
+function getPanelMaxWidthPx(): number {
+  if (typeof window === 'undefined') return DEFAULT_WIDTH;
+  const vpW = document.documentElement.clientWidth;
+  return Math.max(DEFAULT_WIDTH, vpW - PANEL_RIGHT_PX - VIEWPORT_PADDING);
+}
+
 function stripCodeFence(code: string): string {
   return code
     .replace(/^```[\w-]*\n?/gm, '')
@@ -1912,6 +1918,7 @@ export default function AiAssistant() {
 
   // ── Resize state ──
   const [panelWidth, setPanelWidth] = useState(DEFAULT_WIDTH);
+  const [isPanelExpanded, setIsPanelExpanded] = useState(false);
   // Lazy init: compute once at mount so window is defined (avoids SSR crash)
   const initialHeightRef = useRef<number | null>(null);
   if (initialHeightRef.current === null) {
@@ -2400,8 +2407,7 @@ export default function AiAssistant() {
       e.preventDefault();
 
       // Use clientWidth/clientHeight (excludes scrollbars) for accurate bounds
-      const vpW = document.documentElement.clientWidth;
-      const maxW = vpW - PANEL_RIGHT_PX - VIEWPORT_PADDING;
+      const maxW = getPanelMaxWidthPx();
       const maxH = getPanelMaxHeightPx();
 
       if (r.edge === 'corner' || r.edge === 'left') {
@@ -2436,15 +2442,22 @@ export default function AiAssistant() {
   useEffect(() => {
     if (!isOpen) return;
 
-    const clampPanelHeight = () => {
+    const clampPanelSize = () => {
+      const maxW = getPanelMaxWidthPx();
+      if (isPanelExpanded) {
+        setPanelWidth(maxW);
+      } else {
+        setPanelWidth((prev) => Math.min(prev, maxW));
+      }
+
       const maxH = getPanelMaxHeightPx();
       setPanelHeight((prev) => Math.min(prev, maxH));
     };
 
-    clampPanelHeight();
-    window.addEventListener('resize', clampPanelHeight);
-    return () => window.removeEventListener('resize', clampPanelHeight);
-  }, [isOpen]);
+    clampPanelSize();
+    window.addEventListener('resize', clampPanelSize);
+    return () => window.removeEventListener('resize', clampPanelSize);
+  }, [isOpen, isPanelExpanded]);
 
   const startResize = (
     e: React.PointerEvent,
@@ -2462,6 +2475,14 @@ export default function AiAssistant() {
     document.body.style.cursor =
       edge === 'corner' ? 'nwse-resize' : edge === 'top' ? 'ns-resize' : 'ew-resize';
     document.body.style.userSelect = 'none';
+  };
+
+  const togglePanelWidth = () => {
+    setIsPanelExpanded((prev) => {
+      const nextExpanded = !prev;
+      setPanelWidth(nextExpanded ? getPanelMaxWidthPx() : DEFAULT_WIDTH);
+      return nextExpanded;
+    });
   };
 
   // ── Escape key closes panel (or more-menu first) ──
@@ -3469,12 +3490,21 @@ export default function AiAssistant() {
                 </>
               )}
               <button
+                className={styles.panelSizeBtn}
+                onClick={togglePanelWidth}
+                title={isPanelExpanded ? 'Collapse width' : 'Expand width'}
+                aria-label={isPanelExpanded ? 'Collapse width' : 'Expand width'}
+              >
+                {isPanelExpanded ? '❐' : '□'}
+              </button>
+              {/* <button
                 className={styles.accountBtn}
                 onClick={() => switchMode('account')}
                 title={ui('account')}
               >
                 👤
-              </button>
+              </button> */}
+              
             </div>
           </div>
             );
