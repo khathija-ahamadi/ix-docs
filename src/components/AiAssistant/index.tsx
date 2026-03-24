@@ -2197,6 +2197,8 @@ export default function AiAssistant() {
   const [migrateUpgradeSummary, setMigrateUpgradeSummary] = useState('');
   const [migrateApiFeedback, setMigrateApiFeedback] = useState<FeedbackState>(createFeedbackState());
   const [migrateUpgradeFeedback, setMigrateUpgradeFeedback] = useState<FeedbackState>(createFeedbackState());
+  const [migrateApiCopied, setMigrateApiCopied] = useState(false);
+  const [migrateUpgradeCopied, setMigrateUpgradeCopied] = useState(false);
   const [migrationFlow, setMigrationFlow] = useState<MigrationFlow>('api');
   const [upgradeFromVersion, setUpgradeFromVersion] = useState('V3.0.0');
   const [upgradeToVersion, setUpgradeToVersion] = useState('V4.0.0');
@@ -2207,6 +2209,7 @@ export default function AiAssistant() {
   const activeMigrateError = migrationFlow === 'upgrade' ? migrateUpgradeError : migrateApiError;
   const activeMigrateSummary = migrationFlow === 'upgrade' ? migrateUpgradeSummary : migrateApiSummary;
   const activeMigrateFeedback = migrationFlow === 'upgrade' ? migrateUpgradeFeedback : migrateApiFeedback;
+  const activeMigrateCopied = migrationFlow === 'upgrade' ? migrateUpgradeCopied : migrateApiCopied;
   const setActiveMigrateInput = (value: string) => {
     if (migrationFlow === 'upgrade') {
       setMigrateUpgradeInput(value);
@@ -2248,6 +2251,13 @@ export default function AiAssistant() {
       return;
     }
     setMigrateApiFeedback(value);
+  };
+  const setActiveMigrateCopied = (value: boolean) => {
+    if (migrationFlow === 'upgrade') {
+      setMigrateUpgradeCopied(value);
+      return;
+    }
+    setMigrateApiCopied(value);
   };
 
   // ── AbortController refs for in-flight requests ──
@@ -3247,6 +3257,7 @@ export default function AiAssistant() {
       setMigrateUpgradeOutput('');
       setMigrateUpgradeError('');
       setMigrateUpgradeSummary('');
+      setMigrateUpgradeCopied(false);
       setMigrateUpgradeFeedback(createFeedbackState());
     } else {
       setMigrateApiInput('');
@@ -3254,6 +3265,7 @@ export default function AiAssistant() {
       setMigrateApiOutput('');
       setMigrateApiError('');
       setMigrateApiSummary('');
+      setMigrateApiCopied(false);
       setMigrateApiFeedback(createFeedbackState());
     }
   };
@@ -3325,7 +3337,18 @@ export default function AiAssistant() {
   };
 
   const handleMigrateCopy = async (text: string) => {
-    try { await navigator.clipboard.writeText(text); } catch {}
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    setActiveMigrateCopied(true);
+    setTimeout(() => setActiveMigrateCopied(false), 2000);
   };
 
   const handleMigrateDownload = () => {
@@ -5049,13 +5072,13 @@ export default function AiAssistant() {
                         <button
                           className={styles.copyBtn}
                           onClick={() => handleMigrateCopy(stripCodeFence(activeMigrateOutput))}
-                          title={ui('copy')}
+                          title={activeMigrateCopied ? ui('copied') : ui('copyCode')}
                         >
                           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
                             <rect x="5" y="1" width="9" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/>
                             <rect x="2" y="4" width="9" height="11" rx="2" fill="var(--theme-color-primary,#00bde3)" stroke="currentColor" strokeWidth="1.5"/>
                           </svg>
-                          {ui('copy')}
+                          {activeMigrateCopied ? ui('copied') : ui('copy')}
                         </button>
                       </div>
                     </div>
