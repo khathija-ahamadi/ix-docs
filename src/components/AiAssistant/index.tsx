@@ -3641,9 +3641,9 @@ export default function AiAssistant() {
                             </svg>
                           ) : (
                             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                              <path d="M2.5 6.5h3l3-2v7l-3-2h-3z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-                              <path d="M10.8 6a2.8 2.8 0 0 1 0 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                              <path d="M12.6 4.5a4.9 4.9 0 0 1 0 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                              <path d="M2.5 6.5h3l3-2v7l-3-2h-3z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                              <path d="M10.8 6a2.8 2.8 0 0 1 0 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                              <path d="M12.6 4.5a4.9 4.9 0 0 1 0 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                             </svg>
                           )}
                         </button>
