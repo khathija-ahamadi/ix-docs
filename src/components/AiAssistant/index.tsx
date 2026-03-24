@@ -153,6 +153,8 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     upgradeVersionOrderError: 'Target version must be newer than source version.',
     upgradeFromEolWarning: '⚠️ Source version {version} is End of Life. Upgrade is recommended as soon as possible.',
     upgradePathHint: 'Recommended path for V2.0.0: upgrade to V3.0.0 first, then to V4.0.0.',
+    showVersionTable: 'Show version table',
+    hideVersionTable: 'Hide version table',
     copy: 'Copy',
     voiceInputNotSupported: 'Voice input is not supported in this browser.',
     voiceRecognitionError: 'Voice recognition error. Please try again.',
@@ -2103,6 +2105,7 @@ export default function AiAssistant() {
   const [migrationFlow, setMigrationFlow] = useState<MigrationFlow>('api');
   const [upgradeFromVersion, setUpgradeFromVersion] = useState('V3.0.0');
   const [upgradeToVersion, setUpgradeToVersion] = useState('V4.0.0');
+  const [showVersionTable, setShowVersionTable] = useState(false);
 
   // ── AbortController refs for in-flight requests ──
   const chatAbortRef = useRef<AbortController | null>(null);
@@ -4583,6 +4586,7 @@ export default function AiAssistant() {
                   className={`${styles.migrationModeBtn} ${migrationFlow === 'api' ? styles.migrationModeBtnActive : ''}`}
                   onClick={() => {
                     setMigrationFlow('api');
+                    setShowVersionTable(false);
                     setMigrateError('');
                   }}
                   disabled={migrateLoading}
@@ -4593,6 +4597,7 @@ export default function AiAssistant() {
                   className={`${styles.migrationModeBtn} ${migrationFlow === 'upgrade' ? styles.migrationModeBtnActive : ''}`}
                   onClick={() => {
                     setMigrationFlow('upgrade');
+                    setShowVersionTable(false);
                     setMigrateError('');
                   }}
                   disabled={migrateLoading}
@@ -4635,6 +4640,19 @@ export default function AiAssistant() {
               )}
 
               {migrationFlow === 'upgrade' && (
+                <div className={styles.migrationVersionToggle}>
+                  <button
+                    className={styles.settingsLinkBtn}
+                    onClick={() => setShowVersionTable((prev) => !prev)}
+                    type="button"
+                    aria-expanded={showVersionTable}
+                  >
+                    {showVersionTable ? ui('hideVersionTable') : ui('showVersionTable')}
+                  </button>
+                </div>
+              )}
+
+              {migrationFlow === 'upgrade' && showVersionTable && (
                 <div className={styles.migrationVersionTableWrap}>
                   <table className={styles.tierTable}>
                     <thead>
