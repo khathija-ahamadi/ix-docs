@@ -3593,6 +3593,13 @@ export default function AiAssistant() {
                     </>
                   );
                 })()
+              ) : mode === 'codegen' ? (
+                <>
+                  ⚡ <strong>{ui('codeGeneration')}</strong> —{' '}
+                  <button className={styles.tierLink} onClick={() => setMode('settings')}>
+                    {ui('addApiKey')}
+                  </button>
+                </>
               ) : (
                 <>
                   🆓 <strong>{ui('freeTier')}</strong> —{' '}
