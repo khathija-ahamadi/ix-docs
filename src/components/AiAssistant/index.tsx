@@ -3188,7 +3188,7 @@ export default function AiAssistant() {
         setActiveMigrateError(ui('upgradeVersionRequired'));
         return;
       }
-      if ((IX_VERSION_ORDER[upgradeToVersion] || 0) <= (IX_VERSION_ORDER[upgradeFromVersion] || 0)) {
+      if ((IX_VERSION_ORDER[upgradeFromVersion] || 0) >= (IX_VERSION_ORDER[upgradeToVersion] || 0)) {
         setActiveMigrateError(ui('upgradeVersionOrderError'));
         return;
       }
@@ -4976,8 +4976,8 @@ export default function AiAssistant() {
                 disabled={
                   migrateLoading ||
                   !activeMigrateInput.trim() ||
-                  (migrationFlow === 'upgrade' &&
-                    ((IX_VERSION_ORDER[upgradeToVersion] || 0) <= (IX_VERSION_ORDER[upgradeFromVersion] || 0)))
+                   (migrationFlow === 'upgrade' &&
+                     ((IX_VERSION_ORDER[upgradeFromVersion] || 0) >= (IX_VERSION_ORDER[upgradeToVersion] || 0)))
                 }
               >
                 {migrateLoading ? <span className={styles.spinner} /> : '🔍'}{' '}
