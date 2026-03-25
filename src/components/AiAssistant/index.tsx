@@ -1904,8 +1904,8 @@ function AnalyticsView({ lang }: { lang: Language }) {
             <div className={styles.analyticsFeatureChartGrid}>
               <div className={styles.analyticsFeatureBars}>
                 {featureRows.map((item) => {
-                  const widthPct = chartTotal > 0 ? Math.max((item.count / chartTotal) * 100, item.count > 0 ? 6 : 0) : 0;
-                  const sharePct = chartTotal > 0 ? Math.round((item.count / chartTotal) * 100) : 0;
+                  const queryPct = Math.max(0, Math.min(item.count, 100));
+                  const widthPct = item.count > 0 ? Math.max(queryPct, 6) : 0;
                   return (
                     <div key={item.key} className={styles.analyticsFeatureRow}>
                       <div className={styles.analyticsFeatureHeader}>
@@ -1919,7 +1919,7 @@ function AnalyticsView({ lang }: { lang: Language }) {
                           aria-label={`${item.label} ${item.count} ${uiText(lang, 'queries')}`}
                         />
                       </div>
-                      <div className={styles.analyticsFeaturePercent}>{sharePct}%</div>
+                      <div className={styles.analyticsFeaturePercent}>{queryPct}%</div>
                     </div>
                   );
                 })}
