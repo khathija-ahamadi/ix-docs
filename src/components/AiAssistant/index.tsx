@@ -1878,6 +1878,11 @@ function AnalyticsView({ lang }: { lang: Language }) {
       })
       .join(', ');
   })();
+  const donutTooltip = featureRows.length
+    ? `${uiText(lang, 'queriesByFeature')}\n${featureRows
+      .map((item) => `${item.label}: ${item.count}`)
+      .join('\n')}\n${uiText(lang, 'queries')}: ${chartTotal}`
+    : uiText(lang, 'queriesByFeature');
 
   return (
     <div className={styles.settingsBody}>
@@ -1926,6 +1931,7 @@ function AnalyticsView({ lang }: { lang: Language }) {
                   style={{ background: `conic-gradient(from -90deg, ${donutSegments})` }}
                   role="img"
                   aria-label={`${uiText(lang, 'queriesByFeature')} total ${chartTotal}`}
+                  title={donutTooltip}
                 >
                   <div className={styles.analyticsDonutInner}>
                     <div className={styles.analyticsDonutValue}>{chartTotal}</div>
