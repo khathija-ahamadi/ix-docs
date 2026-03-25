@@ -1819,6 +1819,22 @@ function AnalyticsView({ lang }: { lang: Language }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
+  const featureOrder = ['chat', 'generate', 'migrate', 'settings'];
+
+  const featureLabel = (endpoint: string) => {
+    const endpointToKey: Record<string, string> = {
+      chat: 'chat',
+      generate: 'codeGen',
+      codegen: 'codeGen',
+      account: 'account',
+      settings: 'settings',
+      help: 'help',
+      migrate: 'migrate',
+    };
+    const key = endpointToKey[endpoint];
+    return key ? uiText(lang, key) : endpoint;
+  };
+
   useEffect(() => {
     fetch('http://localhost:5000/analytics')
       .then((r) => {
@@ -1829,18 +1845,39 @@ function AnalyticsView({ lang }: { lang: Language }) {
       .catch((e) => { setError(e.message); setLoading(false); });
   }, []);
 
-  const featureLabel = (endpoint: string) => {
-    const endpointToKey: Record<string, string> = {
-      chat: 'chat',
-      codegen: 'codeGen',
-      account: 'account',
-      settings: 'settings',
-      help: 'help',
-      migrate: 'migrate',
-    };
-    const key = endpointToKey[endpoint];
-    return key ? uiText(lang, key) : endpoint;
-  };
+  const featureRows = data
+    ? featureOrder.map((feature) => ({
+      key: feature,
+      count: data.endpointCounts[feature] ?? 0,
+      label: featureLabel(feature),
+    }))
+    : [];
+
+  const chartTotal = featureRows.reduce((sum, item) => sum + item.count, 0);
+  const donutSegments = (() => {
+    if (chartTotal <= 0) {
+      return 'var(--theme-color-component-2, rgba(229,247,255,0.07)) 0% 100%';
+    }
+
+    const colors = [
+      'var(--theme-color-primary, #00bde3)',
+      'var(--theme-color-alarm, #ef4444)',
+      'var(--theme-color-warning, #ffbb00)',
+      'var(--theme-color-success, #22c55e)',
+    ];
+
+    let runningTotal = 0;
+    return featureRows
+      .filter((item) => item.count > 0)
+      .map((item, index) => {
+        const start = (runningTotal / chartTotal) * 100;
+        runningTotal += item.count;
+        const end = (runningTotal / chartTotal) * 100;
+        const color = colors[index % colors.length];
+        return `${color} ${start}% ${end}%`;
+      })
+      .join(', ');
+  })();
 
   return (
     <div className={styles.settingsBody}>
@@ -1859,16 +1896,44 @@ function AnalyticsView({ lang }: { lang: Language }) {
           {/* Endpoint counts */}
           <div className={styles.settingsSection}>
             <h3 className={styles.settingsTitle}>{uiText(lang, 'queriesByFeature')}</h3>
-            <table className={styles.tierTable}>
-              <thead><tr><th>{uiText(lang, 'feature')}</th><th>{uiText(lang, 'queries')}</th></tr></thead>
-              <tbody>
-                {Object.entries(data.endpointCounts)
-                  .filter(([k]) => k !== 'refine')
-                  .map(([k, v]) => (
-                    <tr key={k}><td>{featureLabel(k)}</td><td>{v}</td></tr>
-                  ))}
-              </tbody>
-            </table>
+            <div className={styles.analyticsFeatureChartGrid}>
+              <div className={styles.analyticsFeatureBars}>
+                {featureRows.map((item) => {
+                  const widthPct = chartTotal > 0 ? Math.max((item.count / chartTotal) * 100, item.count > 0 ? 6 : 0) : 0;
+                  const sharePct = chartTotal > 0 ? Math.round((item.count / chartTotal) * 100) : 0;
+                  return (
+                    <div key={item.key} className={styles.analyticsFeatureRow}>
+                      <div className={styles.analyticsFeatureHeader}>
+                        <span className={styles.analyticsFeatureLabel}>{item.label}</span>
+                        <span className={styles.analyticsFeatureCount}>{item.count}</span>
+                      </div>
+                      <div className={styles.analyticsFeatureTrack}>
+                        <div
+                          className={styles.analyticsFeatureFill}
+                          style={{ width: `${widthPct}%` }}
+                          aria-label={`${item.label} ${item.count} ${uiText(lang, 'queries')}`}
+                        />
+                      </div>
+                      <div className={styles.analyticsFeaturePercent}>{sharePct}%</div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className={styles.analyticsDonutCard}>
+                <div
+                  className={styles.analyticsDonut}
+                  style={{ background: `conic-gradient(from -90deg, ${donutSegments})` }}
+                  role="img"
+                  aria-label={`${uiText(lang, 'queriesByFeature')} total ${chartTotal}`}
+                >
+                  <div className={styles.analyticsDonutInner}>
+                    <div className={styles.analyticsDonutValue}>{chartTotal}</div>
+                    <div className={styles.analyticsDonutLabel}>{uiText(lang, 'queries')}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Top questions */}
