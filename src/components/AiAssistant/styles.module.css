@@ -894,6 +894,48 @@
   gap: 2px;
 }
 
+.helpActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.helpActions .settingsLinkBtn {
+  min-width: 120px;
+}
+
+.helpBulletList {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
+  line-height: 1.5;
+}
+
+.helpBulletList li {
+  margin: 0;
+}
+
+.helpNumberedList {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--theme-color-soft-text, rgba(229, 247, 255, 0.65));
+  line-height: 1.5;
+}
+
+.helpNumberedList li::marker {
+  color: var(--theme-color-primary, #00bde3);
+  font-weight: 700;
+}
+
 .helpLink {
   display: flex;
   align-items: center;
@@ -911,6 +953,22 @@
   background: var(--theme-color-ghost-hover, rgba(224, 245, 255, 0.06));
   color: var(--theme-color-std-text, rgba(245, 252, 255, 0.9));
   text-decoration: none;
+}
+
+.helpLinkTextWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.helpLinkTitle {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.helpLinkDescription {
+  font-size: 11px;
+  color: var(--theme-color-weak-text, rgba(219, 244, 255, 0.4));
 }
 
 .helpLinkIcon {

@@ -122,6 +122,26 @@ const UI_TEXT: Record<Language, Record<string, string>> = {
     providerModelTitle: '🤖 AI Provider & Model',
     providerModelDescription: 'Configure Chat, Code Gen, and Migrate independently. Each can use a different provider and model.',
     freeVsAi: '🆓 Free vs AI Assistant',
+    helpDescription: 'Get started quickly with shortcuts and practical guidance.',
+    quickStartTitle: '🚀 Quick Start & Shortcuts',
+    quickStartIntro: 'Recommended flow for first-time use:',
+    quickStartChat: 'Ask Chat about iX components, usage patterns, and API behavior.',
+    quickStartCodegen: 'Generate a starter snippet in Code Gen, then refine it with follow-up instructions.',
+    quickStartMigrate: 'Use Migrate to upgrade deprecated APIs and move between supported versions.',
+    quickStartSettings: 'Open Settings to add your Siemens or Groq API key and choose models.',
+    troubleshootingTitle: '🛠 Troubleshooting',
+    troubleshootingNoAi: 'Getting docs-only answers? Add an API key in Settings.',
+    troubleshootingVoice: 'Voice controls do not work in all browsers. Try Chrome or Edge.',
+    troubleshootingMigration: 'Migration output looks wrong? Include full code context and target version.',
+    resourcesTitle: '📚 Resources',
+    docsDescription: 'Official iX docs and component guidance.',
+    blogDescription: 'Release notes, roadmap, and announcements.',
+    supportDescription: 'Contact support for product questions.',
+    starterAppDescription: 'Bootstrap a new iX project quickly.',
+    openSettings: 'Go to Settings',
+    openChat: 'Go to Chat',
+    openCodeGen: 'Go to Code Gen',
+    openMigrate: 'Go to Migrate',
     docs: 'Go to docs',
     blog: 'Blog',
     support: 'Support',
@@ -4862,6 +4882,37 @@ export default function AiAssistant() {
             <div className={styles.settingsBody}>
               <div className={styles.settingsSection}>
                 <h3 className={styles.settingsTitle}>{ui('help')}</h3>
+                <p className={styles.settingsDescription}>{ui('helpDescription')}</p>
+              </div>
+
+              <div className={styles.settingsSection}>
+                <h3 className={styles.settingsTitle}>{ui('quickStartTitle')}</h3>
+
+                <div className={styles.helpActions}>
+                  <button className={styles.settingsLinkBtn} onClick={() => setMode('chat')}>
+                    {ui('openChat')}
+                  </button>
+                  <button className={styles.settingsLinkBtn} onClick={() => setMode('codegen')}>
+                    {ui('openCodeGen')}
+                  </button>
+                  <button className={styles.settingsLinkBtn} onClick={() => setMode('migrate')}>
+                    {ui('openMigrate')}
+                  </button>
+                  <button className={styles.settingsLinkBtn} onClick={() => setMode('settings')}>
+                    {ui('openSettings')}
+                  </button>
+                </div>
+                <p className={styles.settingsDescription}>{ui('quickStartIntro')}</p>
+                <ol className={styles.helpNumberedList}>
+                  <li>{ui('quickStartChat')}</li>
+                  <li>{ui('quickStartCodegen')}</li>
+                  <li>{ui('quickStartMigrate')}</li>
+                  <li>{ui('quickStartSettings')}</li>
+                </ol>
+              </div>
+
+              <div className={styles.settingsSection}>
+                <h3 className={styles.settingsTitle}>{ui('resourcesTitle')}</h3>
                 <div className={styles.helpLinks}>
                   <a
                     href="https://ix.siemens.io/"
@@ -4875,7 +4926,10 @@ export default function AiAssistant() {
                       <line x1="5.5" y1="8" x2="10.5" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
                       <line x1="5.5" y1="10.5" x2="8.5" y2="10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
                     </svg>
-                    {ui('docs')}
+                    <span className={styles.helpLinkTextWrap}>
+                      <span className={styles.helpLinkTitle}>{ui('docs')}</span>
+                      <span className={styles.helpLinkDescription}>{ui('docsDescription')}</span>
+                    </span>
                   </a>
                   <a
                     href="https://ix.siemens.io/blog"
@@ -4889,7 +4943,10 @@ export default function AiAssistant() {
                       <line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
                       <line x1="5" y1="10.5" x2="9" y2="10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
                     </svg>
-                    {ui('blog')}
+                    <span className={styles.helpLinkTextWrap}>
+                      <span className={styles.helpLinkTitle}>{ui('blog')}</span>
+                      <span className={styles.helpLinkDescription}>{ui('blogDescription')}</span>
+                    </span>
                   </a>
                   <a
                     href="https://ix.siemens.io/docs/home/support/contact-us"
@@ -4902,7 +4959,10 @@ export default function AiAssistant() {
                       <path d="M6.5 6.5C6.5 5.67 7.17 5 8 5s1.5.67 1.5 1.5c0 1-1.5 1.5-1.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                       <circle cx="8" cy="11.5" r="0.75" fill="currentColor"/>
                     </svg>
-                    {ui('support')}
+                    <span className={styles.helpLinkTextWrap}>
+                      <span className={styles.helpLinkTitle}>{ui('support')}</span>
+                      <span className={styles.helpLinkDescription}>{ui('supportDescription')}</span>
+                    </span>
                   </a>
                   <a
                     href="https://ix.siemens.io/docs/home/getting-started/starter-app"
@@ -4914,9 +4974,21 @@ export default function AiAssistant() {
                       <path d="M3 2.5A1.5 1.5 0 014.5 1h7A1.5 1.5 0 0113 2.5v11a1.5 1.5 0 01-1.5 1.5h-7A1.5 1.5 0 013 13.5v-11z" stroke="currentColor" strokeWidth="1.5"/>
                       <path d="M7 5l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    {ui('starterApp')}
+                    <span className={styles.helpLinkTextWrap}>
+                      <span className={styles.helpLinkTitle}>{ui('starterApp')}</span>
+                      <span className={styles.helpLinkDescription}>{ui('starterAppDescription')}</span>
+                    </span>
                   </a>
                 </div>
+              </div>
+
+              <div className={styles.settingsSection}>
+                <h3 className={styles.settingsTitle}>{ui('troubleshootingTitle')}</h3>
+                <ul className={styles.helpBulletList}>
+                  <li>{ui('troubleshootingNoAi')}</li>
+                  <li>{ui('troubleshootingVoice')}</li>
+                  <li>{ui('troubleshootingMigration')}</li>
+                </ul>
               </div>
             </div>
           )}
