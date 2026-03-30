@@ -1391,17 +1391,35 @@ app.post("/migrate", rateLimiter, async (req, res) => {
 
     const summaryQuestion =
       migrationFlow === "upgrade"
-        ? `Provide a short (2-6 sentence) summary of the ${fromVersion} → ${toVersion} upgrade: list notable breaking changes applied, deprecated APIs/components replaced, and manual verification steps.`
-        : "Provide a short (2-6 sentence) summary of the migration performed: list deprecated components replaced, notable API changes, and any manual follow-ups the developer should verify.";
+        ? `Provide a short (2-6 sentence) summary of the ${fromVersion} → ${toVersion} upgrade: list notable breaking changes applied, deprecated APIs/components replaced, and manual verification steps. Do NOT wrap your answer in <think> tags or include any reasoning — just give the summary directly.`
+        : "Provide a short (2-6 sentence) summary of the migration performed: list deprecated components replaced, notable API changes, and any manual follow-ups the developer should verify. Do NOT wrap your answer in <think> tags or include any reasoning — just give the summary directly.";
 
-    const summary = await askAI(
-      docsContext,
-      `${summaryQuestion}\n\nOriginal code:\n${code.toString().slice(0, 3000)}\n\nMigrated code:\n${migratedCode.toString().slice(0, 3000)}`,
-      userApiKey,
-      resolvedLang,
-      provider,
-      model
-    );
+    let summary = "";
+    try {
+      const rawSummary = await askAI(
+        docsContext,
+        `${summaryQuestion}\n\nOriginal code:\n${code.toString().slice(0, 3000)}\n\nMigrated code:\n${migratedCode.toString().slice(0, 3000)}`,
+        userApiKey,
+        resolvedLang,
+        provider,
+        model
+      );
+      // Strip <think>...</think> tags that reasoning models may produce
+      summary = (rawSummary || "")
+        .replace(/<think>[\s\S]*?<\/think>/gi, "")
+        .replace(/<think>[\s\S]*/gi, "")
+        .trim();
+      if (!summary) {
+        summary = migrationFlow === "upgrade"
+          ? `Code upgraded from ${fromVersion} to ${toVersion}. Review the migrated code for deprecated API replacements and verify behavior.`
+          : "Migration complete. Deprecated APIs have been replaced with their current equivalents. Review the migrated code and verify behavior.";
+      }
+    } catch (summaryErr) {
+      console.warn("Summary generation failed (non-fatal):", summaryErr.message || summaryErr);
+      summary = migrationFlow === "upgrade"
+        ? `Code upgraded from ${fromVersion} to ${toVersion}. Review the migrated code for deprecated API replacements and verify behavior.`
+        : "Migration complete. Deprecated APIs have been replaced with their current equivalents. Review the migrated code and verify behavior.";
+    }
 
     res.json({ migratedCode, summary, flow: migrationFlow, fromVersion: fromVersion || null, toVersion: toVersion || null });
   } catch (err) {
@@ -1431,7 +1449,7 @@ app.post("/refine", rateLimiter, async (req, res) => {
     return res.status(400).json({ error: localize(resolvedLang, "noApiKeySettings") });
   }
 
-  const systemPrompt = `You are an expert code editor for the Siemens Industrial Experience (iX) design system. 
+  const systemPrompt = `You are an expert code editor for the Siemens Industrial Experience (iX) design system.
 Modify the provided code ONLY according to the user's instruction and return the complete updated code in a single fenced code block.
 Do not explain — only return the full updated code.${langInstruction(resolvedLang)}`;
 
@@ -1468,7 +1486,7 @@ app.get("/user/settings", (req, res) => {
   const lang = getRequestLang(req);
   // In production, extract userId from JWT token or session
   const userId = req.query?.userId || "anonymous";
-  
+
   // Retrieve from in-memory store or database
   // For now, return defaults based on request language
   res.json({
@@ -1494,7 +1512,7 @@ app.get("/user/settings", (req, res) => {
 app.post("/user/settings", (req, res) => {
   const { language, provider, chatModel, codegenModel, userId } = req.body || {};
   const resolvedLang = normalizeLang(language || getRequestLang(req));
-  
+
   // Validate inputs
   const validProviders = ["siemens", "groq"];
   if (provider && !validProviders.includes(provider)) {
@@ -1603,7 +1621,7 @@ app.post("/user/language", (req, res) => {
 app.get("/suggest", (req, res) => {
   const q = (req.query.q || "").toString().trim();
   const lang = getRequestLang(req);
-  
+
   if (!q || q.length < 2) return res.json({ suggestions: [], lang });
   const results = searchDocs(q, 5);
   res.json({

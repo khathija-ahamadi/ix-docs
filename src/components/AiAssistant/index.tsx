@@ -1759,6 +1759,154 @@ function stripCodeFence(code: string): string {
     .trim();
 }
 
+// ── Markdown-like renderer for bot messages ─────────────────────────
+function renderFormattedText(text: string): JSX.Element {
+  // Split on fenced code blocks first: ```lang\ncode\n```
+  const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
+  const parts: { type: 'text' | 'code'; lang?: string; content: string }[] = [];
+  let lastIdx = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = codeBlockRegex.exec(text)) !== null) {
+    if (match.index > lastIdx) {
+      parts.push({ type: 'text', content: text.slice(lastIdx, match.index) });
+    }
+    parts.push({ type: 'code', lang: match[1] || '', content: match[2].trimEnd() });
+    lastIdx = match.index + match[0].length;
+  }
+  if (lastIdx < text.length) {
+    parts.push({ type: 'text', content: text.slice(lastIdx) });
+  }
+
+  const renderInline = (line: string, key: string): JSX.Element => {
+    // Process inline code, bold, italic, links
+    const tokens: JSX.Element[] = [];
+    const inlineRegex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g;
+    let last = 0;
+    let inlineMatch: RegExpExecArray | null;
+    let idx = 0;
+
+    while ((inlineMatch = inlineRegex.exec(line)) !== null) {
+      if (inlineMatch.index > last) {
+        tokens.push(<span key={`${key}-t${idx++}`}>{line.slice(last, inlineMatch.index)}</span>);
+      }
+      const seg = inlineMatch[0];
+      if (seg.startsWith('`') && seg.endsWith('`')) {
+        tokens.push(<code key={`${key}-t${idx++}`} className="fmt-inline-code">{seg.slice(1, -1)}</code>);
+      } else if (seg.startsWith('**') && seg.endsWith('**')) {
+        tokens.push(<strong key={`${key}-t${idx++}`}>{seg.slice(2, -2)}</strong>);
+      } else if (seg.startsWith('*') && seg.endsWith('*')) {
+        tokens.push(<em key={`${key}-t${idx++}`}>{seg.slice(1, -1)}</em>);
+      } else if (seg.startsWith('[')) {
+        const linkMatch = seg.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+        if (linkMatch) {
+          tokens.push(
+            <a key={`${key}-t${idx++}`} href={linkMatch[2]} target="_blank" rel="noopener noreferrer" className="fmt-link">{linkMatch[1]}</a>
+          );
+        } else {
+          tokens.push(<span key={`${key}-t${idx++}`}>{seg}</span>);
+        }
+      }
+      last = inlineMatch.index + seg.length;
+    }
+    if (last < line.length) {
+      tokens.push(<span key={`${key}-t${idx++}`}>{line.slice(last)}</span>);
+    }
+    return <>{tokens}</>;
+  };
+
+  const renderTextBlock = (content: string, blockKey: string): JSX.Element[] => {
+    const lines = content.split('\n');
+    const elements: JSX.Element[] = [];
+    let listItems: { ordered: boolean; text: string }[] = [];
+    let listOrdered = false;
+
+    const flushList = () => {
+      if (listItems.length === 0) return;
+      const items = listItems.map((item, li) => (
+        <li key={`${blockKey}-li${li}`}>{renderInline(item.text, `${blockKey}-li${li}`)}</li>
+      ));
+      if (listOrdered) {
+        elements.push(<ol key={`${blockKey}-ol${elements.length}`} className="fmt-list fmt-ol">{items}</ol>);
+      } else {
+        elements.push(<ul key={`${blockKey}-ul${elements.length}`} className="fmt-list fmt-ul">{items}</ul>);
+      }
+      listItems = [];
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // Headings
+      const headingMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+      if (headingMatch) {
+        flushList();
+        const level = headingMatch[1].length;
+        elements.push(
+          <div key={`${blockKey}-h${i}`} className={`fmt-heading fmt-h${level}`}>
+            {renderInline(headingMatch[2], `${blockKey}-h${i}`)}
+          </div>
+        );
+        continue;
+      }
+
+      // Unordered list items
+      if (/^[-*•]\s+/.test(trimmed)) {
+        if (listItems.length > 0 && listOrdered) flushList();
+        listOrdered = false;
+        listItems.push({ ordered: false, text: trimmed.replace(/^[-*•]\s+/, '') });
+        continue;
+      }
+
+      // Ordered list items
+      if (/^\d+[.)]\s+/.test(trimmed)) {
+        if (listItems.length > 0 && !listOrdered) flushList();
+        listOrdered = true;
+        listItems.push({ ordered: true, text: trimmed.replace(/^\d+[.)]\s+/, '') });
+        continue;
+      }
+
+      flushList();
+
+      // Empty line → spacing
+      if (trimmed === '') {
+        elements.push(<div key={`${blockKey}-br${i}`} className="fmt-spacer" />);
+        continue;
+      }
+
+      // Regular paragraph
+      elements.push(
+        <div key={`${blockKey}-p${i}`} className="fmt-paragraph">{renderInline(trimmed, `${blockKey}-p${i}`)}</div>
+      );
+    }
+    flushList();
+    return elements;
+  };
+
+  return (
+    <div className="fmt-root">
+      {parts.map((part, pi) => {
+        if (part.type === 'code') {
+          const codeLines = part.content.split('\n');
+          return (
+            <div key={`block-${pi}`} className="fmt-code-block">
+              {part.lang && <div className="fmt-code-lang">{part.lang}</div>}
+              <pre className="fmt-pre"><code>{codeLines.map((line, li) => (
+                <div key={li} className="fmt-code-line">
+                  <span className="fmt-line-num">{li + 1}</span>
+                  <span className="fmt-line-text">{line}</span>
+                </div>
+              ))}</code></pre>
+            </div>
+          );
+        }
+        return <div key={`block-${pi}`}>{renderTextBlock(part.content, `tb-${pi}`)}</div>;
+      })}
+    </div>
+  );
+}
+
 function getDownloadFileName(framework: Framework): string {
   return `ix-${framework}-generated.txt`;
 }
@@ -2239,7 +2387,7 @@ export default function AiAssistant() {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
-  const chatInputRef = useRef<HTMLInputElement>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
 
   // ── Code Generator state ──
   const [description, setDescription] = useState('');
@@ -2779,7 +2927,10 @@ export default function AiAssistant() {
   };
 
   const handleChatKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') sendMessage();
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   };
 
   const submitFeedback = async ({
@@ -3329,7 +3480,17 @@ export default function AiAssistant() {
       }
       const data = await res.json();
       setActiveMigrateOutput(data.migratedCode || '');
-      setActiveMigrateSummary(data.summary || '');
+      // Strip <think> tags from reasoning models & provide fallback
+      let summary = (data.summary || '')
+        .replace(/<think>[\s\S]*?<\/think>/gi, '')
+        .replace(/<think>[\s\S]*/gi, '')
+        .trim();
+      if (!summary && data.migratedCode) {
+        summary = migrationFlow === 'upgrade'
+          ? `Code upgraded from ${upgradeFromVersion} to ${upgradeToVersion}. Review the migrated output for deprecated API replacements and verify behavior.`
+          : 'Migration complete. Deprecated APIs have been replaced with their current equivalents. Review the migrated code and verify behavior.';
+      }
+      setActiveMigrateSummary(summary);
     } catch (err: any) {
       if (err.name === 'AbortError') return;
       setActiveMigrateError(err.message || ui('migrationFailed'));
@@ -3648,7 +3809,7 @@ export default function AiAssistant() {
               >
                 👤
               </button> */}
-              
+
             </div>
           </div>
             );
@@ -3829,7 +3990,9 @@ export default function AiAssistant() {
                         ? ui('ixBotPremium')
                         : ui('ixBot')}
                     </span>
-                    <p className={styles.bubbleText}>{msg.text}</p>
+                    <div className={styles.bubbleText}>
+                      {msg.role === 'bot' ? renderFormattedText(msg.text) : msg.text}
+                    </div>
                     {msg.role === 'bot' && (
                       <div className={styles.bubbleActions}>
                         <button
@@ -3950,15 +4113,20 @@ export default function AiAssistant() {
                 </div>
               )}
               <div className={styles.inputRow}>
-                <input
+                <textarea
                   ref={chatInputRef}
-                  className={styles.input}
-                  type="text"
+                  className={styles.chatTextarea}
                   placeholder={isListening ? ui('listening') : ui('askPlaceholder')}
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   onKeyDown={handleChatKeyDown}
                   disabled={chatLoading}
+                  rows={1}
+                  onInput={(e) => {
+                    const el = e.currentTarget;
+                    el.style.height = 'auto';
+                    el.style.height = Math.min(el.scrollHeight, 96) + 'px';
+                  }}
                 />
                 <button
                   className={`${styles.micBtn} ${isListening ? styles.micBtnActive : ''}`}
@@ -4350,7 +4518,12 @@ export default function AiAssistant() {
                   </div>
                   <pre className={styles.codeBlock}>
                     <code>
-                      {stripCodeFence(generatedCode)}
+                      {stripCodeFence(generatedCode).split('\n').map((line, li) => (
+                        <div key={li} className={styles.codeLine}>
+                          <span className={styles.codeLineNum}>{li + 1}</span>
+                          <span className={styles.codeLineText}>{line}</span>
+                        </div>
+                      ))}
                     </code>
                   </pre>
                   <div className={styles.feedbackBox}>
@@ -5168,7 +5341,8 @@ export default function AiAssistant() {
 
               {activeMigrateSummary && (
                 <div className={styles.migrateSummary}>
-                  <strong>📋 {ui('summary')}</strong> {activeMigrateSummary}
+                  <div className={styles.migrateSummaryHeader}>📋 {ui('summary')}</div>
+                  <div className={styles.migrateSummaryContent}>{renderFormattedText(activeMigrateSummary)}</div>
                 </div>
               )}
 
@@ -5188,6 +5362,7 @@ export default function AiAssistant() {
                               : styles.diffUnchanged
                           }
                         >
+                          <span className={styles.diffLineNum}>{i + 1}</span>
                           <span className={styles.diffGutter}>
                             {line.type === 'added' ? '+' : line.type === 'removed' ? '\u2212' : ' '}
                           </span>
@@ -5226,7 +5401,14 @@ export default function AiAssistant() {
                       </div>
                     </div>
                     <pre className={styles.codeBlock}>
-                      <code>{stripCodeFence(activeMigrateOutput)}</code>
+                      <code>
+                        {stripCodeFence(activeMigrateOutput).split('\n').map((line, li) => (
+                          <div key={li} className={styles.codeLine}>
+                            <span className={styles.codeLineNum}>{li + 1}</span>
+                            <span className={styles.codeLineText}>{line}</span>
+                          </div>
+                        ))}
+                      </code>
                     </pre>
                     <div className={styles.feedbackBox}>
                       <div className={styles.feedbackRow}>
