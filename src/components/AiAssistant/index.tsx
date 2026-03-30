@@ -3695,8 +3695,8 @@ export default function AiAssistant() {
             // All overflow items with icon + label
             const MORE_ITEMS: { id: Mode; icon: string; label: string }[] = [
               { id: 'migrate', icon: '↔', label: ui('migrate') },
-              { id: 'analytics', icon: '◫', label: ui('analyticsTitle') },
               { id: 'settings', icon: '⚙', label: ui('settings') },
+              { id: 'analytics', icon: '◫', label: ui('analyticsTitle') },
               { id: 'help', icon: '?', label: ui('help') },
             ];
             // If the active mode is an overflow item, float it up as a visible tab.
