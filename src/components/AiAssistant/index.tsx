@@ -3500,9 +3500,9 @@ export default function AiAssistant() {
         {isOpen ? '✕' : (
           <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, lineHeight: 1 }}>
             <span style={{ fontSize: 15 }}>🤖</span>
-            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, fontSize: 8, fontWeight: 600, letterSpacing: '0.01em' }}>
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, fontSize: 8, fontWeight: 600, letterSpacing: '0.01em', color: 'black' }}>
               <span>iX</span>
-              <span>Assistant</span>
+              <span>Assist Pro</span>
             </span>
           </span>
         )}
