@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
 const docs = require("./docs.json");
 
 // Optional TLS bypass for corporate proxy compatibility (off by default)
@@ -683,10 +685,12 @@ function cosineSimilarity(queryTokens, idf, docVector) {
  *
  * Returns top-K docs sorted by hybrid relevance score.
  */
-const HYBRID_ALPHA = 0.60; // 60% BM25, 40% cosine semantic
+const HYBRID_ALPHA = 0.55;     // BM25 weight when using TF-IDF fallback
+const EMBEDDING_ALPHA = 0.40;  // BM25 weight when dense embeddings available (embeddings get 60%)
 const SEARCH_MODE = {
-  HYBRID: "hybrid",
-  BM25: "bm25",
+  HYBRID: "hybrid",            // BM25 + TF-IDF cosine (fallback when no embeddings)
+  EMBEDDING: "embedding",      // BM25 + dense embedding cosine (preferred)
+  BM25: "bm25",                // pure lexical
 };
 
 const FREE_CHAT_CACHE_TTL_MS = 30_000;
@@ -729,9 +733,28 @@ function setCachedFreeChatResponse(question, lang, value) {
   }
 }
 
-function searchDocs(query, topK = 10, options = {}) {
-  const mode = options.mode === SEARCH_MODE.BM25 ? SEARCH_MODE.BM25 : SEARCH_MODE.HYBRID;
-  const includeSectionBoost = mode === SEARCH_MODE.HYBRID;
+/**
+ * Resolve the best search mode based on embedding availability.
+ */
+function resolveSearchMode(requestedMode) {
+  if (requestedMode === SEARCH_MODE.BM25) return SEARCH_MODE.BM25;
+  if (embeddingStore.ready) return SEARCH_MODE.EMBEDDING;
+  return SEARCH_MODE.HYBRID; // TF-IDF fallback
+}
+
+/**
+ * Async hybrid search: BM25 + dense embedding cosine (or TF-IDF cosine fallback).
+ *
+ * When dense embeddings are loaded AND an embedding API key is available,
+ * the query is embedded on-the-fly and compared against pre-computed doc
+ * vectors using true cosine similarity. This dramatically improves recall
+ * for paraphrased, conceptual, and synonym-rich queries.
+ *
+ * Falls back to BM25 + TF-IDF cosine when embeddings aren't available.
+ */
+async function searchDocs(query, topK = 10, options = {}) {
+  const mode = resolveSearchMode(options.mode);
+  const includeSectionBoost = mode !== SEARCH_MODE.BM25;
   const expanded = expandQuery(query);
   const queryTokens = tokenize(expanded);
   if (queryTokens.length === 0) return [];
@@ -756,7 +779,7 @@ function searchDocs(query, topK = 10, options = {}) {
       bm25 += idfVal * tfNorm;
     }
 
-    // Title-match boosts (applied on BM25 only)
+    // Title-match boosts
     const lowerTitle = doc.title.toLowerCase();
     if (lowerTitle.includes(lowerQuery)) bm25 *= 2.0;
     else {
@@ -769,20 +792,39 @@ function searchDocs(query, topK = 10, options = {}) {
     return { docIdx: i, doc, bm25, matchedKeywords };
   });
 
-  // ── Pass 2: cosine semantic scores ───────────────────────────────
-  // Normalise BM25 to [0,1] then blend with cosine
+  // ── Pass 2: Semantic scores (dense embeddings or TF-IDF fallback) ──
   const maxBM25 = Math.max(...rawScores.map((s) => s.bm25), 1e-9);
+
+  // Try to get a dense query embedding for true semantic search
+  let queryEmbedding = null;
+  if (mode === SEARCH_MODE.EMBEDDING) {
+    const provider = options.provider || "siemens";
+    queryEmbedding = await getQueryEmbedding(expanded, provider);
+    if (!queryEmbedding) {
+      console.warn("[search] Query embedding unavailable, falling back to TF-IDF cosine");
+    }
+  }
+
+  const useRealEmbeddings = mode === SEARCH_MODE.EMBEDDING && queryEmbedding;
+  const alpha = useRealEmbeddings ? EMBEDDING_ALPHA : HYBRID_ALPHA;
 
   const scores = rawScores.map(({ docIdx, doc, bm25, matchedKeywords }) => {
     const bm25Norm = bm25 / maxBM25;
-    const cosine =
-      mode === SEARCH_MODE.HYBRID
-        ? cosineSimilarity(queryTokens, idf, docVectors[docIdx])
-        : 0;
+
+    let semanticScore = 0;
+    if (useRealEmbeddings && embeddingStore.vectors[docIdx]) {
+      // Dense embedding cosine similarity (true semantic)
+      semanticScore = denseCosineSimilarity(queryEmbedding, embeddingStore.vectors[docIdx]);
+    } else if (mode !== SEARCH_MODE.BM25) {
+      // TF-IDF cosine fallback
+      semanticScore = cosineSimilarity(queryTokens, idf, docVectors[docIdx]);
+    }
+
     const blendedScore =
-      mode === SEARCH_MODE.HYBRID
-        ? HYBRID_ALPHA * bm25Norm + (1 - HYBRID_ALPHA) * cosine
-        : bm25Norm;
+      mode === SEARCH_MODE.BM25
+        ? bm25Norm
+        : alpha * bm25Norm + (1 - alpha) * semanticScore;
+
     return {
       title: doc.title,
       content: doc.content,
@@ -790,6 +832,7 @@ function searchDocs(query, topK = 10, options = {}) {
       source: doc.source,
       url: doc.url || null,
       matchedKeywords,
+      semanticScore,
     };
   });
 
@@ -906,6 +949,157 @@ function buildFreeTierAnswer(question, docsForAnswer = [], lang = "en") {
 // Build hybrid search index at startup
 const searchIndex = buildSearchIndex(docs);
 console.log(`Hybrid search index (BM25 + cosine TF-IDF) built over ${docs.length} document chunks`);
+
+// ─── Embedding-based Semantic Search ────────────────────────────────────
+/**
+ * Dense vector embeddings for true semantic similarity search.
+ * Pre-computed by `node build-embeddings.js` and stored in embeddings.json.
+ * Falls back to TF-IDF cosine when embeddings are not available.
+ */
+const EMBEDDINGS_PATH = path.resolve(__dirname, "embeddings.json");
+
+// Embedding provider configuration (mirrors build-embeddings.js)
+const EMBEDDING_PROVIDERS = {
+  siemens: {
+    url: "https://api.siemens.com/llm/v1/embeddings",
+    model: process.env.EMBEDDING_MODEL || "bge-m3",
+    apiKey: () => process.env.SIEMENS_LLM_API_KEY || process.env.LLM_API_KEY || "",
+  },
+  groq: {
+    url: "https://api.groq.com/openai/v1/embeddings",
+    model: process.env.EMBEDDING_MODEL || "nomic-embed-text-v1.5",
+    apiKey: () => process.env.GROQ_API_KEY || "",
+  },
+};
+
+/**
+ * In-memory embedding store.
+ * `vectors` is a flat array aligned by index with `docs` —
+ * vectors[i] is the dense embedding for docs[i], or null if unavailable.
+ */
+let embeddingStore = {
+  ready: false,
+  provider: null,
+  model: null,
+  dimensions: null,
+  vectors: [],  // Array<Float64Array | null>
+};
+
+function loadEmbeddings() {
+  if (!fs.existsSync(EMBEDDINGS_PATH)) {
+    console.log("⚠️  embeddings.json not found — semantic search will use TF-IDF fallback");
+    console.log("   Run 'node build-embeddings.js' to enable dense-vector semantic search.");
+    return;
+  }
+  try {
+    const raw = JSON.parse(fs.readFileSync(EMBEDDINGS_PATH, "utf-8"));
+    if (!raw.vectors || raw.vectors.length !== docs.length) {
+      console.warn(
+        `⚠️  embeddings.json has ${raw.vectors?.length ?? 0} vectors but docs.json has ${docs.length} chunks — skipping.`
+      );
+      console.warn("   Re-run 'node build-embeddings.js' to regenerate.");
+      return;
+    }
+    const vectors = raw.vectors.map((v) =>
+      v.embedding ? new Float64Array(v.embedding) : null
+    );
+    const validCount = vectors.filter(Boolean).length;
+    if (validCount === 0) {
+      console.warn("⚠️  embeddings.json contains 0 valid embeddings — using TF-IDF fallback");
+      return;
+    }
+    embeddingStore = {
+      ready: true,
+      provider: raw.provider || "unknown",
+      model: raw.model || "unknown",
+      dimensions: raw.dimensions || vectors.find(Boolean)?.length || null,
+      vectors,
+    };
+    console.log(
+      `✅ Loaded ${validCount}/${vectors.length} dense embeddings ` +
+      `(${embeddingStore.dimensions}D, ${embeddingStore.provider}/${embeddingStore.model})`
+    );
+  } catch (err) {
+    console.error("❌ Failed to load embeddings.json:", err.message);
+  }
+}
+
+loadEmbeddings();
+
+/**
+ * Compute cosine similarity between two dense Float64Array vectors.
+ */
+function denseCosineSimilarity(a, b) {
+  if (!a || !b || a.length !== b.length) return 0;
+  let dot = 0, normA = 0, normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  const denom = Math.sqrt(normA) * Math.sqrt(normB);
+  return denom > 0 ? dot / denom : 0;
+}
+
+/**
+ * Call the embedding API on-the-fly for a user query string.
+ * Caches recent query embeddings to avoid redundant API calls.
+ */
+const queryEmbeddingCache = new Map();
+const QUERY_EMBED_CACHE_MAX = 200;
+const QUERY_EMBED_CACHE_TTL_MS = 5 * 60_000; // 5 minutes
+
+async function getQueryEmbedding(text, providerName) {
+  const resolvedProvider = providerName === "groq" ? "groq" : "siemens";
+  const config = EMBEDDING_PROVIDERS[resolvedProvider];
+  const apiKey = config?.apiKey();
+  if (!apiKey) return null;
+
+  // Check cache
+  const cacheKey = `${resolvedProvider}::${text.slice(0, 300).toLowerCase().trim()}`;
+  const cached = queryEmbeddingCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) return cached.embedding;
+
+  try {
+    const response = await axios.post(
+      config.url,
+      { model: config.model, input: [text.slice(0, 8000)] },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 10_000,
+      }
+    );
+    const embedding = response.data?.data?.[0]?.embedding;
+    if (!Array.isArray(embedding)) return null;
+
+    const vec = new Float64Array(embedding);
+
+    // Cache the result
+    queryEmbeddingCache.set(cacheKey, {
+      embedding: vec,
+      expiresAt: Date.now() + QUERY_EMBED_CACHE_TTL_MS,
+    });
+    if (queryEmbeddingCache.size > QUERY_EMBED_CACHE_MAX) {
+      const oldestKey = queryEmbeddingCache.keys().next().value;
+      if (oldestKey) queryEmbeddingCache.delete(oldestKey);
+    }
+    return vec;
+  } catch (err) {
+    console.warn("[embedding] Query embedding failed:", err.message || err);
+    return null;
+  }
+}
+
+// Prune stale query embedding cache entries every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of queryEmbeddingCache.entries()) {
+    if (now > entry.expiresAt) queryEmbeddingCache.delete(key);
+  }
+}, 10 * 60_000);
 
 // ─── LLM helpers ────────────────────────────────────────────────────
 
@@ -1129,8 +1323,8 @@ app.post("/chat", rateLimiter, async (req, res) => {
 
   // RAG search over the full documentation corpus
   const matchedDocs = isFreeTierRequest
-    ? searchDocs(question, 5, { mode: SEARCH_MODE.BM25 })
-    : searchDocs(question, 10, { mode: SEARCH_MODE.HYBRID });
+    ? await searchDocs(question, 5, { mode: SEARCH_MODE.BM25 })
+    : await searchDocs(question, 10, { mode: SEARCH_MODE.EMBEDDING, provider });
 
   if (matchedDocs.length === 0) {
     const emptyResponse = {
@@ -1263,8 +1457,8 @@ app.post("/generate", rateLimiter, async (req, res) => {
   // Track analytics
   trackAnalytics(description, "generate", resolvedLang);
 
-  // Step 1 — RAG: Hybrid retrieval of relevant component documentation
-  const matchedDocs = searchDocs(description, 15);
+  // Step 1 — RAG: Embedding retrieval of relevant component documentation
+  const matchedDocs = await searchDocs(description, 15, { mode: SEARCH_MODE.EMBEDDING, provider });
 
   if (matchedDocs.length === 0) {
     return res.json({
@@ -1364,7 +1558,7 @@ app.post("/migrate", rateLimiter, async (req, res) => {
       migrationFlow === "upgrade"
         ? `${code.toString()} Siemens iX upgrade ${fromVersion} ${toVersion} breaking changes release notes migration path`
         : `${code.toString()} migrate migration deprecated removed replacement Siemens iX`;
-    const matchedDocs = searchDocs(migrationQuery, 12);
+    const matchedDocs = await searchDocs(migrationQuery, 12, { mode: SEARCH_MODE.EMBEDDING, provider });
     const topDocs = matchedDocs.slice(0, 12);
 
     const migrationDescription =
@@ -1618,12 +1812,13 @@ app.post("/user/language", (req, res) => {
  * No LLM call, no API key required. Used for search autocomplete in the UI.
  * Respects user language for response formatting (future enhancement).
  */
-app.get("/suggest", (req, res) => {
+app.get("/suggest", async (req, res) => {
   const q = (req.query.q || "").toString().trim();
   const lang = getRequestLang(req);
 
   if (!q || q.length < 2) return res.json({ suggestions: [], lang });
-  const results = searchDocs(q, 5);
+  // Use BM25-only for fast type-ahead (no embedding API latency)
+  const results = await searchDocs(q, 5, { mode: SEARCH_MODE.BM25 });
   res.json({
     suggestions: results.map((r) => ({
       title: r.title,
@@ -1779,6 +1974,210 @@ app.get("/analytics", (req, res) => {
   });
 });
 
+/** Embedding status endpoint */
+app.get("/embeddings/status", (req, res) => {
+  res.json({
+    ready: embeddingStore.ready,
+    provider: embeddingStore.provider,
+    model: embeddingStore.model,
+    dimensions: embeddingStore.dimensions,
+    totalChunks: docs.length,
+    embeddedChunks: embeddingStore.vectors.filter(Boolean).length,
+    queryEmbeddingCacheSize: queryEmbeddingCache.size,
+    searchMode: embeddingStore.ready ? "bm25+embedding" : "bm25+tfidf-fallback",
+  });
+});
+
+/**
+ * POST /embeddings/reload — hot-reload embeddings.json without restarting.
+ * Useful after running `node build-embeddings.js` while the server is live.
+ */
+app.post("/embeddings/reload", (req, res) => {
+  try {
+    loadEmbeddings();
+    queryEmbeddingCache.clear();
+    res.json({
+      ok: true,
+      ready: embeddingStore.ready,
+      provider: embeddingStore.provider,
+      model: embeddingStore.model,
+      dimensions: embeddingStore.dimensions,
+      embeddedChunks: embeddingStore.vectors.filter(Boolean).length,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── In-process embedding builder (triggered from UI) ───────────────
+const crypto = require("crypto");
+
+const MAX_EMBED_INPUT_CHARS = 8000;
+const EMBED_BATCH_SIZE = 20;
+const EMBED_BATCH_DELAY_MS = 200;
+
+/** Prepare text for the embedding model: title + keywords + content. */
+function prepareEmbeddingInput(doc) {
+  const parts = [doc.title || ""];
+  if (doc.keywords?.length) parts.push(doc.keywords.slice(0, 15).join(", "));
+  parts.push((doc.content || "").slice(0, MAX_EMBED_INPUT_CHARS));
+  return parts.join("\n\n").trim();
+}
+
+function contentHash(text) {
+  return crypto.createHash("sha256").update(text).digest("hex").slice(0, 16);
+}
+
+/** Call the embedding API for a batch of texts. */
+async function fetchEmbeddingBatch(texts, url, model, apiKey) {
+  const response = await axios.post(
+    url,
+    { model, input: texts },
+    {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      timeout: 120_000,
+    }
+  );
+  const data = response.data?.data;
+  if (!Array.isArray(data)) {
+    throw new Error(`Unexpected response: ${JSON.stringify(response.data).slice(0, 200)}`);
+  }
+  return data.sort((a, b) => a.index - b.index).map((d) => d.embedding);
+}
+
+// Track in-flight build to prevent concurrent builds
+let embeddingBuildInProgress = false;
+
+/**
+ * POST /embeddings/build
+ * Trigger embedding generation from the UI.
+ *
+ * Body: {
+ *   apiKey?: string,         — optional: falls back to LLM_API_KEY from .env
+ *   provider?: string,       — "siemens" (default) | "groq"
+ * }
+ *
+ * Returns: { ok, embeddedChunks, totalChunks, dimensions, provider, model }
+ *
+ * This runs in-process — no need to SSH in or use the CLI.
+ * After completion it automatically reloads the embedding store.
+ */
+app.post("/embeddings/build", rateLimiter, async (req, res) => {
+  const { apiKey: userApiKey, provider } = req.body || {};
+
+  const resolvedProvider = provider === "groq" ? "groq" : "siemens";
+  const config = EMBEDDING_PROVIDERS[resolvedProvider];
+  if (!config) {
+    return res.status(400).json({ error: `Unknown provider: ${resolvedProvider}` });
+  }
+
+  // Use provided key, fall back to the provider's env key
+  const apiKey = (typeof userApiKey === "string" && userApiKey.trim())
+    ? userApiKey.trim()
+    : config.apiKey();
+
+  if (!apiKey) {
+    return res.status(400).json({
+      error: "No API key available. Provide one in the request body or set LLM_API_KEY in .env.",
+    });
+  }
+
+  if (embeddingBuildInProgress) {
+    return res.status(409).json({
+      error: "Embedding build is already in progress. Please wait for it to complete.",
+    });
+  }
+
+  embeddingBuildInProgress = true;
+  console.log(`[embeddings/build] Starting build for ${docs.length} chunks (${resolvedProvider}/${config.model})...`);
+
+  try {
+    // Load existing embeddings for incremental updates
+    let existingMap = new Map();
+    if (fs.existsSync(EMBEDDINGS_PATH)) {
+      try {
+        const existing = JSON.parse(fs.readFileSync(EMBEDDINGS_PATH, "utf-8"));
+        if (existing.provider === resolvedProvider && existing.model === config.model) {
+          for (const v of (existing.vectors || [])) {
+            if (v.hash && v.embedding) existingMap.set(v.hash, v.embedding);
+          }
+        }
+      } catch { /* ignore parse errors */ }
+    }
+
+    // Prepare all doc inputs
+    const prepared = docs.map((doc) => {
+      const text = prepareEmbeddingInput(doc);
+      const hash = contentHash(text);
+      return { text, hash, embedding: existingMap.get(hash) || null };
+    });
+
+    const toEmbed = prepared.filter((p) => !p.embedding);
+    console.log(`[embeddings/build] ${prepared.length} total, ${prepared.length - toEmbed.length} cached, ${toEmbed.length} to embed`);
+
+    // Batch embed
+    let completed = 0;
+    let dimensions = null;
+
+    for (let i = 0; i < toEmbed.length; i += EMBED_BATCH_SIZE) {
+      const batch = toEmbed.slice(i, i + EMBED_BATCH_SIZE);
+      const texts = batch.map((b) => b.text);
+
+      const embeddings = await fetchEmbeddingBatch(texts, config.url, config.model, apiKey.trim());
+      for (let j = 0; j < batch.length; j++) {
+        batch[j].embedding = embeddings[j];
+        if (!dimensions && embeddings[j]) dimensions = embeddings[j].length;
+      }
+      completed += batch.length;
+
+      if (i + EMBED_BATCH_SIZE < toEmbed.length) {
+        await new Promise((r) => setTimeout(r, EMBED_BATCH_DELAY_MS));
+      }
+    }
+
+    // Write embeddings.json
+    const vectors = prepared.map((p) => ({ hash: p.hash, embedding: p.embedding }));
+    const validCount = vectors.filter((v) => v.embedding).length;
+    const dims = dimensions || (vectors.find((v) => v.embedding)?.embedding?.length ?? null);
+
+    const output = {
+      provider: resolvedProvider,
+      model: config.model,
+      dimensions: dims,
+      generatedAt: new Date().toISOString(),
+      totalChunks: vectors.length,
+      embeddedChunks: validCount,
+      vectors,
+    };
+
+    fs.writeFileSync(EMBEDDINGS_PATH, JSON.stringify(output), "utf-8");
+    console.log(`[embeddings/build] ✅ Wrote ${validCount}/${vectors.length} embeddings`);
+
+    // Auto-reload into memory
+    loadEmbeddings();
+    queryEmbeddingCache.clear();
+
+    res.json({
+      ok: true,
+      embeddedChunks: validCount,
+      totalChunks: vectors.length,
+      dimensions: dims,
+      provider: resolvedProvider,
+      model: config.model,
+      searchMode: "bm25+embedding",
+    });
+  } catch (err) {
+    const msg = err.response?.data?.error?.message || err.message;
+    console.error("[embeddings/build] ❌ Failed:", msg);
+    res.status(err.response?.status || 500).json({ error: msg });
+  } finally {
+    embeddingBuildInProgress = false;
+  }
+});
+
 /** Health check */
 app.get("/health", (req, res) => {
   const deprecatedDocs = docs.filter((d) => hasDeprecationSignal(d.content)).length;
@@ -1786,12 +2185,22 @@ app.get("/health", (req, res) => {
     status: "ok",
     docs: docs.length,
     deprecatedChunks: deprecatedDocs,
+    embeddings: {
+      ready: embeddingStore.ready,
+      provider: embeddingStore.provider,
+      model: embeddingStore.model,
+      dimensions: embeddingStore.dimensions,
+      embeddedChunks: embeddingStore.vectors.filter(Boolean).length,
+    },
+    searchMode: embeddingStore.ready ? "bm25+embedding" : "bm25+tfidf-fallback",
     analytics: {
       totalQueries: analytics.recentQueries.length,
       endpointCounts: analytics.endpointCounts,
     },
     features: [
-      "hybrid-search-bm25-cosine",
+      "hybrid-search-bm25-embedding",
+      "dense-embedding-similarity",
+      "tfidf-cosine-fallback",
       "usage-analytics",
       "deprecation-alerts",
       "multi-language-support",
@@ -1805,6 +2214,8 @@ app.get("/health", (req, res) => {
       "section-type-boost",
       "url-dedup",
       "user-feedback-triage",
+      "embedding-hot-reload",
+      "query-embedding-cache",
     ],
     supportedLanguages: ["en", "de", "zh", "fr", "es", "ja", "pt", "ko"],
   });
@@ -1813,6 +2224,7 @@ app.get("/health", (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`iX Chatbot backend running on http://localhost:${PORT}`);
+  console.log(`  Search mode: ${embeddingStore.ready ? "BM25 + Dense Embedding Similarity" : "BM25 + TF-IDF Cosine (fallback)"}`);
   console.log(`  POST /chat              — chatbot Q&A (rate-limited)`);
   console.log(`  POST /generate          — AI code generator (rate-limited)`);
   console.log(`  POST /migrate           — code migration & upgrade assistant (rate-limited)`);
@@ -1824,6 +2236,9 @@ app.listen(PORT, () => {
   console.log(`  POST /user/settings     — save user preferences`);
   console.log(`  GET  /user/profile      — retrieve user profile`);
   console.log(`  POST /user/language     — quick language switch`);
+  console.log(`  GET  /embeddings/status — embedding index status`);
+  console.log(`  POST /embeddings/build  — build embeddings with API key (from UI)`);
+  console.log(`  POST /embeddings/reload — hot-reload embeddings`);
   console.log(`  GET  /analytics         — usage analytics (admins)`);
   console.log(`  GET  /health            — health check`);
   console.log(`Supported languages: en, de, zh, fr, es, ja, pt, ko`);

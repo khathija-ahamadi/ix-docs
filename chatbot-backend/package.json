@@ -4,6 +4,8 @@
   "main": "server.js",
   "scripts": {
     "build-docs": "node build-docs.js",
+    "build-embeddings": "node build-embeddings.js",
+    "build-all": "node build-docs.js && node build-embeddings.js",
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
