@@ -1,0 +1,24 @@
+@startuml
+top to bottom direction
+
+' All nodes as circles with text inside.
+circle "Fragmented\nDocumentation ↓" as FD #Blue
+circle "Missed\nUpdates ↓" as MU
+circle "Cross-Linking ↑" as CL
+circle "Unstructured\nGuides ↓" as UG #Blue
+circle "Efficient\nDiscovery ↑" as ED
+circle "Deprecated\nUsage ↓" as DU
+circle "Manual\nSearching ↓" as MS #Blue
+circle "Bugs &\nSupport Tickets ↓" as BS #Blue
+circle "Workarounds ↓" as WA
+
+FD --> MU
+FD --> CL
+FD --> UG
+
+UG --> ED
+ED --> DU
+DU --> MS
+MS --> BS
+BS --> WA
+@enduml

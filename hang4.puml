@@ -1,0 +1,25 @@
+@startuml
+top to bottom direction
+
+' Cyan background rectangles for key nodes, normal rectangles for others
+rectangle "Fragmented Documentation ↓" as FD #LightCoral
+rectangle "Missed Updates ↓" as MU #LightCyan
+rectangle "Cross-Linking ↑" as CL #LightCyan
+rectangle "Unstructured Guides ↓" as UG #Cyan
+rectangle "Efficient Discovery ↑" as ED #E0FFFF
+rectangle "Deprecated Usage ↓" as DU
+rectangle "Manual Searching ↓" as MS #Cyan
+rectangle "Bugs & Support Tickets ↓" as BS #Cyan
+rectangle "Workarounds ↓" as WA #LightCyan
+
+FD --> MU
+MU --> DU
+FD --> CL
+FD --> UG
+UG --> ED
+CL --> ED
+
+UG --> MS
+MS --> BS
+BS --> WA
+@enduml

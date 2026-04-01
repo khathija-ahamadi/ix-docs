@@ -1,0 +1,22 @@
+@startmindmap
+* <b>Structural Inefficiencies in Siemens iX Design Documentation
+** <b>Fragmented Information Architecture
+*** Unstructured docs
+*** No comprehensive indexing
+*** Lacks dynamic cross-linking
+** <b>Missed Updates / Breaking Changes
+*** Not linked to changelogs
+*** No clear deprecation notices
+** <b>Technical Complexity
+*** Advanced settings are hard to discover for non-experts
+** <b>User Behavior
+*** Important sections skipped
+*** Indirect, inefficient navigation
+** <b>Trial-and-error Reliance
+*** Manual search required
+*** Disconnected resources
+** <b>Workarounds & Customization
+*** Inconsistent implementations
+*** Increased maintenance
+*** Divergence from standards
+@endmindmap

@@ -1,0 +1,68 @@
+@startuml
+skinparam usecaseBackgroundColor White
+skinparam usecaseBorderColor #013371
+skinparam usecaseBorderThickness 2
+skinparam usecaseFontColor #013371
+skinparam usecaseFontName Arial
+skinparam usecaseFontSize 18
+skinparam ArrowColor Black
+
+' Main node
+usecase "Structural Inefficiencies\nin Siemens iX Design\nDocumentation ↓" as Effect
+
+' Chain main branches vertically
+usecase "Fragmented Info\nArchitecture ↓" as Frag
+usecase "Missed Updates / \nBreaking Changes ↓" as Updates
+usecase "Technical\nComplexity ↓" as Tech
+usecase "User Behavior ↓" as User
+usecase "Trial-&-Error\nReliance ↓" as Trial
+usecase "Workarounds &\nCustomization ↑" as Workarounds
+
+Effect -- Frag
+Frag -- Updates
+Updates -- Tech
+Tech -- User
+User -- Trial
+Trial -- Workarounds
+
+' Sub-branches more vertical, chain where possible
+usecase "Unstructured\ndocs ↓" as Frag1
+usecase "Lack of\nindexing ↓" as Frag2
+usecase "No dynamic\ncross-linking ↓" as Frag3
+Frag -- Frag1
+Frag1 -- Frag2
+Frag2 -- Frag3
+
+usecase "linkage to\nchangelogs ↑" as Up1
+usecase "Clear\ndeprecation notices ↑" as Up2
+Updates -- Up1
+Up1 -- Up2
+
+usecase "Settings hard for\nnon-experts ↓" as Tech1
+usecase "Language-specific\nadjustments ↑" as Tech2
+Tech -- Tech1
+Tech1 -- Tech2
+
+usecase "Sections skipped ↓" as User1
+usecase "Indirect navigation ↓" as User2
+User -- User1
+User1 -- User2
+
+usecase "Manual search required ↓" as Trial1
+usecase "Disconnected\nresources ↓" as Trial2
+Trial -- Trial1
+Trial1 -- Trial2
+
+usecase "Inconsistent\nimplementations ↓" as Work1
+usecase "Increased\nmaintenance ↓" as Work2
+usecase "Divergence from\nstandards ↓" as Work3
+Workarounds -- Work1
+Work1 -- Work2
+Work2 -- Work3
+
+legend right
+  ↑ = Increase / More is better
+  ↓ = Decrease / Less is better
+endlegend
+
+@enduml
