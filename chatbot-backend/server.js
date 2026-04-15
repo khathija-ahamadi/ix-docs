@@ -433,6 +433,30 @@ const QUERY_ALIASES = {
   responsive: ["breakpoints", "application", "layout-grid"],
   accessibility: ["a11y", "accessible"],
   a11y: ["accessibility"],
+  // Map generic UI terms to iX components to reinforce iX-first results
+  input: ["ix-input", "input", "forms-field"],
+  textarea: ["ix-textarea", "input"],
+  button: ["ix-button", "button", "icon-button", "link-button"],
+  select: ["ix-select", "select", "dropdown"],
+  checkbox: ["ix-checkbox", "checkbox"],
+  radio: ["ix-radio", "radio"],
+  modal: ["ix-modal", "modal", "message-modal"],
+  toast: ["ix-toast", "toast", "messagebar"],
+  spinner: ["ix-spinner", "spinner", "progress-indicator"],
+  tabs: ["ix-tabs", "tabs"],
+  tooltip: ["ix-tooltip", "tooltip"],
+  slider: ["ix-slider", "slider"],
+  pagination: ["ix-pagination", "pagination"],
+  avatar: ["ix-avatar", "avatar"],
+  chip: ["ix-chip", "chip", "pill"],
+  grid: ["ix-grid", "grid", "html-grid", "ag-grid"],
+  menu: ["ix-menu", "application-menu", "menu"],
+  breadcrumb: ["ix-breadcrumb", "breadcrumb"],
+  "date picker": ["ix-date-picker", "date-picker", "date-dropdown"],
+  "time picker": ["ix-time-picker", "input-time"],
+  flip: ["ix-flip", "flip"],
+  kpi: ["ix-kpi", "kpi"],
+  empty: ["ix-empty-state", "empty-state"],
 };
 
 const FEEDBACK_PROMPT_ISSUE_RULES = [
@@ -900,6 +924,72 @@ function uniqueByUrl(results, max = 10) {
   return out;
 }
 
+// ─── iX-only component enforcement ────────────────────────────────────────
+/**
+ * Maps common non-iX HTML / third-party patterns to their iX equivalents.
+ * Used to detect and warn when generated code contains non-iX components.
+ */
+const NON_IX_TO_IX_MAP = {
+  "<button":              "ix-button / IxButton",
+  "<input":               "ix-input / IxInput",
+  "<select":              "ix-select / IxSelect",
+  "<textarea":            "ix-textarea / IxTextarea",
+  "<dialog":              "ix-modal / IxModal",
+  "<table":               "ix-grid (AG Grid) / IxGrid",
+  "<nav":                 "ix-menu / IxMenu or ix-breadcrumb / IxBreadcrumb",
+  "<details":             "ix-blind / IxBlind",
+  "<progress":            "ix-spinner / IxSpinner",
+  "<a href":              "ix-link-button / IxLinkButton (where applicable)",
+  "mat-":                 "Siemens iX equivalent (Angular Material detected)",
+  "MuiButton":            "IxButton (Material UI detected)",
+  "MuiInput":             "IxInput (Material UI detected)",
+  "MuiSelect":            "IxSelect (Material UI detected)",
+  "MuiDialog":            "IxModal (Material UI detected)",
+  "ant-btn":              "ix-button (Ant Design detected)",
+  "ant-input":            "ix-input (Ant Design detected)",
+  "ant-select":           "ix-select (Ant Design detected)",
+  "ant-modal":            "ix-modal (Ant Design detected)",
+  "el-button":            "ix-button (Element UI detected)",
+  "el-input":             "ix-input (Element UI detected)",
+  "el-select":            "ix-select (Element UI detected)",
+  "btn-primary":          "ix-button variant=\"primary\" (Bootstrap detected)",
+  "btn-secondary":        "ix-button variant=\"secondary\" (Bootstrap detected)",
+  "form-control":         "ix-input / ix-select (Bootstrap detected)",
+  "@angular/material":    "Siemens iX Angular (@angular/material detected)",
+  "@chakra-ui":           "Siemens iX equivalent (Chakra UI detected)",
+  "primeng":              "Siemens iX equivalent (PrimeNG detected)",
+  "vuetify":              "Siemens iX equivalent (Vuetify detected)",
+  "@mui/":                "Siemens iX equivalent (MUI detected)",
+  "antd":                 "Siemens iX equivalent (Ant Design detected)",
+  "react-bootstrap":      "Siemens iX equivalent (React-Bootstrap detected)",
+};
+
+/**
+ * Validates LLM-generated code for non-iX component usage.
+ * Returns an object with `warnings` array and `hasNonIxComponents` flag.
+ * Does NOT block code delivery — only appends advisory warnings.
+ */
+function validateIxComponentUsage(code) {
+  if (!code || typeof code !== "string") return { warnings: [], hasNonIxComponents: false };
+  const lowerCode = code.toLowerCase();
+  const warnings = [];
+  for (const [pattern, ixAlternative] of Object.entries(NON_IX_TO_IX_MAP)) {
+    if (lowerCode.includes(pattern.toLowerCase())) {
+      // Ignore patterns inside comments
+      const lines = code.split("\n");
+      const inCode = lines.some((line) => {
+        const trimmed = line.trim();
+        const isComment = trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*") || trimmed.startsWith("<!--");
+        return !isComment && line.toLowerCase().includes(pattern.toLowerCase());
+      });
+      if (inCode) {
+        warnings.push(`⚠️ Non-iX component detected: "${pattern}" → use ${ixAlternative} instead.`);
+      }
+    }
+  }
+  return { warnings, hasNonIxComponents: warnings.length > 0 };
+}
+
 function buildDocsContextForPrompt(items = [], { includeUrls = true } = {}) {
   return items
     .map((d, i) => {
@@ -1218,6 +1308,10 @@ async function askAI(context, question, userApiKey, lang = "en", provider = "sie
         "You are a helpful assistant for the Siemens Industrial Experience (iX) design system. " +
         "Answer only from the provided Siemens iX documentation excerpts. " +
         "Do not invent APIs, properties, version numbers, or migration paths not present in the excerpts. " +
+        "CRITICAL: You MUST exclusively recommend and use Siemens iX components (ix-button, ix-input, ix-modal, ix-select, etc.) for ALL UI needs. " +
+        "NEVER suggest or use third-party UI libraries (Material UI, Ant Design, Bootstrap, Chakra UI, PrimeNG, Angular Material, etc.) or plain HTML elements when an iX equivalent exists. " +
+        "If the user asks about a UI pattern not directly available in iX, explain the closest iX component(s) that can achieve the same result. " +
+        "Only suggest non-iX approaches as a last resort when absolutely no iX component covers the need, and clearly mark it with: \"⚠️ No iX component available for this — using standard HTML/CSS as fallback.\". " +
         "If any component, property, or API in the question has been deprecated or removed, " +
         "always highlight this clearly with a ⚠️ warning, state which version introduced the change, " +
         "and provide the recommended replacement or migration path. " +
@@ -1255,7 +1349,13 @@ async function generateCode(componentDocs, description, framework, userApiKey, f
   const docsContext = buildDocsContextForPrompt(componentDocs, { includeUrls: true });
 
   const systemPrompt = `You are an expert code generator for the Siemens Industrial Experience (iX) design system.
-Your job is to generate COMPLETE, WORKING, PRODUCTION-READY code using iX components.
+Your job is to generate COMPLETE, WORKING, PRODUCTION-READY code using EXCLUSIVELY Siemens iX components.
+
+CRITICAL CONSTRAINT — iX COMPONENTS ONLY:
+- You MUST use Siemens iX components for ALL UI elements. Every button MUST be <ix-button> / <IxButton>, every input MUST be <ix-input> / <IxInput>, every modal MUST be <ix-modal> / <IxModal>, etc.
+- NEVER use plain HTML elements (<button>, <input>, <select>, <table>, <dialog>) when an iX equivalent exists.
+- NEVER import or suggest third-party UI libraries: NO Material UI, NO Ant Design, NO Bootstrap, NO Chakra UI, NO PrimeNG, NO Angular Material, NO Vuetify.
+- If a UI element has no direct iX equivalent, compose it from existing iX components (e.g., use ix-card + ix-button for a custom widget). Only use a plain HTML element as an absolute last resort and mark it with: // ⚠️ No iX component available — plain HTML fallback
 
 RULES:
 1. ONLY use components and APIs documented in the provided Siemens iX excerpts below — do NOT invent component names, props, events, or imports.
@@ -1263,14 +1363,15 @@ RULES:
 3. ${frameworkGuide[framework] || frameworkGuide.react}
 4. Include ALL necessary imports, setup code, and styles.
 5. Use proper form structure with labels, placeholders, and helper text where appropriate.
-6. Apply iX design tokens (CSS custom properties) for any custom styling.
+6. Apply iX design tokens (CSS custom properties) for any custom styling — NEVER use hardcoded colors or third-party CSS frameworks.
 7. Return ONLY the code inside a single fenced code block — no prose before or after.
 8. Add brief inline comments explaining key sections.
 9. Make the code copy-paste ready — a developer should be able to use it immediately.
 10. If any component in the documentation is marked deprecated, do NOT use it — use the recommended replacement instead and add a MIGRATION comment explaining the change.
-11. If the request asks for behavior that is not covered by the provided iX excerpts, choose the closest documented approach and add a TODO comment noting the limitation.
+11. If the request asks for behavior that is not covered by the provided iX excerpts, choose the closest documented iX approach and add a TODO comment noting the limitation.
 12. Add a short source comment near the top: "Sources: [n], [m]" based on the excerpt IDs you used.
-13. Keep code syntax, identifiers, and imports in their original programming language conventions.${langInstruction(lang)}`;
+13. Keep code syntax, identifiers, and imports in their original programming language conventions.
+14. Prefer iX layout components (ix-layout-grid, ix-content, ix-application) over raw HTML/CSS grid or flexbox where applicable.${langInstruction(lang)}`;
 
   const fileSection = fileContent
     ? `\n---\n\n## Existing Code File ("${fileName || 'uploaded file'}")
@@ -1286,6 +1387,414 @@ Refactor or extend the following code to fulfil the user request using iX compon
   ];
 
   return callLLM({ messages, apiKey: key, provider, model, task: "codegen", temperature: 0.2, maxTokens: 4096 });
+}
+
+// ─── Migration-specific helpers ─────────────────────────────────────
+
+/**
+ * Comprehensive breaking-changes knowledge base per version upgrade.
+ * Embedded directly so the LLM has 100% reliable migration rules
+ * instead of depending on RAG search to find the right doc chunks.
+ */
+const VERSION_BREAKING_CHANGES = {
+  "V2.0.0->V3.0.0": {
+    label: "V2 → V3",
+    summary: "Bootstrap removal, icon loading changes, CSS namespacing, 16+ component API renames, echarts theme name changes.",
+    changes: [
+      // Bootstrap removal
+      { area: "dependency", old: "Bootstrap as peerDependency", new: "Bootstrap removed — install manually if needed", components: ["global"] },
+      { area: "css-class", old: ".table", new: ".ix-table", components: ["global"] },
+      { area: "css-class", old: ".table-striped", new: ".ix-table-striped", components: ["global"] },
+      { area: "css-class", old: ".btn-group", new: ".ix-button-group", components: ["global"] },
+      // CSS namespacing
+      { area: "css-class", old: '<input type="text"> (no class)', new: '<input type="text" class="ix-form-control">', components: ["input", "textarea"] },
+      { area: "css-class", old: 'class="form-control"', new: 'class="ix-form-control"', components: ["input", "textarea"] },
+      { area: "css-class", old: "<label> (no class)", new: '<label class="ix-form-label">', components: ["label"] },
+      // Icon loading (React/Vue)
+      { area: "import", old: '<IxIcon name="star" />', new: "import { iconStar } from '@siemens/ix-icons/icons'; <IxIcon name={iconStar} />", components: ["ix-icon"] },
+      // Icon loading (Angular) — add SVG glob to angular.json assets
+      { area: "config", old: "Icons loaded automatically", new: "Add SVG glob to angular.json assets: { glob: '**/*.svg', input: 'node_modules/@siemens/ix-icons/svg', output: './svg' }", components: ["ix-icon"] },
+      // Component renames
+      { area: "prop", old: "ix-action-card: variant='insight'|'notification'", new: "variant='filled'|'outline'", components: ["ix-action-card"] },
+      { area: "prop", old: "ix-blind: variant='insight'|'notification'", new: "variant='filled'|'outline'", components: ["ix-blind"] },
+      { area: "prop", old: "ix-card: variant='insight'|'notification'", new: "variant='filled'|'outline'", components: ["ix-card"] },
+      { area: "prop", old: "ix-push-card: variant='insight'|'notification'", new: "variant='filled'|'outline'", components: ["ix-push-card"] },
+      { area: "prop", old: "ix-chip: color", new: "chipColor", components: ["ix-chip"] },
+      { area: "prop", old: "ix-date-picker: textSelectedDate", new: "i18nDone", components: ["ix-date-picker"] },
+      { area: "event", old: "ix-date-picker: done", new: "dateSelect", components: ["ix-date-picker"] },
+      { area: "prop-removed", old: "ix-date-picker: individual, eventDelimiter", new: "removed (no replacement)", components: ["ix-date-picker"] },
+      { area: "prop", old: "ix-datetime-picker: textSelectedDate", new: "i18nDone", components: ["ix-datetime-picker"] },
+      { area: "event", old: "ix-datetime-picker: done", new: "dateSelect", components: ["ix-datetime-picker"] },
+      { area: "prop-removed", old: "ix-datetime-picker: eventDelimiter", new: "removed", components: ["ix-datetime-picker"] },
+      { area: "prop", old: "ix-event-list: color", new: "itemColor", components: ["ix-event-list"] },
+      { area: "prop", old: "ix-icon-button: color", new: "iconColor", components: ["ix-icon-button"] },
+      { area: "prop-removed", old: "ix-icon-button: size='32'", new: "removed (use default sizing)", components: ["ix-icon-button"] },
+      { area: "prop-removed", old: "ix-menu: maxVisibleMenuItems", new: "removed (menu scrolls now)", components: ["ix-menu"] },
+      { area: "prop", old: "ix-menu-item: tabIcon", new: "icon", components: ["ix-menu-item"] },
+      { area: "prop", old: "ix-modal: keyboard", new: "closeOnEscape", components: ["ix-modal"] },
+      { area: "prop", old: "ix-pill: color", new: "pillColor", components: ["ix-pill"] },
+      { area: "prop", old: "ix-select: selectedIndices", new: "value", components: ["ix-select"] },
+      { area: "event", old: "ix-select: itemSelectionChange", new: "valueChange", components: ["ix-select"] },
+      { area: "prop", old: "ix-select-item: value (number)", new: "value (string type)", components: ["ix-select-item"] },
+      { area: "prop-removed", old: "ix-time-picker: individual, showTimeReference", new: "removed", components: ["ix-time-picker"] },
+      { area: "prop", old: "ix-typography: color", new: "textColor", components: ["ix-typography"] },
+      { area: "fix", old: "ix-tree nodeToggled: isExpaned", new: "isExpanded (typo fix)", components: ["ix-tree"] },
+      // Echarts
+      { area: "config", old: "echarts theme 'brand-dark'", new: "'theme-brand-dark'", components: ["ix-echarts"] },
+      { area: "config", old: "echarts theme 'brand-light'", new: "'theme-brand-light'", components: ["ix-echarts"] },
+      { area: "config", old: "echarts theme 'classic-dark'", new: "'theme-classic-dark'", components: ["ix-echarts"] },
+      { area: "config", old: "echarts theme 'classic-light'", new: "'theme-classic-light'", components: ["ix-echarts"] },
+      { area: "import-removed", old: "convertThemeName from '@siemens/ix-echarts'", new: "removed — use theme name directly: echarts.init(el, theme)", components: ["ix-echarts"] },
+      // Global CSS
+      { area: "css", old: "input default width: 100%", new: "width: auto", components: ["input"] },
+    ],
+  },
+  "V3.0.0->V4.0.0": {
+    label: "V3 → V4",
+    summary: "Angular 20 required, button variant system overhaul (9 variant mappings), basic/map navigation removed, drawer deprecated, AG Grid v33 theming, elevation principle update.",
+    changes: [
+      // Angular
+      { area: "dependency", old: "Angular <20", new: "Angular 20+ required for @siemens/ix-angular", components: ["global"] },
+      // Icon rename
+      { area: "icon", old: "cam", new: "output-cam", components: ["ix-icon"] },
+      // Removed components
+      { area: "component-removed", old: "ix-basic-navigation", new: "ix-application + ix-application-header + ix-menu", components: ["ix-basic-navigation"] },
+      { area: "component-removed", old: "ix-map-navigation", new: "ix-application + ix-pane (inline for left sidebar, floating for right overlay)", components: ["ix-map-navigation"] },
+      // Drawer → Pane
+      { area: "component-deprecated", old: "ix-drawer", new: 'ix-pane variant="floating" composition="right" borderless close-on-click-outside hide-on-collapse', components: ["ix-drawer"] },
+      { area: "prop-mapping", old: "ix-drawer: expanded", new: "ix-pane: show", components: ["ix-drawer", "ix-pane"] },
+      { area: "prop-mapping", old: "ix-drawer: width", new: "ix-pane: size", components: ["ix-drawer", "ix-pane"] },
+      { area: "event-mapping", old: "ix-drawer: on-drawer-close / on-open", new: "ix-pane: on-expanded-change", components: ["ix-drawer", "ix-pane"] },
+      // Button variants — THE BIG ONE
+      { area: "variant", old: 'variant="secondary"', new: 'variant="subtle-primary"', components: ["ix-button", "ix-dropdown-button", "ix-icon-button", "ix-split-button", "ix-toggle-button", "ix-icon-toggle-button"] },
+      { area: "variant", old: 'variant="secondary" outline', new: 'variant="subtle-secondary"', components: ["ix-button", "ix-dropdown-button", "ix-icon-button", "ix-split-button", "ix-toggle-button", "ix-icon-toggle-button"] },
+      { area: "variant", old: 'variant="secondary" ghost', new: 'variant="subtle-tertiary"', components: ["ix-button", "ix-dropdown-button", "ix-icon-button", "ix-split-button", "ix-toggle-button", "ix-icon-toggle-button"] },
+      { area: "variant", old: 'variant="primary" (no outline/ghost)', new: 'variant="primary" (unchanged)', components: ["ix-button"] },
+      { area: "variant", old: 'variant="primary" outline', new: 'variant="secondary"', components: ["ix-button", "ix-dropdown-button", "ix-icon-button", "ix-split-button", "ix-toggle-button", "ix-icon-toggle-button"] },
+      { area: "variant", old: 'variant="primary" ghost', new: 'variant="tertiary"', components: ["ix-button", "ix-dropdown-button", "ix-icon-button", "ix-split-button", "ix-toggle-button", "ix-icon-toggle-button"] },
+      { area: "variant", old: 'variant="danger" (no outline/ghost)', new: 'variant="danger-primary"', components: ["ix-button"] },
+      { area: "variant", old: 'variant="danger" outline', new: 'variant="danger-secondary"', components: ["ix-button", "ix-dropdown-button", "ix-icon-button", "ix-split-button"] },
+      { area: "variant", old: 'variant="danger" ghost', new: 'variant="danger-tertiary"', components: ["ix-button", "ix-dropdown-button", "ix-icon-button", "ix-split-button"] },
+      { area: "prop-removed", old: "outline property on button components", new: "removed — use new variant names instead", components: ["ix-button", "ix-icon-button", "ix-dropdown-button", "ix-split-button", "ix-toggle-button", "ix-icon-toggle-button"] },
+      { area: "prop-removed", old: "ghost property on button components", new: "removed — use new variant names instead", components: ["ix-button", "ix-icon-button", "ix-dropdown-button", "ix-split-button", "ix-toggle-button", "ix-icon-toggle-button"] },
+      // Default variant for buttons without explicit variant set
+      { area: "default-variant", old: "ix-button default (no variant, no outline, no ghost)", new: 'variant="primary"', components: ["ix-button", "ix-dropdown-button", "ix-split-button"] },
+      { area: "default-variant", old: "ix-button default with outline", new: 'variant="secondary"', components: ["ix-button", "ix-dropdown-button", "ix-split-button"] },
+      { area: "default-variant", old: "ix-button default with ghost", new: 'variant="tertiary"', components: ["ix-button", "ix-dropdown-button", "ix-split-button"] },
+      { area: "default-variant", old: "ix-icon-button / ix-toggle-button / ix-icon-toggle-button default (no variant, no outline, no ghost)", new: 'variant="subtle-primary"', components: ["ix-icon-button", "ix-toggle-button", "ix-icon-toggle-button"] },
+      { area: "default-variant", old: "ix-icon-button / ix-toggle-button default with outline", new: 'variant="subtle-secondary"', components: ["ix-icon-button", "ix-toggle-button", "ix-icon-toggle-button"] },
+      { area: "default-variant", old: "ix-icon-button / ix-toggle-button default with ghost", new: 'variant="subtle-tertiary"', components: ["ix-icon-button", "ix-toggle-button", "ix-icon-toggle-button"] },
+      // Other component updates
+      { area: "prop", old: "ix-flip-tile: state", new: "variant", components: ["ix-flip-tile"] },
+      { area: "type", old: "FlipTileState", new: "FlipTileVariant", components: ["ix-flip-tile"] },
+      { area: "prop", old: "ix-message-bar: dismissible (default true)", new: "persistent (default false)", components: ["ix-message-bar"] },
+      { area: "css", old: "ix-application-header height: 2.75rem (44px)", new: "3rem (48px)", components: ["ix-application-header"] },
+      { area: "css", old: "ix-application content area flexbox overflow", new: "min-width: 0 added (remove workarounds if any)", components: ["ix-application"] },
+      // AG Grid
+      { area: "dependency", old: "AG Grid < v33", new: "AG Grid v33+ required", components: ["ix-aggrid"] },
+      { area: "import-removed", old: "@import '@siemens/ix-aggrid/dist/ix-aggrid/ix-aggrid.css'", new: "removed — use new theming API", components: ["ix-aggrid"] },
+      { area: "css-class-removed", old: 'class="ag-theme-alpine-dark ag-theme-ix"', new: "removed — use getIxTheme(agGrid) theming API", components: ["ix-aggrid"] },
+      { area: "config", old: "AG Grid manual CSS theme classes", new: "import { getIxTheme } from '@siemens/ix-aggrid'; gridOptions.theme = getIxTheme(agGrid);", components: ["ix-aggrid"] },
+      // Elevation
+      { area: "visual", old: "variant='filled' on color-2/component-1 backgrounds", new: "variant='outline' (visual review needed)", components: ["ix-blind", "ix-card", "ix-push-card", "ix-action-card", "ix-event-list"] },
+    ],
+  },
+};
+
+/**
+ * Returns all breaking changes relevant for a multi-version upgrade path.
+ * E.g. V2→V4 returns V2→V3 + V3→V4 combined.
+ */
+function getBreakingChangesForUpgrade(fromVersion, toVersion) {
+  const versionOrder = ["V2.0.0", "V3.0.0", "V4.0.0"];
+  const fromIdx = versionOrder.indexOf(fromVersion);
+  const toIdx = versionOrder.indexOf(toVersion);
+  if (fromIdx < 0 || toIdx < 0 || toIdx <= fromIdx) return [];
+
+  const steps = [];
+  for (let i = fromIdx; i < toIdx; i++) {
+    const key = `${versionOrder[i]}->${versionOrder[i + 1]}`;
+    if (VERSION_BREAKING_CHANGES[key]) {
+      steps.push(VERSION_BREAKING_CHANGES[key]);
+    }
+  }
+  return steps;
+}
+
+/**
+ * Filters breaking changes to only those relevant to components found in the user's code.
+ */
+function filterBreakingChangesForCode(breakingSteps, extractedComponents) {
+  if (!extractedComponents || extractedComponents.length === 0) return breakingSteps;
+
+  const codeComponentsLower = new Set(extractedComponents.map(c => c.toLowerCase().replace(/ \(plain html\)$/, "")));
+  // Always include "global" changes
+  codeComponentsLower.add("global");
+
+  return breakingSteps.map(step => ({
+    ...step,
+    changes: step.changes.filter(change =>
+      change.components.some(c => codeComponentsLower.has(c.toLowerCase())) ||
+      change.components.includes("global")
+    ),
+  }));
+}
+
+/**
+ * Formats breaking changes into a clear text block for the LLM prompt.
+ */
+function formatBreakingChangesForPrompt(breakingSteps, onlyRelevant = false) {
+  if (breakingSteps.length === 0) return "No known version-specific breaking changes for this path.";
+
+  return breakingSteps.map(step => {
+    const header = `## ${step.label} Breaking Changes\n**Summary:** ${step.summary}\n`;
+    if (step.changes.length === 0 && onlyRelevant) return header + "\n(No relevant changes for the detected components.)\n";
+
+    const changeLines = step.changes.map((c, i) => {
+      const comps = c.components.filter(x => x !== "global").join(", ");
+      const compStr = comps ? ` [${comps}]` : "";
+      return `${i + 1}. **${c.area}**${compStr}: \`${c.old}\` → \`${c.new}\``;
+    });
+    return header + changeLines.join("\n");
+  }).join("\n\n---\n\n");
+}
+
+/**
+ * Extracts iX component names from user code for targeted doc retrieval.
+ * Looks for ix- web component tags, Ix* React/Angular imports, and @siemens/ix* packages.
+ */
+function extractIxComponentsFromCode(code) {
+  const components = new Set();
+
+  // Web component tags: <ix-button>, <ix-modal>, etc.
+  const wcMatches = code.match(/<\/?ix-([a-z][a-z0-9-]*)/gi) || [];
+  for (const m of wcMatches) {
+    const name = m.replace(/<\/?/g, "").toLowerCase();
+    components.add(name);
+  }
+
+  // React/Angular PascalCase: IxButton, IxModal, etc.
+  const pascalMatches = code.match(/\bIx[A-Z][a-zA-Z0-9]*/g) || [];
+  for (const m of pascalMatches) {
+    // Convert IxButton -> ix-button
+    const kebab = m.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+    components.add(kebab);
+  }
+
+  // Also grab any known iX package imports
+  const importMatches = code.match(/@siemens\/ix[a-z-]*/g) || [];
+  for (const m of importMatches) {
+    components.add(m);
+  }
+
+  // Catch plain HTML elements that could be migrated
+  const htmlElements = ["<button", "<input", "<select", "<dialog", "<table", "<textarea", "<details", "<progress", "<nav"];
+  for (const el of htmlElements) {
+    if (code.toLowerCase().includes(el)) {
+      components.add(el.replace("<", "") + " (plain HTML)");
+    }
+  }
+
+  return [...components];
+}
+
+/**
+ * Detects the framework from the code to set the right migration context.
+ */
+function detectFrameworkFromCode(code) {
+  if (/@siemens\/ix-react|from\s+['"]react['"]|import\s+React/i.test(code)) return "react";
+  if (/@siemens\/ix-angular|@angular\/core|@Component/i.test(code)) return "angular";
+  if (/@siemens\/ix-vue|from\s+['"]vue['"]/i.test(code)) return "vue";
+  if (/defineCustomElements|@siemens\/ix\/loader/i.test(code)) return "webcomponents";
+  // Default: try to detect from tag style
+  if (/<Ix[A-Z]/.test(code)) return "react"; // PascalCase JSX
+  if (/<ix-[a-z]/.test(code) && /\[.*\]="/.test(code)) return "angular"; // Angular property binding
+  if (/<ix-[a-z]/.test(code) && /@[a-z]+="/.test(code)) return "vue"; // Vue event binding
+  return "react"; // fallback
+}
+
+/**
+ * Dedicated migration LLM call with a precise, migration-specific system prompt.
+ * Unlike the generic generateCode(), this focuses on:
+ * - Line-by-line analysis of what changed and why
+ * - Preserving ALL non-iX business logic untouched
+ * - Only modifying deprecated / broken iX APIs
+ */
+async function generateMigratedCode(topDocs, originalCode, framework, userApiKey, provider, model, lang, flow, fromVersion, toVersion, extractedComponents) {
+  const key = resolveApiKey(provider, userApiKey);
+  if (!key) {
+    const err = new Error("NO_API_KEY");
+    err.code = "NO_API_KEY";
+    throw err;
+  }
+
+  const docsContext = buildDocsContextForPrompt(topDocs, { includeUrls: true });
+
+  const frameworkGuide = {
+    react: "React with @siemens/ix-react (PascalCase JSX: <IxButton>, <IxModal>). For props: use camelCase. For events: use onEventName.",
+    angular: "Angular with @siemens/ix-angular (kebab-case templates: <ix-button>, [prop]=\"value\", (event)=\"handler($event)\").",
+    vue: "Vue 3 with @siemens/ix-vue (PascalCase: <IxButton>, :prop=\"value\", @event=\"handler\").",
+    webcomponents: "Web Components with @siemens/ix (kebab-case: <ix-button>, setAttribute, addEventListener).",
+  };
+
+  // Build the breaking changes section — this is the key improvement
+  let breakingChangesBlock = "";
+  if (flow === "upgrade" && fromVersion && toVersion) {
+    const allSteps = getBreakingChangesForUpgrade(fromVersion, toVersion);
+    const relevantSteps = filterBreakingChangesForCode(allSteps, extractedComponents);
+    const fullStepsText = formatBreakingChangesForPrompt(allSteps);
+    const relevantStepsText = relevantSteps.some(s => s.changes.length > 0)
+      ? formatBreakingChangesForPrompt(relevantSteps, true)
+      : "";
+
+    breakingChangesBlock = `
+
+## EXACT BREAKING CHANGES (${fromVersion} → ${toVersion}) — APPLY THESE
+
+The following are the CONFIRMED, DOCUMENTED breaking changes. Apply each one that matches the code:
+
+${fullStepsText}
+
+${relevantStepsText ? `### Changes specifically relevant to THIS code:\n\n${relevantStepsText}` : ""}
+
+IMPORTANT: Apply EVERY matching change from the list above. Each change has the exact old → new mapping. Do not skip any.`;
+  } else {
+    breakingChangesBlock = `
+
+## API MIGRATION
+Modernize deprecated iX APIs to current equivalents. Focus on:
+- Deprecated components → their documented replacement
+- Removed props/events → new API surface
+- Old import paths → current package structure`;
+  }
+
+  const systemPrompt = `You are a PRECISE Siemens iX code migration specialist for the ${flow === "upgrade" ? `${fromVersion} → ${toVersion} upgrade` : "API migration"}.
+
+YOUR TASK: Apply the EXACT breaking changes listed below to the provided code. This is a mechanical, rule-based transformation — not creative coding.
+
+RULES:
+1. Apply EVERY matching change from the breaking changes list. Each entry has exact old → new values.
+2. Preserve ALL business logic, state management, API calls, routing, and non-iX code EXACTLY as-is.
+3. For EACH change you make, add an inline comment: // MIGRATED: <old> → <new>
+4. If a breaking change applies but you're unsure of the exact syntax for this framework, add: // TODO: Verify migration — <description>
+5. The code uses ${frameworkGuide[framework] || frameworkGuide.react}
+6. Return the COMPLETE migrated code in a single fenced code block — no prose, no explanation before or after.
+7. Do NOT invent APIs, props, or component names. Only use what's in the breaking changes list and documentation excerpts.
+8. If the code uses plain HTML elements that have iX equivalents, also migrate those: <button> → ix-button, <input> → ix-input, etc.
+9. Keep ALL non-iX imports unchanged.
+10. Maintain exact formatting and indentation of unchanged code.${langInstruction(lang)}`;
+
+  const componentsFound = extractedComponents.length > 0
+    ? `\n\n**iX Components detected in this code:** ${extractedComponents.join(", ")}`
+    : "";
+
+  const userPrompt = `${breakingChangesBlock}
+
+---
+
+## Additional iX Documentation Excerpts (supplementary reference)
+
+${docsContext}
+
+---
+
+## Code to Migrate
+
+Framework: ${framework}${componentsFound}
+
+\`\`\`
+${originalCode.slice(0, 8000)}${originalCode.length > 8000 ? "\n// ... (truncated)" : ""}
+\`\`\`
+
+Apply all matching breaking changes and return the complete migrated code.`;
+
+  return callLLM({
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    apiKey: key,
+    provider,
+    model,
+    task: "codegen",
+    temperature: 0.1,   // Very low temperature for precise mechanical changes
+    maxTokens: 4096,
+  });
+}
+
+/**
+ * Generates a precise migration summary by comparing original vs migrated code.
+ */
+async function generateMigrationSummary(docsContext, originalCode, migratedCode, userApiKey, lang, provider, model, flow, fromVersion, toVersion) {
+  const flowLabel = flow === "upgrade" ? `${fromVersion} → ${toVersion} upgrade` : "API migration";
+
+  // Provide the actual breaking changes list so the summary can reference them
+  let knownChangesRef = "";
+  if (flow === "upgrade" && fromVersion && toVersion) {
+    const steps = getBreakingChangesForUpgrade(fromVersion, toVersion);
+    knownChangesRef = `\n\n## Reference: Known breaking changes for ${fromVersion} → ${toVersion}\n\n${formatBreakingChangesForPrompt(steps)}`;
+  }
+
+  const summaryPrompt = `You are a Siemens iX migration reviewer. Compare the original and migrated code to produce a PRECISE, STRUCTURED summary of ONLY the changes that were actually applied.
+
+FORMAT your response EXACTLY as:
+
+### Migration Summary (${flowLabel})
+
+**Components changed:**
+- \`<old>\` → \`<new>\` — <one-line reason>
+
+**Props/Events renamed:**
+- \`<old prop/event>\` → \`<new prop/event>\` on \`<component>\`
+
+**Import/Config changes:**
+- \`<old>\` → \`<new>\`
+
+**Removed (no replacement):**
+- \`<item>\` — <what to do instead>
+
+**Manual review needed:**
+- <specific item to verify>
+
+RULES:
+- List ONLY changes that were actually made in the code diff. Compare line-by-line.
+- Be specific: use exact component names, prop names, event names.
+- If no changes were needed, say: "No migration changes were needed — the code is already compatible."
+- Do NOT list hypothetical changes. Only list what actually changed.
+- Do NOT wrap in <think> tags. No reasoning. Just the structured summary.
+- Keep all code identifiers in English — never translate component names or props.${langInstruction(lang)}`;
+
+  try {
+    const rawSummary = await callLLM({
+      messages: [
+        { role: "system", content: summaryPrompt },
+        {
+          role: "user",
+          content: `${knownChangesRef}\n\n## Documentation Context\n\n${docsContext.slice(0, 2000)}\n\n---\n\n## Original Code\n\n\`\`\`\n${originalCode.slice(0, 4000)}\n\`\`\`\n\n## Migrated Code\n\n\`\`\`\n${migratedCode.slice(0, 4000)}\n\`\`\`\n\nList only the changes that were actually applied.`,
+        },
+      ],
+      apiKey: resolveApiKey(provider, userApiKey),
+      provider,
+      model,
+      task: "chat",
+      temperature: 0.2,
+      maxTokens: 1500,
+    });
+
+    const cleaned = (rawSummary || "")
+      .replace(/<think>[\s\S]*?<\/think>/gi, "")
+      .replace(/<think>[\s\S]*/gi, "")
+      .trim();
+
+    return cleaned || (flow === "upgrade"
+      ? `Code upgraded from ${fromVersion} to ${toVersion}. Review the migrated code for deprecated API replacements and verify behavior.`
+      : "Migration complete. Deprecated APIs have been replaced with their current equivalents. Review the migrated code and verify behavior.");
+  } catch (summaryErr) {
+    console.warn("Summary generation failed (non-fatal):", summaryErr.message || summaryErr);
+    return flow === "upgrade"
+      ? `Code upgraded from ${fromVersion} to ${toVersion}. Review the migrated code for deprecated API replacements and verify behavior.`
+      : "Migration complete. Deprecated APIs have been replaced with their current equivalents. Review the migrated code and verify behavior.";
+  }
 }
 
 // ─── Routes ─────────────────────────────────────────────────────────
@@ -1373,6 +1882,10 @@ app.post("/chat", rateLimiter, async (req, res) => {
         "You are a helpful, knowledgeable assistant for the Siemens Industrial Experience (iX) design system. " +
         "Answer the user's question strictly using the provided iX documentation excerpts below. " +
         "Do not invent details that are not present in the excerpts. " +
+        "CRITICAL: Always recommend Siemens iX components exclusively for ALL UI needs. " +
+        "NEVER suggest third-party UI libraries (Material UI, Ant Design, Bootstrap, Chakra UI, PrimeNG, Angular Material, Vuetify, etc.) or plain HTML elements when an iX component exists for the same purpose. " +
+        "If the user asks about a UI pattern, always map it to the appropriate iX component (e.g., popup → ix-modal, sidebar → ix-menu, table → ix-grid, alert → ix-message-bar). " +
+        "Only mention non-iX solutions as a clearly marked last resort: '⚠️ No iX component available for this pattern.' " +
         "Be concise but thorough. If the docs contain code examples, include them formatted in markdown code blocks. " +
         "When referencing information, cite the source number in brackets like [1], [2] etc. " +
         "If the answer is not covered by the provided docs, say so honestly and suggest checking https://ix.siemens.io/. " +
@@ -1402,11 +1915,17 @@ app.post("/chat", rateLimiter, async (req, res) => {
 
   try {
     const answer = await callLLM({ messages, apiKey: key, provider, model, task: "chat", temperature: 0.3, maxTokens: 2048 });
+    const { warnings: ixWarnings, hasNonIxComponents } = validateIxComponentUsage(answer);
+    if (hasNonIxComponents) {
+      console.warn(`[chat] Non-iX components detected in answer:`, ixWarnings.join("; "));
+    }
     res.json({
       answer,
       tier: "premium",
       sources,
       hasDeprecationWarnings: topDocs.some((d) => d.deprecated),
+      ixComponentWarnings: ixWarnings,
+      hasNonIxComponents,
     });
   } catch (err) {
     const status = err.response?.status || 500;
@@ -1475,6 +1994,12 @@ app.post("/generate", rateLimiter, async (req, res) => {
     // Step 2 — LLM: generate code using retrieved docs
     const code = await generateCode(topDocs, description, framework, userApiKey, fileContent, fileName, provider, model, resolvedLang);
 
+    // Step 3 — Validate generated code uses iX components exclusively
+    const { warnings: ixWarnings, hasNonIxComponents } = validateIxComponentUsage(code);
+    if (hasNonIxComponents) {
+      console.warn(`[generate] Non-iX components detected in output:`, ixWarnings.join("; "));
+    }
+
     res.json({
       code,
       matchedComponents: topDocs.map((d) => ({
@@ -1488,6 +2013,9 @@ app.post("/generate", rateLimiter, async (req, res) => {
       framework,
       // Warn caller if any matched component doc contains deprecation signals
       hasDeprecationWarnings: topDocs.some((d) => d.deprecated),
+      // iX-only enforcement warnings
+      ixComponentWarnings: ixWarnings,
+      hasNonIxComponents,
     });
   } catch (err) {
     const status = err.response?.status || 500;
@@ -1553,69 +2081,99 @@ app.post("/migrate", rateLimiter, async (req, res) => {
   trackAnalytics(code.toString().slice(0, 200), "migrate", resolvedLang);
 
   try {
-    // Retrieve relevant docs to give the LLM context about iX components
-    const migrationQuery =
-      migrationFlow === "upgrade"
-        ? `${code.toString()} Siemens iX upgrade ${fromVersion} ${toVersion} breaking changes release notes migration path`
-        : `${code.toString()} migrate migration deprecated removed replacement Siemens iX`;
-    const matchedDocs = await searchDocs(migrationQuery, 12, { mode: SEARCH_MODE.EMBEDDING, provider });
-    const topDocs = matchedDocs.slice(0, 12);
+    // ── Step 1: Extract component names & imports from user code for targeted search ──
+    const codeStr = code.toString();
+    const extractedComponents = extractIxComponentsFromCode(codeStr);
+    const detectedFramework = detectFrameworkFromCode(codeStr);
 
-    const migrationDescription =
-      migrationFlow === "upgrade"
-        ? `Upgrade the provided code from Siemens iX ${fromVersion} to ${toVersion}. Use only documented Siemens iX changes from the provided excerpts, apply required breaking/deprecation updates, preserve behavior, and return complete copy-paste-ready upgraded code.`
-        : `Migrate the provided code to the current Siemens iX APIs. Replace deprecated components/APIs with documented replacements, preserve behavior, and return complete copy-paste-ready code.`;
+    // ── Step 2: Build focused search queries targeting migration guides ──
+    const componentTerms = extractedComponents
+      .filter(c => !c.includes("(plain HTML)"))
+      .slice(0, 10)
+      .join(" ");
 
-    // Ask the code-generator to produce migrated code. Use the original file content
-    // so the generator can refactor/replace deprecated components where applicable.
-    const migratedCode = await generateCode(
+    // For version upgrades, search specifically for the migration guide + changelog
+    const versionLabel = migrationFlow === "upgrade"
+      ? `${fromVersion} ${toVersion}`.replace(/V/g, "v").replace(/\.0\.0/g, "")
+      : "";
+
+    const migrationQuery = migrationFlow === "upgrade"
+      ? `Upgrade to ${toVersion} migration guide breaking changes ${versionLabel} ${componentTerms}`.trim()
+      : `Siemens iX migrate deprecated removed replacement ${componentTerms || "component API"} current`.trim();
+
+    const changelogQuery = migrationFlow === "upgrade"
+      ? `changelog release notes ${versionLabel} breaking removed renamed deprecated`.trim()
+      : `deprecated removed replacement migration ${componentTerms}`.trim();
+
+    // Run three targeted searches in parallel for maximum coverage
+    const searchPromises = [
+      searchDocs(migrationQuery, 10, { mode: SEARCH_MODE.EMBEDDING, provider }),
+      searchDocs(changelogQuery, 8, { mode: SEARCH_MODE.EMBEDDING, provider }),
+    ];
+    if (extractedComponents.length > 0) {
+      searchPromises.push(
+        searchDocs(componentTerms + " Siemens iX component API props events guide", 6, { mode: SEARCH_MODE.EMBEDDING, provider })
+      );
+    }
+    const searchResults = await Promise.all(searchPromises);
+
+    // Merge and deduplicate docs, prioritizing migration-specific content
+    const allDocs = searchResults.flat();
+    const mergedDocs = uniqueByUrl(allDocs, 15);
+    const topDocs = mergedDocs.slice(0, 15);
+
+    // ── Step 3: Use a dedicated migration prompt (NOT the generic code-gen prompt) ──
+    const migratedCode = await generateMigratedCode(
       topDocs,
-      migrationDescription,
-      "react",
+      codeStr,
+      detectedFramework,
       userApiKey,
-      code.toString(),
-      "uploaded-file",
       provider,
       model,
-      resolvedLang
+      resolvedLang,
+      migrationFlow,
+      fromVersion,
+      toVersion,
+      extractedComponents
     );
 
-    // Ask for a brief summary of the migration steps performed
+    // ── Step 4: Generate a precise, diff-style summary ──
     const docsContext = buildDocsContextForPrompt(topDocs, { includeUrls: true });
+    let summary = await generateMigrationSummary(
+      docsContext,
+      codeStr,
+      migratedCode,
+      userApiKey,
+      resolvedLang,
+      provider,
+      model,
+      migrationFlow,
+      fromVersion,
+      toVersion
+    );
 
-    const summaryQuestion =
-      migrationFlow === "upgrade"
-        ? `Provide a short (2-6 sentence) summary of the ${fromVersion} → ${toVersion} upgrade: list notable breaking changes applied, deprecated APIs/components replaced, and manual verification steps. Do NOT wrap your answer in <think> tags or include any reasoning — just give the summary directly.`
-        : "Provide a short (2-6 sentence) summary of the migration performed: list deprecated components replaced, notable API changes, and any manual follow-ups the developer should verify. Do NOT wrap your answer in <think> tags or include any reasoning — just give the summary directly.";
-
-    let summary = "";
-    try {
-      const rawSummary = await askAI(
-        docsContext,
-        `${summaryQuestion}\n\nOriginal code:\n${code.toString().slice(0, 3000)}\n\nMigrated code:\n${migratedCode.toString().slice(0, 3000)}`,
-        userApiKey,
-        resolvedLang,
-        provider,
-        model
-      );
-      // Strip <think>...</think> tags that reasoning models may produce
-      summary = (rawSummary || "")
-        .replace(/<think>[\s\S]*?<\/think>/gi, "")
-        .replace(/<think>[\s\S]*/gi, "")
-        .trim();
-      if (!summary) {
-        summary = migrationFlow === "upgrade"
-          ? `Code upgraded from ${fromVersion} to ${toVersion}. Review the migrated code for deprecated API replacements and verify behavior.`
-          : "Migration complete. Deprecated APIs have been replaced with their current equivalents. Review the migrated code and verify behavior.";
-      }
-    } catch (summaryErr) {
-      console.warn("Summary generation failed (non-fatal):", summaryErr.message || summaryErr);
-      summary = migrationFlow === "upgrade"
-        ? `Code upgraded from ${fromVersion} to ${toVersion}. Review the migrated code for deprecated API replacements and verify behavior.`
-        : "Migration complete. Deprecated APIs have been replaced with their current equivalents. Review the migrated code and verify behavior.";
+    const { warnings: ixWarnings, hasNonIxComponents } = validateIxComponentUsage(migratedCode);
+    if (hasNonIxComponents) {
+      console.warn(`[migrate] Non-iX components detected in output:`, ixWarnings.join("; "));
     }
 
-    res.json({ migratedCode, summary, flow: migrationFlow, fromVersion: fromVersion || null, toVersion: toVersion || null });
+    // Include metadata about the breaking changes that were applied
+    const breakingChangesApplied = (migrationFlow === "upgrade" && fromVersion && toVersion)
+      ? getBreakingChangesForUpgrade(fromVersion, toVersion).reduce((sum, step) => sum + step.changes.length, 0)
+      : 0;
+
+    res.json({
+      migratedCode,
+      summary,
+      flow: migrationFlow,
+      fromVersion: fromVersion || null,
+      toVersion: toVersion || null,
+      detectedFramework: detectedFramework,
+      detectedComponents: extractedComponents,
+      knownBreakingChanges: breakingChangesApplied,
+      ixComponentWarnings: ixWarnings,
+      hasNonIxComponents,
+    });
   } catch (err) {
     const status = err.response?.status || 500;
     const message =
@@ -1645,6 +2203,7 @@ app.post("/refine", rateLimiter, async (req, res) => {
 
   const systemPrompt = `You are an expert code editor for the Siemens Industrial Experience (iX) design system.
 Modify the provided code ONLY according to the user's instruction and return the complete updated code in a single fenced code block.
+CRITICAL: Use ONLY Siemens iX components for all UI elements. Replace any plain HTML elements (<button>, <input>, <select>, <dialog>) with their iX equivalents (ix-button, ix-input, ix-select, ix-modal). NEVER introduce third-party UI libraries (Material UI, Ant Design, Bootstrap, etc.). If non-iX elements exist in the original code, migrate them to iX components where possible.
 Do not explain — only return the full updated code.${langInstruction(resolvedLang)}`;
 
   const userPrompt = `Framework: ${framework}\n\nExisting code:\n\`\`\`\n${code}\n\`\`\`\n\nInstruction: ${instruction}\n\nReturn the complete updated code.`;
@@ -1662,7 +2221,11 @@ Do not explain — only return the full updated code.${langInstruction(resolvedL
       temperature: 0.2,
       maxTokens: 4096,
     });
-    res.json({ code: refined });
+    const { warnings: ixWarnings, hasNonIxComponents } = validateIxComponentUsage(refined);
+    if (hasNonIxComponents) {
+      console.warn(`[refine] Non-iX components detected in output:`, ixWarnings.join("; "));
+    }
+    res.json({ code: refined, ixComponentWarnings: ixWarnings, hasNonIxComponents });
   } catch (err) {
     const status = err.response?.status || 500;
     const message = err.response?.data?.error?.message || err.message;
